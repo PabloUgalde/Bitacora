@@ -1,0 +1,872 @@
+/* --- TEMA PREMIUM "BLACK & GOLD" v2.12 --- */
+
+:root {
+    --primary-color: #D4AF37;
+    --background-color: #121212;
+    --surface-color: #1E1E1E;
+    --surface-hover-color: #2a2a2a;
+    --border-color: #383838;
+    --text-color: #E0E0E0;
+    --text-color-light: #FFFFFF;
+    --text-muted-color: #9E9E9E;
+    --accent-color-green: #4CAF50;
+    --accent-color-red: #D32F2F;
+    --secondary-color: #424242;
+    --font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    --border-radius: 8px;
+}
+
+body { 
+    font-family: var(--font-family); 
+    margin: 0; 
+    background-color: var(--background-color); 
+    color: var(--text-color); 
+}
+
+header { 
+    background-color: var(--surface-color); 
+    padding: 0.75rem 2rem; 
+    border-bottom: 1px solid var(--border-color); 
+    position: sticky; 
+    top: 0; 
+    z-index: 100; 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+}
+
+main { 
+    max-width: 1400px; 
+    margin: 0 auto; 
+    padding: 1.5rem 2rem; 
+    width: 100%; 
+    box-sizing: border-box;
+}
+main:has(#view-logbook.active) {
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+}  
+
+/* --- LOGO CON PALAS DE PILOTO --- */
+.logo-link { text-decoration: none; display: flex; align-items: center; gap: 1rem; }
+.pilot-epaulette { display: flex; flex-direction: column; justify-content: space-between; width: 33px; height: 40px; padding: 8px; border: 1.5px solid var(--text-muted-color); border-radius: 3px; background-color: #000; }
+.pilot-epaulette .stripe { height: 7px; background-color: var(--primary-color); border-radius: 2px; }
+.logo-text { font-size: 1.75rem; font-weight: 600; color: var(--text-color-light); }
+
+/* --- NAVEGACIÓN --- */
+header nav { display: flex; gap: 0.5rem; align-items: center; }
+.nav-link { padding: 0.5rem 1rem; border-radius: 6px; text-decoration: none; font-weight: 500; color: var(--text-muted-color); transition: all 0.2s ease-in-out; border-bottom: 3px solid transparent; }
+.nav-link:hover { color: var(--primary-color); background-color: var(--surface-hover-color); }
+.nav-link.active { color: var(--primary-color); font-weight: 600; border-bottom: 3px solid var(--primary-color); }
+
+/* ====================================================================== */
+/* = SOLUCIÓN DEFINITIVA Y UNIFICADA PARA MENÚS DESPLEGABLES            = */
+/* ====================================================================== */
+
+/* --- Estilo Base para AMBOS menús desplegables --- */
+.nav-dropdown-menu {
+    position: absolute;
+    z-index: 1100;
+    min-width: 200px;
+    padding: 0.5rem 0;
+    background-color: var(--surface-color); /* Fondo sólido */
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    
+    /* Lógica de visibilidad */
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(5px);
+    transition: all 0.2s ease-out;
+    pointer-events: none;
+}
+
+/* --- Mostrar el menú cuando tiene la clase .active --- */
+.nav-dropdown-menu.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+/* --- Estilos para las opciones DENTRO de los menús --- */
+.nav-dropdown-menu a {
+    display: block; /* Asegura que cada opción ocupe su propia línea */
+    padding: 0.75rem 1.25rem;
+    color: var(--text-color-light);
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.nav-dropdown-menu a:hover {
+    background-color: var(--primary-color);
+    color: var(--background-color) !important; /* !important para anular otros :hover */
+}
+
+/* Línea divisoria en el menú de navegación */
+.nav-dropdown-menu hr {
+    border-color: var(--border-color);
+    margin: 0.5rem 0;
+}
+
+/* Estilo específico para la opción ACTIVA en el menú de ORDENAR */
+#sort-order-menu .sort-option.active {
+    font-weight: 600;
+    color: var(--primary-color);
+    background-color: rgba(212, 175, 55, 0.1);
+}
+
+/* --- ESTILOS GENERALES DE VISTAS --- */
+.view { display: none; position: relative; }
+.view.active { display: block; animation: fadeIn 0.4s; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+h2 { color: var(--text-color-light); font-weight: 600; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem; margin-bottom: 1.5rem; }
+h3 { color: var(--text-color); margin-bottom: 1.5rem; font-weight: 600; }
+h4 { color: var(--primary-color); margin-top: 1.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-color); margin-bottom: 1rem; font-weight: 600; }
+label { font-weight: 500; display: block; margin-bottom: 0.25rem; color: var(--text-muted-color); font-size: 0.9rem;}
+label.required::after { content: ' *'; color: var(--accent-color-red); }
+
+/* --- DASHBOARD --- */
+.dashboard-hero-bg { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100%; max-width: 600px; opacity: 0.08; z-index: -1; pointer-events: none; }
+.dashboard-hero-bg img { width: 100%; height: auto; }
+.dashboard-content { position: relative; z-index: 1; background-color: transparent; }
+.card-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); 
+    gap: 1rem; 
+    margin-bottom: 2rem;
+}
+@media (min-width: 768px) {
+    .card-container {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.5rem;
+    }
+}
+@media (min-width: 1024px) { 
+.card-container { grid-template-columns: repeat(4, 1fr); }}
+.summary-card { background-color: rgba(30, 30, 30, 0.75); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); padding: 1.5rem; border-radius: var(--border-radius); border: 1px solid var(--border-color); transition: transform 0.2s, box-shadow 0.2s; }
+.summary-card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2); }
+.summary-card h3 { margin-top: 0; font-size: 1rem; color: var(--text-muted-color); font-weight: 500; }
+.summary-card .value { font-size: 2.5rem; font-weight: 700; color: var(--primary-color); }
+
+/* --- ESTILO PARA TARJETA PRINCIPAL DEL DASHBOARD --- */
+.summary-card.primary-card {
+    background-color: var(--surface-color); /* Fondo sólido y un poco más oscuro */
+    border: 2px solid var(--primary-color);
+    /* Sutil resplandor dorado */
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.25); 
+}
+
+/* Título más prominente para la tarjeta principal */
+.summary-card.primary-card h3 {
+    color: var(--text-color-light); 
+    font-weight: 600;
+}
+
+/* Efecto hover mejorado para la tarjeta principal */
+.summary-card.primary-card:hover {
+    transform: translateY(-5px);
+    /* Resplandor más intenso al pasar el mouse */
+    box-shadow: 0 8px 25px rgba(212, 175, 55, 0.4);
+}
+
+/* --- FORMULARIOS Y BOTONES --- */
+#flight-form, .settings-container { background: var(--surface-color); padding: 2rem; border-radius: var(--border-radius); border: 1px solid var(--border-color); }
+.status { min-height: 1.2em; font-weight: bold; margin-top: 1rem; }
+.status.success { color: var(--accent-color-green); } .status.error { color: var(--accent-color-red); }
+.form-step { display: none; }
+.form-step.active { display: block; }
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; }
+.form-group-full { grid-column: 1 / -1; }
+input, select, textarea { width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; box-sizing: border-box; background-color: #2a2a2a; color: var(--text-color); transition: border-color 0.2s; }
+input:focus, select:focus, textarea:focus { border-color: var(--primary-color); outline: none; box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2); }
+input:disabled, select:disabled { background-color: #333; cursor: not-allowed; opacity: 0.5; }
+input.error, select.error { border-color: var(--accent-color-red); }
+.navigation-buttons { display: flex; justify-content: space-between; margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1.5rem; }
+.navigation-buttons button, .submit-btn { padding: 0.8rem 1.5rem; border: none; border-radius: 6px; cursor: pointer; font-size: 1rem; font-weight: 600; transition: all 0.2s; }
+.next-btn { background-color: var(--primary-color); color: #000; margin-left: auto; }
+.next-btn:hover { background-color: #e8c75a; }
+.prev-btn { background-color: var(--secondary-color); color: var(--text-color-light); }
+.prev-btn:hover { background-color: #555; }
+.submit-btn { background-color: var(--accent-color-green); color: white; }
+.submit-btn:hover { background-color: #388E3C; }
+.hidden { display: none !important; }
+
+/* --- LAYOUT Y ESTILOS DEL REGISTRO DETALLADO (LOGBOOK) --- */
+
+#view-logbook.active { 
+    display: grid; 
+    grid-template-rows: auto 1fr auto; 
+    gap: 0.5rem; 
+    height: calc(100vh - 110px); 
+}
+.logbook-header { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+}
+#logbook-controls { 
+    display: flex; 
+    gap: 1rem; 
+    align-items: center; 
+}
+#pagination-controls { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+}
+#view-logbook .logbook-header,
+#view-logbook #pagination-controls { 
+    margin-top: 0; 
+    margin-bottom: 0; 
+}
+#detailed-logbook-container { 
+    display: flex;
+    min-height: 0; 
+    min-width: 0; 
+    overflow: hidden;
+}
+#detailed-logbook-container .table-container { 
+    overflow: auto; 
+}
+
+/* --- TABLAS --- */
+.table-container { width: 100%; overflow-x: auto; background-color: var(--surface-color); border-radius: var(--border-radius); border: 1px solid var(--border-color); }
+table { width: 100%; border-spacing: 0; border-collapse: collapse; }
+th, td { padding: 0.8rem 1rem; border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color); vertical-align: middle; }
+th:first-child, td:first-child { border-left: 0; } 
+th:last-child, td:last-child { border-right: 0; } 
+th { background-color: #2a2a2a; font-weight: 600; font-size: 0.9rem; text-align: center; white-space: normal; color: var(--text-muted-color); }
+td { text-align: center; white-space: nowrap; font-size: 0.85rem; }
+tbody tr:hover td { background-color: rgba(212, 175, 55, 0.1); }
+#detailed-logbook-container tbody tr:hover td:nth-child(1) { background-color: #2B2923; }
+#detailed-logbook-container tbody tr:nth-child(even):hover td:nth-child(1) { background-color: #312F28; }
+tbody tr:nth-child(even) td { background-color: #242424; }
+tbody td:nth-child(3), tbody td:nth-child(4), tbody td:nth-child(30) { text-align: left; }
+
+/* --- ESTILOS ESPECÍFICOS --- */
+.delete-flight-btn {
+    background-color: transparent;
+    border: 1px solid var(--secondary-color);
+    color: var(--text-muted-color);
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+    transition: all 0.2s;
+    margin-left: 0.5rem; /* Espacio entre los botones */
+}
+.delete-flight-btn:hover {
+    background-color: var(--accent-color-red);
+    color: white;
+    border-color: var(--accent-color-red);
+}
+
+/* --- MODAL --- */
+.modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.7); align-items: center; justify-content: center; }
+.modal.open { display: flex; }
+.modal-content { background-color: var(--surface-color); margin: auto; padding: 1.5rem 2rem; border-radius: var(--border-radius); border: 1px solid var(--border-color); box-shadow: 0 5px 15px rgba(0,0,0,0.3); width: 90%; max-width: 950px; position: relative; max-height: 90vh; overflow-y: auto; }
+.modal-header { border-bottom-color: var(--border-color); }
+/* --- ESTILOS PARA EL BOTÓN DE CIERRE DE MODALES --- */
+.modal-content .close-button {
+    position: absolute;
+    top: 1rem;
+    right: 1.5rem;
+    color: var(--text-muted-color);
+    font-size: 2rem;
+    font-weight: bold;
+    line-height: 1;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.modal-content .close-button:hover {
+    color: var(--accent-color-red);
+}
+
+/* --- AJUSTE AL ENCABEZADO DEL MODAL --- */
+.modal-header {
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 1rem;
+    margin-bottom: 1.5rem;
+    /* Añadimos espacio a la derecha para que el título no choque con el botón */
+    padding-right: 2.5rem; 
+}
+.modal-header h3 {
+    margin: 0; /* Limpiamos márgenes por defecto del título */
+}
+#advanced-filter-form h4 { color: var(--primary-color); }
+#advanced-filter-form .form-grid { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
+.settings-container h3 { border-bottom-color: var(--border-color); }
+
+/* --- ESTILOS MEJORADOS PARA SECCIÓN DE LICENCIAS --- */
+
+.licenses-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem; /* Espacio entre cada fila de licencia */
+}
+
+/* El header y cada item usarán una cuadrícula de 3 columnas */
+.license-header,
+.license-item {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr; /* Columna 1 más ancha, las otras 2 iguales */
+    gap: 1rem;
+    align-items: center;
+}
+
+.license-header span {
+    color: var(--text-muted-color);
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    padding: 0 0.5rem;
+}
+
+.license-item label {
+    margin-bottom: 0;
+    font-weight: 600;
+    padding: 0 0.5rem;
+}
+
+/* Ajustes para que los inputs no tengan márgenes que rompan la alineación */
+.license-item input {
+    margin: 0;
+}
+
+/* --- ESTILOS PARA RESÚMENES (FASE 4) --- */
+.summary-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1.5rem; }
+.summary-filters { display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap; padding-bottom: 1rem; }
+.filter-group { display: flex; align-items: center; gap: 0.5rem; }
+.filter-group label { margin-bottom: 0; white-space: nowrap; }
+.summary-filters select { background-color: var(--secondary-color); border-color: var(--border-color); padding: 0.5rem 1rem; min-width: 120px; }
+.button-group { display: flex; border: 1px solid var(--border-color); border-radius: var(--border-radius); overflow: hidden; }
+.toggle-btn { padding: 0.5rem 1rem; background-color: var(--secondary-color); color: var(--text-muted-color); border: none; cursor: pointer; transition: all 0.2s ease; border-left: 1px solid var(--border-color); }
+.button-group .toggle-btn:first-child { border-left: none; }
+.toggle-btn:hover { background-color: var(--surface-hover-color); color: var(--text-color); }
+.toggle-btn.active { background-color: var(--primary-color); color: #000; font-weight: 600; }
+
+#aircraft-summary-table-container td:nth-child(3),
+#aircraft-summary-table-container td:nth-child(4) { text-align: center; }
+
+#yearly-summary-table-container td:nth-child(3),
+#yearly-summary-table-container td:nth-child(4),
+#monthly-breakdown-container td:nth-child(3),
+#monthly-breakdown-container td:nth-child(4) { text-align: center; }
+#monthly-breakdown-container h3 { margin-top: 2rem; }
+
+#airport-summary-table-container td:nth-child(2),
+#airport-summary-table-container td:nth-child(3),
+#airport-summary-table-container td:nth-child(4),
+#airport-summary-table-container td:nth-child(5),
+#airport-summary-table-container td:nth-child(6) { text-align: center; }
+
+/* --- ESTILOS MEJORADOS PARA DASHBOARD (FASE 4.2) --- */
+
+/* 1. Layout Principal del Dashboard */
+#view-dashboard.active h2:first-of-type {
+    margin-top: 0;
+}
+.dashboard-grid-main {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-top: 2rem;
+}
+.dashboard-column {
+    display: flex;
+    flex-direction: column;
+}
+@media (max-width: 1000px) {
+    .dashboard-grid-main {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* 2. Control de Espaciado Vertical */
+.dashboard-column > * {
+    margin-bottom: 1.5rem; /* Espacio uniforme debajo de cada elemento */
+}
+.dashboard-column > *:last-child {
+    margin-bottom: 0; /* Sin espacio para el último elemento */
+}
+.dashboard-column h3 {
+    margin-bottom: 0.75rem; /* Reduce el espacio entre el título y su tabla/gráfico */
+}
+
+/* 3. Estilos de Componentes Específicos */
+.table-container.compact table th,
+.table-container.compact table td {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+}
+.table-container.compact table th {
+    font-size: 0.9rem;
+}
+.chart-container-half {
+    background-color: var(--surface-color);
+    padding: 1.5rem;
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+    height: auto;
+    min-height: 400px;
+}
+
+/* 4. Alineación Personalizada de Tablas del Dashboard */
+#dashboard-totals-table-container td:nth-child(1),
+#dashboard-totals-table-container td:nth-child(3) {
+    text-align: left;
+}
+#logbook-display-dashboard td:nth-child(2),
+#logbook-display-dashboard td:nth-child(5) {
+    text-align: left;
+}
+#recency-summary-container td:nth-child(1) {
+    text-align: left;
+}
+
+/* --- ESTILOS PARA CONFIGURACIÓN DE TARJETAS DEL DASHBOARD (FASE 4.2 AVANZADO) --- */
+
+/* NUEVA CUADRÍCULA PARA LOS SELECTORES DE TARJETAS */
+.card-config-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Dos columnas iguales */
+    gap: 1rem; /* Espacio entre las ranuras */
+}
+
+.card-slot {
+    background-color: var(--background-color);
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+}
+
+.card-slot label {
+    font-size: 0.8rem;
+    color: var(--text-muted-color);
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+}
+
+/* Estilo para la tarjeta fija */
+.card-slot.fixed {
+    background-color: #2a2a2a;
+    grid-column: 1 / -1; /* Ocupa el ancho completo */
+    text-align: center;
+}
+
+.card-slot.fixed p {
+    margin: 0;
+    padding: 0.75rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.card-slot select {
+    width: 100%;
+}
+
+/* Estilo para las tarjetas fijas */
+.card-slot.fixed {
+    background-color: #2a2a2a; /* Un fondo ligeramente diferente */
+}
+
+.card-slot.fixed p {
+    margin: 0;
+    padding: 0.75rem; /* Mismo padding que un select para alinear */
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--primary-color); /* Color dorado para destacar */
+}
+
+/* Estilo para los selectores de las tarjetas personalizables */
+.card-slot select {
+    width: 100%;
+    /* Reutilizamos los estilos existentes de los selectores */
+}
+/* --- ESTILOS PARA ACORDEÓN DE CONFIGURACIÓN --- */
+
+.accordion-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.accordion-item {
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    overflow: hidden; /* Clave para que el borde redondeado se aplique bien */
+}
+
+.accordion-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 0.5rem 1.5rem;
+    background-color: var(--surface-hover-color);
+    border: none;
+    color: var(--text-color-light);
+    cursor: pointer;
+    text-align: left;
+}
+
+.accordion-header h3 {
+    margin: 0.5rem 0;
+    font-size: 1.1rem;
+}
+
+.accordion-icon {
+    font-size: 1.5rem;
+    transition: transform 0.3s ease;
+}
+
+.accordion-header.active .accordion-icon {
+    transform: rotate(180deg);
+}
+
+.accordion-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out, padding 0.3s ease-out;
+    padding: 0 1.5rem;
+}
+
+.accordion-content.active {
+    /* Un valor alto para asegurar que quepa todo el contenido */
+    max-height: 1500px; 
+    padding: 1.5rem;
+}
+
+/* --- ESTILOS PARA NOTIFICACIONES --- */
+.notification {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 1rem 1.5rem;
+    border-radius: var(--border-radius);
+    background-color: var(--surface-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--box-shadow);
+    z-index: 2000;
+    opacity: 0;
+    animation: fadeInOut 5s ease-in-out;
+}
+.notification.error {
+    background-color: var(--accent-color-red);
+    color: white;
+    border-color: #ffc107;
+}
+@keyframes fadeInOut {
+    0%, 100% { opacity: 0; transform: translate(-50%, 20px); }
+    10%, 90% { opacity: 1; transform: translate(-50%, 0); }
+}
+/* --- ESTILOS PARA ACORDEÓN DE CONFIGURACIÓN --- */
+
+/* ... (tus estilos de acordeón existentes) ... */
+
+/* NUEVA CUADRÍCULA DE 2 COLUMNAS PARA EL CONTENIDO DEL ACORDEÓN */
+.settings-grid.two-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem; /* Espacio entre las dos columnas principales */
+}
+
+/* Estilos para cada sección dentro de la cuadrícula */
+.config-section h4 {
+    margin-top: 0; /* Elimina el margen superior del primer título de cada sección */
+}
+
+/* Hacer que el layout sea de una sola columna en pantallas más pequeñas */
+@media (max-width: 900px) {
+    .settings-grid.two-columns {
+        grid-template-columns: 1fr;
+    }
+}
+/* --- ESTILOS PARA FORMULARIO DE DATOS PERSONALES --- */
+
+.personal-data-container {
+    display: grid;
+    /* Dos columnas de igual tamaño */
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem; /* Espacio horizontal y vertical */
+}
+
+.personal-data-item label {
+    margin-bottom: 0.5rem;
+}
+
+.personal-data-item.full-width {
+    /* Hace que el campo Domicilio ocupe ambas columnas */
+    grid-column: 1 / -1;
+}
+/* --- ESTILOS PARA SUBSECCIONES EN CONFIGURACIÓN --- */
+
+.sub-section {
+    padding: 1.5rem;
+    background-color: var(--background-color); /* Un poco más oscuro para contrastar */
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+}
+
+/* Añade un espacio entre las dos subsecciones de la misma columna */
+.sub-section + .sub-section {
+    margin-top: 1.5rem;
+}
+/* --- ESTILOS PARA LA INFO DE LA CARPETA DE RESPALDO --- */
+
+.backup-info {
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    border: 1px dashed var(--border-color);
+    margin-bottom: 1rem;
+    transition: all 0.3s ease;
+}
+
+.backup-info.configured {
+    background-color: rgba(76, 175, 80, 0.1); /* Verde sutil */
+    border-color: var(--accent-color-green);
+    border-style: solid;
+}
+
+.backup-info.not-configured {
+    background-color: rgba(212, 175, 55, 0.1); /* Amarillo sutil */
+    border-color: var(--primary-color);
+}
+
+.backup-info strong {
+    color: var(--text-color-light);
+    margin-right: 0.5rem;
+}
+
+.backup-info span {
+    color: var(--text-muted-color);
+}
+
+.backup-info.configured span {
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+/* --- ESTILOS PARA FORMULARIO DE FILTRO AVANZADO (CORREGIDO) --- */
+
+/* Aplica margen superior solo a los bloques principales que son hijos directos del formulario */
+#advanced-filter-form > .filter-section + .filter-section,
+#advanced-filter-form > .side-by-side-sections {
+    margin-top: 2rem;
+}
+
+#advanced-filter-form h4 {
+    margin-bottom: 1rem;
+}
+
+/* Fila superior con 6 campos */
+.filter-grid-6-col {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 1rem;
+}
+
+/* Fila para Observaciones/Página y para Tiempos */
+.filter-grid-2-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+
+/* Fila para la sección de Roles */
+.filter-grid-3-col {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+}
+
+/* Contenedor que pone a Tiempos y Roles uno al lado del otro */
+.side-by-side-sections {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    align-items: start; /* Asegura que ambos contenedores comiencen en la parte superior */
+}
+
+/* Para que el campo Simulador ocupe el ancho completo de su cuadrícula */
+.full-width-item {
+    grid-column: 1 / -1;
+}
+
+/* --- AJUSTES DE LAYOUT Y ESPACIADO PARA LA VISTA DE CONFIGURACIÓN --- */
+
+/* 1. Convierte la vista en un contenedor Flex para controlar la altura */
+#view-settings.view.active {
+    display: flex;
+    flex-direction: column;
+}
+
+/* 2. El título ocupa su espacio normal */
+#view-settings h2 {
+    margin-top: 0;
+    margin-bottom: 1.5rem; /* Espaciado estándar debajo del título */
+    flex-shrink: 0; /* Evita que el título se encoja */
+}
+
+/* 3. El contenedor principal se ajusta a su contenido */
+#view-settings .settings-container {
+    flex-grow: 0; /* Evita que el contenedor crezca para llenar el espacio */
+    padding: 1.5rem; /* Restablece un padding uniforme y estético */
+}
+
+/* 4. Ajustes finos al botón de guardar */
+#view-settings .navigation-buttons {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color); /* Restaura el borde para separación visual */
+}
+/* --- ESTILO PARA INPUT CON BOTÓN ADJUNTO --- */
+.input-with-button {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.input-with-button input {
+    flex-grow: 1; /* El input ocupa el espacio restante */
+}
+
+.input-with-button button {
+    flex-shrink: 0; /* El botón no se encoge */
+    width: auto;
+    padding: 0.75rem 1.5rem;
+    margin-left: 0;
+}
+
+#hamburger-btn .hamburger-bar {
+    display: block;
+    width: 25px;
+    height: 3px;
+    margin: 5px 0;
+    background-color: var(--text-color); /* <-- Asegúrate de que esta línea esté presente */
+    transition: all 0.3s ease-in-out;
+}
+
+/* --- AJUSTE PERSONALIZADO: REORDENAR Y CENTRAR PAGINACIÓN EN ESCRITORIO --- */
+
+@media (min-width: 801px) {
+    /*
+    El truco aquí es usar 'display: contents'. Esta propiedad hace que el
+    contenedor .pagination-bottom-row "desaparezca" para el layout,
+    "promoviendo" a sus hijos (.pagination-left y #pagination-info)
+    para que se comporten como hijos directos de #pagination-controls.
+    */
+    .pagination-bottom-row {
+        display: contents;
+    }
+
+    /*
+    Ahora que #pagination-controls tiene tres "hijos" de layout,
+    (1: #pagination-buttons, 2: .pagination-left, 3: #pagination-info),
+    el 'justify-content: space-between' que ya tenía los distribuirá
+    correctamente: el primero a la izquierda, el último a la derecha y el
+    del medio en el centro.
+
+    Solo necesitamos reordenarlos para que se vean como queremos.
+    */
+
+    /* Colocamos el texto "Mostrando..." a la izquierda */
+    #pagination-info {
+        order: 1;
+    }
+
+    /* Colocamos los botones "Anterior" y "Siguiente" en el centro */
+    #pagination-buttons {
+        order: 2;
+        display: flex; /* Asegura que los botones internos se alineen bien */
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    /* Colocamos el selector "Vuelos por página" a la derecha */
+    .pagination-left {
+        order: 3;
+        display: flex; /* Para alinear la etiqueta y el selector */
+        align-items: center;
+        gap: 0.5rem;
+    }
+}
+/* ====================================================================== */
+/* =      REESTRUCTURACIÓN AVANZADA DE LA VISTA DE CONFIGURACIÓN        = */
+/* =                   (SOLO PARA ESCRITORIO)                           = */
+/* ====================================================================== */
+
+@media (min-width: 1024px) {
+
+    /* --- ACORDEÓN 1: APP Y DASHBOARD --- */
+
+    /* 
+     * Paso 1: Forzamos el grid principal del primer acordeón a ser de UNA SOLA columna.
+     * Esto hace que el bloque de "Tarjetas del Dashboard" se mueva ABAJO del bloque
+     * que contiene "Fuente de Datos" y "Respaldo".
+    */
+    .accordion-container > .accordion-item:first-child .settings-grid.two-columns {
+        grid-template-columns: 1fr;
+    }
+
+    /* 
+     * Paso 2: Tomamos el primer hijo de esa cuadrícula (el .config-section que
+     * agrupa "Fuente de Datos" y "Respaldo") y lo convertimos en una cuadrícula
+     * de DOS columnas.
+    */
+    .accordion-container > .accordion-item:first-child .config-section:first-child {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem; /* Mantenemos un espaciado consistente */
+        align-items: start; /* Alinea ambas sub-secciones en la parte superior */
+    }
+
+    /* 
+     * Paso 3: Ajustamos la cuadrícula de selección de tarjetas del dashboard 
+     * para que tenga CUATRO columnas. Con 8 tarjetas en total, esto creará
+     * automáticamente el layout de 2 filas y 4 columnas que solicitaste.
+    */
+    #dashboard-cards-config-container.card-config-container {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.5rem; /* Un poco más de espacio para que no se vea apretado */
+    }
+
+    /* --- ACORDEÓN 2: DATOS DEL PILOTO Y LICENCIAS --- */
+    
+    /* 
+     * El segundo acordeón ya tiene la estructura correcta (un .settings-grid.two-columns
+     * con dos .config-section hijos), por lo que las reglas por defecto de `style.css`
+     * lo mostrarán en dos columnas sin necesidad de añadir código nuevo.
+     * Los cambios anteriores, al ser más específicos, no le afectan.
+    */
+}
+/* --- AJUSTE PARA EL SELECTOR "Vuelos por página" --- */
+
+/* 1. Hacemos que el contenedor sea un layout flex para alinear sus hijos */
+#pagination-controls .pagination-left {
+    display: flex;
+    align-items: center; /* Centra verticalmente el texto y el selector */
+    gap: 0.75rem; /* Espacio entre el texto y el selector */
+}
+
+/* 2. Anulamos el 'display: block' solo para este label específico */
+#pagination-controls .pagination-left label {
+    display: inline; /* Permite que el selector se ponga a su lado */
+    margin-bottom: 0; /* Quitamos el margen inferior que ya no es necesario */
+    white-space: nowrap; /* Evita que el texto "Vuelos por página" se parta en dos líneas */
+}
+
+/* --- LÍNEA SEPARADORA PARA CAMBIOS DE PÁGINA EN LA BITÁCORA --- */
+tr.page-break td {
+    /* Dibuja un borde superior grueso y dorado en todas las celdas de la fila */
+    border-top: 3px solid var(--primary-color) !important;
+}

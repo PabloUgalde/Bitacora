@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bitácora de Vuelo Pro (v22 - Tema Premium)</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/idb-keyval@6/dist/umd.js"></script>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="custom-styles.css">
+    <link rel="stylesheet" href="mobile.css">
+    <link rel="stylesheet" href="print.css" media="print">
+</head>
+<body>
+    <header>
+        <a href="#" data-view="view-dashboard" class="logo-link nav-link">
+            <div class="pilot-epaulette"><div class="stripe"></div><div class="stripe"></div><div class="stripe"></div><div class="stripe"></div></div>
+            <span class="logo-text">Mi Bitácora de Vuelo</span>
+        </a>
+        <button id="hamburger-btn" aria-label="Abrir menú">
+            <span class="hamburger-bar"></span>
+            <span class="hamburger-bar"></span>
+            <span class="hamburger-bar"></span>
+        </button>
+        <nav id="main-nav">
+            <a href="#" data-view="view-dashboard" class="nav-link active">Dashboard</a>
+            <a href="#" data-view="view-add-flight" class="nav-link">Añadir Vuelo</a>
+            <a href="#" data-view="view-logbook" class="nav-link">Registro Detallado</a>
+            <div class="nav-dropdown">
+                <a href="#" class="nav-link" id="summaries-dropdown-toggle">Resúmenes ▼</a>
+                <div class="nav-dropdown-menu" id="summaries-dropdown-menu">
+                    <a href="#" data-view="view-summaries-by-page" class="nav-link">Por Página</a>
+                    <hr>
+                    <a href="#" data-view="view-summary-by-time" class="nav-link">Anual / Mensual</a>
+                    <a href="#" data-view="view-summary-by-type" class="nav-link">Por Tipo de Avión</a>
+                    <a href="#" data-view="view-summary-by-aircraft" class="nav-link">Por Aeronave</a>
+                    <a href="#" data-view="view-summary-by-airport" class="nav-link">Por Aeródromo</a>
+                    <a href="#" data-view="view-summary-ifr" class="nav-link">Resumen IFR</a>
+                </div>
+            </div>
+            <a href="#" data-view="view-settings" class="nav-link">Configuración</a>
+        </nav>
+        <!-- FIN DE LA MODIFICACIÓN -->
+    </header>
+
+    <main>
+        <div id="view-dashboard" class="view active">
+            <div class="dashboard-hero-bg"><img src="logo-avion.png" alt="Logo Avión"></div>
+            <div class="dashboard-content">
+                <h2>Resumen General</h2>
+                <div id="totals-display" class="card-container"></div>
+                <div class="dashboard-grid-main">
+                    <div class="dashboard-column">
+                        <h3>Totales Detallados</h3>
+                        <div id="dashboard-totals-table-container" class="table-container compact"></div>
+                        <h3>Últimos Vuelos</h3>
+                        <div id="logbook-display-dashboard" class="table-container"></div>
+                    </div>
+                    <div class="dashboard-column">
+                        <h3>Distribución de Tiempos de Vuelo</h3>
+                        <div class="chart-container-half"><canvas id="flight-time-pie-chart"></canvas></div>
+                        <h3>Actividad Reciente (Períodos Móviles)</h3>
+                        <div id="recency-summary-container" class="table-container"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="view-add-flight" class="view">
+            <form id="flight-form" novalidate>
+                <h2 id="flight-form-title">Añadir Nuevo Vuelo</h2>
+                <p id="status-message" class="status"></p>
+                <div class="form-step active" id="step-1">
+                    <h3>Paso 1: Datos del Vuelo</h3>
+                    <div class="form-grid">
+                        <div><label for="fecha">Fecha</label><input type="date" id="fecha"></div>
+                        <div><label class="required" for="aeronave">Aeronave</label><input type="text" id="aeronave" placeholder="Ej: C172"></div>
+                        <div><label class="required" for="matricula">Matrícula</label><input type="text" id="matricula" placeholder="Ej: CC-ABC"></div>
+                        <div><label class="required" for="desde">Desde</label><input type="text" id="desde" placeholder="Ej: SCEL"></div>
+                        <div><label class="required" for="hasta">Hasta</label><input type="text" id="hasta" placeholder="Ej: SCVH"></div>
+                    </div>
+                    <div class="navigation-buttons"><button type="button" class="next-btn">Siguiente →</button></div>
+                </div>
+                <div class="form-step" id="step-2">
+                    <h3>Paso 2: Tiempos y Aterrizajes</h3>
+                    <div class="form-grid">
+                        <div><label class="required" for="duracion">Duración Total</label><input type="number" step="0.1" min="0" id="duracion" placeholder="Ej: 1.5"></div>
+                        <div><label class="required" for="tipoAvion">Tipo de Avión</label><select id="tipoAvion"></select></div>
+                        <div><label class="required" for="condicionDiurno">Horas Diurnas</label><input type="number" step="0.1" min="0" id="condicionDiurno" placeholder="Ej: 1.5"></div>
+                        <div><label for="condicionNocturno">Horas Nocturnas</label><input type="number" step="0.1" min="0" id="condicionNocturno" placeholder="Ej: 0"></div>
+                        <div><label for="condicionIFR">Horas IFR</label><input type="number" step="0.1" min="0" id="condicionIFR" placeholder="Subconjunto de total"></div>
+                        <div id="ifr-approaches-container" class="hidden" style="grid-column: 1 / -1;"><div class="form-grid"><div><label for="approaches-no">Nº Aprox. (NO)</label><input type="number" min="0" id="approaches-no" placeholder="Ej: 2"></div><div><label for="approaches-tip">Tipo Aprox. (Tip)</label><input type="text" id="approaches-tip" placeholder="Ej: ILS, VOR"></div></div></div>
+                        <div><label>Aterrizajes Día</label><input type="number" min="0" id="aterrizajesDia" placeholder="Ej: 1"></div>
+                        <div><label>Aterrizajes Noche</label><input type="number" min="0" id="aterrizajesNoche" placeholder="Ej: 0"></div>
+                    </div>
+                    <div class="navigation-buttons"><button type="button" class="prev-btn">← Anterior</button><button type="button" class="next-btn">Siguiente →</button></div>
+                </div>
+                <div class="form-step" id="step-3">
+                    <h3>Paso 3: Roles y Observaciones</h3>
+                    <div id="pilot-roles-container">
+                        <h4>Tiempo como Piloto</h4>
+                        <div class="form-grid">
+                            <div><label>PIC</label><input type="number" step="0.1" min="0" id="rol-pic" placeholder="Ej: 1.5"></div>
+                            <div><label>SIC</label><input type="number" step="0.1" min="0" id="rol-sic" placeholder="Ej: 0"></div>
+                            <div><label>Como Instructor</label><input type="number" step="0.1" min="0" id="rol-instructor" placeholder="Ej: 0"></div>
+                        </div>
+                    </div>
+                    <div id="student-roles-container"><h4>Tiempo como Alumno</h4><p class="form-hint">Como alumno, la "Instrucción Recibida" debe ser igual a la Duración Total.</p></div>
+                    <div id="other-roles-container">
+                        <h4>Otros Tiempos de Vuelo</h4>
+                        <div class="form-grid">
+                            <div><label>Instrucción Recibida</label><input type="number" step="0.1" min="0" id="rol-instruccion" placeholder="Ej: 0"></div>
+                            <div><label>Solo</label><input type="number" step="0.1" min="0" id="rol-solo" placeholder="Subconjunto de PIC"></div>
+                            <div><label>Travesía</label><input type="number" step="0.1" min="0" id="rol-travesia" placeholder="Subconjunto de total"></div>
+                            <div><label>Simulador</label><input type="number" step="0.1" min="0" id="rol-simulador" placeholder="Ej: 1.0"></div>
+                        </div>
+                    </div>
+                    <div class="form-group-full" style="margin-top: 1rem;"><label for="observaciones">Observaciones</label><textarea id="observaciones" rows="3"></textarea></div>
+                    <div class="navigation-buttons"><button type="button" class="prev-btn">← Anterior</button><button type="button" id="review-flight-btn" class="next-btn">Revisar Vuelo →</button></div>
+                </div>
+                <div class="form-step" id="step-4">
+                    <h3>Paso 4: Revisar y Guardar</h3>
+                    <p>Por favor, revisa que todos los datos sean correctos. Así se verá el registro en tu bitácora.</p>
+                    <div id="flight-preview-container"></div>
+                    <div class="navigation-buttons"><button type="button" class="prev-btn">← Corregir</button><button type="submit" class="submit-btn">Guardar Vuelo Definitivo</button></div>
+                </div>
+            </form>
+        </div>
+        <div id="view-logbook" class="view">
+            <div class="logbook-header">
+                <h2>Registro Detallado de Vuelos</h2>
+                <div id="logbook-controls">
+                    <div class="nav-dropdown">
+                        <button id="sort-order-toggle" class="next-btn" title="Ordenar Vuelos">
+                        <span class="button-text">Ordenar por: Carga ⇕</span>
+                        </button>
+                        <div class="nav-dropdown-menu" id="sort-order-menu">
+                            <a href="#" class="sort-option" data-sort="natural">Orden de Carga</a>
+                            <a href="#" class="sort-option" data-sort="desc">Fecha (Más Reciente)</a>
+                            <a href="#" class="sort-option" data-sort="asc">Fecha (Más Antiguo)</a>
+                        </div>
+                    </div>
+                    <div id="active-filters-display"></div>
+                    <button id="clear-logbook-filter-btn" class="prev-btn hidden" style="width: auto; padding: 0.75rem 1.5rem;">Borrar Filtro</button>
+                    <button id="open-filter-modal-btn" class="next-btn" style="width: auto; padding: 0.75rem 1.5rem;" title="Filtrar Vuelos">
+                        <span class="button-text">Filtro Avanzado</span>
+                    </button>
+                    <button id="open-print-modal-btn" class="submit-btn" style="width: auto; padding: 0.75rem 1.5rem; margin-left: 1rem;" title="Imprimir Reporte">
+                        <span class="button-text">Imprimir Reporte</span>
+                    </button>
+                </div>
+            </div>
+            <div id="detailed-logbook-container">
+            </div>
+                <div id="pagination-controls">
+                    <!-- Fila 1: Botones (RESTAURADOS) -->
+                    <div id="pagination-buttons" class="pagination-center"></div>
+
+                    <!-- Fila 2: Selector y texto -->
+                    <div class="pagination-bottom-row">
+                        <div class="pagination-left">
+                            <label for="items-per-page">Vuelos por página:</label>
+                            <!-- El <select> nativo para escritorio -->
+                            <select id="items-per-page-desktop" class="desktop-only">
+                                <option value="50" selected>50</option>
+                                <option value="100">100</option>
+                                <option value="150">150</option>
+                                <option value="200">200</option>
+                            </select>
+                            <!-- El menú personalizado para móvil -->
+                            <div id="items-per-page-custom-select" class="mobile-only">
+                                <button id="items-per-page-btn">15</button>
+                                <div id="items-per-page-menu">
+                                    <button data-value="15">15</button>
+                                    <button data-value="30">30</button>
+                                    <button data-value="50">50</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="pagination-info" class="pagination-right"></div>
+                    </div>
+                </div>
+        </div>
+        <div id="view-summaries-by-page" class="view"><div class="logbook-header"><h2>Resumen por Página</h2></div><div id="summary-by-page-container"></div></div>
+        <div id="view-summary-by-time" class="view"><div class="summary-controls"><h2>Resumen Anual y Mensual</h2><div class="summary-filters"><div class="filter-group"><label for="time-summary-year-select">Seleccionar Año:</label><select id="time-summary-year-select"></select></div></div></div><div id="yearly-summary-table-container"></div><div id="monthly-breakdown-container"></div></div>
+        <div id="view-summary-by-type" class="view">
+            <div class="summary-controls">
+                <h2>Resumen por Tipo de Avión</h2>
+                <div class="summary-filters">
+                    <div class="filter-group">
+                        <label for="type-summary-year-select">Año:</label>
+                        <select id="type-summary-year-select"></select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="type-summary-month-select">Mes:</label>
+                        <select id="type-summary-month-select"></select>
+                    </div>
+                </div>
+            </div>
+            <div id="type-summary-table-container">
+                <!-- La tabla se generará aquí -->
+            </div>
+        </div>
+        <div id="view-summary-by-airport" class="view"><div class="summary-controls"><h2>Resumen por Aeródromo</h2><div class="summary-filters"><div class="filter-group"><label for="airport-summary-year-select">Año:</label><select id="airport-summary-year-select"></select></div><div class="filter-group"><label for="airport-summary-month-select">Mes:</label><select id="airport-summary-month-select"></select></div></div></div><div id="airport-summary-table-container"></div></div>
+        <div id="view-summary-by-aircraft" class="view"><div class="summary-controls"><h2>Resumen por Aeronave</h2><div class="summary-filters"><div class="filter-group"><label for="aircraft-summary-year-select">Año:</label><select id="aircraft-summary-year-select"></select></div><div class="filter-group"><label for="aircraft-summary-month-select">Mes:</label><select id="aircraft-summary-month-select"></select></div><div class="filter-group"><label>Agrupar por:</label><div class="button-group" id="aircraft-group-by-buttons"><button class="toggle-btn active" data-value="Aeronave Marca y Modelo">Modelo</button><button class="toggle-btn" data-value="Matricula Aeronave">Matrícula</button></div></div></div></div><div id="aircraft-summary-table-container"></div></div>
+        <div id="view-summary-ifr" class="view"><div class="summary-controls"><h2>Resumen IFR</h2><div class="summary-filters"><div class="filter-group"><label for="ifr-summary-year-select">Año:</label><select id="ifr-summary-year-select"></select></div><div class="filter-group"><label for="ifr-summary-month-select">Mes:</label><select id="ifr-summary-month-select"></select></div><div class="filter-group"><label>Agrupar por:</label><div class="button-group" id="ifr-group-by-buttons"><button class="toggle-btn active" data-value="Aeronave Marca y Modelo">Modelo</button><button class="toggle-btn" data-value="Matricula Aeronave">Matrícula</button></div></div></div></div><div id="ifr-summary-table-container"></div></div>
+        
+        <div id="view-settings" class="view">
+            <h2>Configuración</h2>
+            <div class="settings-container accordion-container">
+                
+                <!-- ACORDEÓN 1: APP, DATOS Y DASHBOARD -->
+                <div class="accordion-item">
+                    <button class="accordion-header">
+                        <h3>Configuración de la App y Dashboard</h3><span class="accordion-icon">▼</span>
+                    </button>
+                    <div class="accordion-content">
+                        <div class="settings-grid two-columns">
+                            
+                            <!-- COLUMNA IZQUIERDA: GESTIÓN DE DATOS -->
+                            <div class="config-section">
+                                <!-- Subsección: Fuente de Datos -->
+                                <div class="sub-section">
+                                    <h4>Fuente de Datos y Gestión</h4>
+                                    <p>Elige tu modo de almacenamiento y gestiona tus datos desde archivos Excel.</p>
+                                    <div class="settings-grid data-source-grid" style="grid-template-columns: 1fr;">
+                                        <div><label for="data-source-select">Modo de almacenamiento</label><select id="data-source-select"><option value="local">Local</option><option value="google_sheets">Google Sheets</option></select></div>
+                                        <div id="google-sheets-url-container" class="hidden">
+                                            <label for="google-sheets-url">URL de la API</label>
+                                            <div class="input-with-button">
+                                                <input type="url" id="google-sheets-url">
+                                                <button type="button" id="load-from-sheets-btn" class="next-btn">Cargar</button>
+                                            </div>
+                                        </div>                                    
+                                    </div>
+                                    <div class="navigation-buttons" style="border: none; padding-top: 1rem; flex-wrap: wrap; justify-content: flex-start; gap: 1rem;">
+                                        <input type="file" id="excel-file-input" accept=".xlsx, .xls" style="display: none;">
+                                        <button id="upload-excel-btn" type="button" class="next-btn" style="width: auto; margin-left: 0;">Cargar (Excel)</button>
+                                        <button id="download-excel-btn" type="button" class="submit-btn" style="width: auto;">Descargar (Excel)</button>
+                                        <button id="sync-to-sheets-btn" type="button" class="submit-btn" style="width: auto; background-color: #4CAF50;">Subir a Google Sheets</button>
+                                        <p id="data-status" class="status" style="width: 100%; margin: 0.5rem 0 0 0;"></p>
+                                    </div>
+                                </div>
+
+                                <!-- Subsección: Respaldo Automático -->
+                                <div class="sub-section">
+                                    <h4>Respaldo Automático</h4>
+                                    <p>Configura una carpeta para guardar copias de seguridad automáticas.</p>
+                                        <div id="backup-folder-display" class="backup-info">
+                                            <!-- El estado y la ruta se mostrarán aquí -->
+                                        </div>
+                                        <div class="filter-group" style="margin-bottom: 1rem;">
+                                            <label for="backup-retention-select">Guardar respaldos por:</label>
+                                            <select id="backup-retention-select">
+                                                <option value="0">Siempre</option>
+                                                <option value="7">7 días</option>
+                                                <option value="30" selected>30 días</option>
+                                                <option value="90">90 días</option>
+                                            </select>
+                                        </div>
+                                    <div id="local-data-management">
+                                        <div class="navigation-buttons" style="border: none; padding-top: 0.5rem; flex-wrap: wrap; justify-content: flex-start; gap: 1rem;">
+                                            <button id="setup-backup-btn" type="button" class="next-btn" style="width: auto; margin-left: 0;">Configurar Carpeta</button>
+                                            <button id="restore-backup-btn" type="button" class="submit-btn" style="width: auto;">Restaurar</button>
+                                            <button id="clear-local-data-btn" type="button" class="prev-btn" style="background-color: var(--accent-color-red); width: auto; margin-left: auto;">Borrar Info Vuelos</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- COLUMNA DERECHA: TARJETAS DEL DASHBOARD -->
+                            <div class="config-section" style="margin-top: 2rem;">
+                                <h4>Tarjetas del Dashboard</h4>
+                                <p>La tarjeta "Horas Totales" es fija. Personaliza las 7 restantes.</p>
+                                <div id="dashboard-cards-config-container" class="card-config-container">
+                                    <!-- Las ranuras se generarán aquí -->
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ACORDEÓN 2: DATOS DEL PILOTO Y LICENCIAS (FUSIONADO) -->
+                <div class="accordion-item">
+                    <button class="accordion-header">
+                        <h3>Datos del Piloto y Licencias</h3><span class="accordion-icon">▼</span>
+                    </button>
+                    <div class="accordion-content">
+                        <div class="settings-grid two-columns">
+                            <div class="config-section">
+                                <form id="pilot-data-form">
+                                    <h4>Datos Personales</h4>
+                                    <!-- NUEVA ESTRUCTURA PARA DATOS PERSONALES -->
+                                    <div class="personal-data-container">
+                                        <div class="personal-data-item">
+                                            <label for="profile-nombre">Nombre</label>
+                                            <input type="text" id="profile-nombre">
+                                        </div>
+                                        <div class="personal-data-item">
+                                            <label for="profile-rut">R.U.T.</label>
+                                            <input type="text" id="profile-rut">
+                                        </div>
+                                        <div class="personal-data-item">
+                                            <label for="profile-nacimiento">Fecha de Nacimiento</label>
+                                            <input type="date" id="profile-nacimiento">
+                                        </div>
+                                        <div class="personal-data-item">
+                                            <label for="profile-ci">Carné de Identidad</label>
+                                            <input type="text" id="profile-ci">
+                                        </div>
+                                        <div class="personal-data-item">
+                                            <label for="profile-telefono">Teléfono</label>
+                                            <input type="tel" id="profile-telefono">
+                                        </div>
+                                        <div class="personal-data-item">
+                                            <label for="profile-email">E-mail</label>
+                                            <input type="email" id="profile-email">
+                                        </div>
+                                        <div class="personal-data-item full-width">
+                                            <label for="profile-domicilio">Domicilio</label>
+                                            <input type="text" id="profile-domicilio">
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="config-section">
+                                <form id="licenses-data-form">
+                                    <h4>Licencias</h4>
+                                    <p>El rol (Alumno/Piloto) se determina automáticamente.</p>
+                                    <div class="licenses-container">
+                                        <div class="license-header"><span>Descripción</span><span>Número</span><span>Fecha</span></div>
+                                        <div class="license-item"><label>Alumno Piloto</label><input type="text" id="lic-ap-numero" data-license-type="student"><input type="date" id="lic-ap-fecha"></div>
+                                        <div class="license-item"><label>Piloto Deportivo</label><input type="text" id="lic-pd-numero" data-license-type="pilot"><input type="date" id="lic-pd-fecha"></div>
+                                        <div class="license-item"><label>Piloto Privado</label><input type="text" id="lic-pp-numero" data-license-type="pilot"><input type="date" id="lic-pp-fecha"></div>
+                                        <div class="license-item"><label>Piloto Comercial</label><input type="text" id="lic-pc-numero" data-license-type="pilot"><input type="date" id="lic-pc-fecha"></div>
+                                        <div class="license-item"><label>Piloto de TLA</label><input type="text" id="lic-ptla-numero" data-license-type="pilot"><input type="date" id="lic-ptla-fecha"></div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="navigation-buttons">
+                    <p id="settings-status" class="status"></p>
+                    <button id="save-settings-btn" type="button" class="submit-btn" style="width: auto; margin-left: auto;">Guardar Toda la Configuración</button>
+                </div>
+                
+            </div>
+        </div>
+        <div id="restore-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header"><h3>Selecciona un Respaldo para Restaurar</h3><span class="close-button">×</span></div>
+                <p>Se encontraron los siguientes respaldos. El más reciente está arriba.</p>
+                <div id="backup-list-container"></div>
+            </div>
+        </div>
+        <div id="filter-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Filtro Avanzado</h3>
+                    <span class="close-button">×</span>
+                </div>
+                <form id="advanced-filter-form">
+                    <!-- SECCIÓN 1: DATOS GENERALES -->
+                    <div class="filter-section">
+                        <h4>Datos Generales</h4>
+                        <!-- Cuadrícula para la primera fila de 6 campos -->
+                        <div class="filter-grid-6-col">
+                            <div><label>Aeronave</label><input type="text" id="filter-aeronave" data-filter-key="Aeronave Marca y Modelo"></div>
+                            <div><label>Matrícula</label><input type="text" id="filter-matricula" data-filter-key="Matricula Aeronave"></div>
+                            <div><label>Desde</label><input type="text" id="filter-desde" data-filter-key="Desde"></div>
+                            <div><label>Hasta</label><input type="text" id="filter-hasta" data-filter-key="Hasta"></div>
+                            <div><label>Fecha Desde</label><input type="date" id="filter-date-from" data-filter-key="Fecha-min"></div>
+                            <div><label>Fecha Hasta</label><input type="date" id="filter-date-to" data-filter-key="Fecha-max"></div>
+                        </div>
+                        <!-- Cuadrícula para la segunda fila de 2 campos -->
+                        <div class="filter-grid-2-col" style="margin-top: 1rem;">
+                            <div><label>Observaciones contiene</label><input type="text" id="filter-observaciones" data-filter-key="Observaciones"></div>
+                            <div><label>Página de Bitácora (Nº exacto)</label><input type="number" id="filter-pagina" data-filter-key="Pagina Bitacora a Replicar"></div>
+                        </div>
+                    </div>
+
+                    <!-- CONTENEDOR PRINCIPAL PARA LAS DOS SECCIONES INFERIORES -->
+                    <div class="side-by-side-sections">
+                        <!-- SECCIÓN 2: TIEMPOS Y ATERRIZAJES (IZQUIERDA) -->
+                        <div class="filter-section">
+                            <h4>Tiempos y Aterrizajes (mínimo)</h4>
+                            <div class="filter-grid-2-col">
+                                <div><label>Duración Total ≥</label><input type="number" step="0.1" min="0" id="filter-duracion-min" data-filter-key="Duracion Total de Vuelo-min" placeholder="Ej: 1.5"></div>
+                                <div><label>IFR ≥</label><input type="number" step="0.1" min="0" id="filter-ifr-min" data-filter-key="IFR-min"></div>
+                                <div><label>Diurno ≥</label><input type="number" step="0.1" min="0" id="filter-diurno-min" data-filter-key="Diurno-min"></div>
+                                <div><label>Aterrizajes Día ≥</label><input type="number" min="0" id="filter-aterrizajes-dia-min" data-filter-key="Aterrizajes Dia-min"></div>
+                                <div><label>Nocturno ≥</label><input type="number" step="0.1" min="0" id="filter-nocturno-min" data-filter-key="Nocturno-min"></div>
+                                <div><label>Aterrizajes Noche ≥</label><input type="number" min="0" id="filter-aterrizajes-noche-min" data-filter-key="Aterrizajes Noche-min"></div>
+                            </div>
+                        </div>
+
+                        <!-- SECCIÓN 3: ROLES (DERECHA) -->
+                        <div class="filter-section">
+                            <h4>Roles (mínimo)</h4>
+                            <div class="filter-grid-3-col">
+                                <div><label>PIC ≥</label><input type="number" step="0.1" min="0" id="filter-pic-min" data-filter-key="Piloto al Mando (PIC)-min"></div>
+                                <div><label>SIC ≥</label><input type="number" step="0.1" min="0" id="filter-sic-min" data-filter-key="Copiloto (SIC)-min"></div>
+                                <div><label>Instructor ≥</label><input type="number" step="0.1" min="0" id="filter-instructor-min" data-filter-key="Como Instructor-min"></div>
+                                <div><label>Instrucción ≥</label><input type="number" step="0.1" min="0" id="filter-instruccion-min" data-filter-key="Instruccion Recibida-min"></div>
+                                <div><label>Solo ≥</label><input type="number" step="0.1" min="0" id="filter-solo-min" data-filter-key="Solo-min"></div>
+                                <div><label>Travesía ≥</label><input type="number" step="0.1" min="0" id="filter-travesia-min" data-filter-key="Travesia-min"></div>
+                                <!-- Campo de simulador que ocupa todo el ancho de la última fila -->
+                                <div class="full-width-item">
+                                    <label>Simulador ≥</label>
+                                    <input type="number" step="0.1" min="0" id="filter-simulador-min" data-filter-key="Simulador o Entrenador de Vuelo-min">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="navigation-buttons">
+                        <button type="button" id="reset-filter-btn" class="prev-btn">Limpiar Filtros</button>
+                        <button type="submit" id="apply-filter-btn" class="next-btn">Aplicar Filtro</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+<!-- Pega esto al final de <main>, antes de la etiqueta de cierre </main> -->
+<div id="print-modal" class="modal">
+    <div class="modal-content" style="max-width: 550px;">
+        <div class="modal-header">
+            <h3>Generar Reporte de Vuelo</h3>
+            <span class="close-button">×</span>
+        </div>
+        <form id="print-report-form">
+            <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
+                <div>
+                    <label for="print-page-from">Desde la página Nº:</label>
+                    <input type="number" id="print-page-from" min="1" placeholder="Ej: 1">
+                </div>
+                <div>
+                    <label for="print-page-to">Hasta la página Nº:</label>
+                    <input type="number" id="print-page-to" min="1" placeholder="Última">
+                </div>
+            </div>
+            <div class="form-group-full" style="margin-top: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                <input type="checkbox" id="print-include-summary" checked style="width: auto;">
+                <label for="print-include-summary" style="margin-bottom: 0;">Incluir página de resumen de totales</label>
+            </div>
+            <div class="navigation-buttons">
+                <button type="submit" class="next-btn">Generar e Imprimir</button>
+            </div>
+        </form>
+    </div>
+</div>
+<!-- ====================================================== -->
+<!-- =         MODAL DE SINCRONIZACIÓN DE DATOS (v2)      = -->
+<!-- ====================================================== -->
+<div id="sync-prompt-modal" class="modal">
+    <div class="modal-content" style="max-width: 650px;">
+        <div class="modal-header">
+            <h3>Cambio de Fuente a Google Sheets</h3>
+        </div>
+        <div>
+            <p>Has guardado <strong id="local-flight-count" style="font-size: 1.1rem;">X</strong> vuelos en este dispositivo mientras usabas el modo local.</p>
+            <p>Ahora que te conectarás a Google Sheets, ¿qué quieres hacer con esos vuelos locales?</p>
+            
+            <div class="sync-option" style="background-color: rgba(76, 175, 80, 0.1); padding: 1rem; border-radius: var(--border-radius); border: 1px solid var(--accent-color-green);">
+                <h4>Opción 1: Fusionar Datos (Recomendado)</h4>
+                <p>Se añadirán tus vuelos locales a tu hoja de Google Sheets, sin borrar nada de lo que ya tengas en la nube. <strong>Es la opción más segura para no perder información.</strong></p>
+                <button id="sync-action-merge" class="submit-btn" style="width: 100%; margin-top: 0.5rem;">Fusionar mis datos locales con Sheets</button>
+            </div>
+
+            <div class="sync-option" style="background-color: rgba(211, 47, 47, 0.1); padding: 1rem; border-radius: var(--border-radius); border: 1px solid var(--accent-color-red); margin-top: 1.5rem;">
+                <h4>Opción 2: Usar Solo Google Sheets</h4>
+                <p>Se ignorarán tus vuelos locales y la aplicación cargará <strong>únicamente</strong> lo que existe en tu hoja de Google Sheets. <strong>¡Atención! Perderás los vuelos guardados en este dispositivo.</strong></p>
+                <button id="sync-action-replace" class="prev-btn" style="width: 100%; margin-top: 0.5rem; background-color: var(--accent-color-red);">Ignorar datos locales</button>
+            </div>
+            
+            <div class="navigation-buttons" style="margin-top: 2rem; border-top: 1px solid var(--border-color); padding-top: 1.5rem;">
+                <button id="sync-action-cancel" class="prev-btn">No cambiar, seguir en modo Local</button>
+            </div>
+        </div>
+    </div>
+</div>   
+    <script src="state.js"></script>
+    <script src="summary-renderer.js"></script>
+    <script src="ui-render.js"></script>
+    <script src="ui.js"></script>
+    <script src="data-importer.js"></script>
+    <script src="backup-manager.js"></script> 
+    <script src="report-generator.js"></script> 
+    <script src="api.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

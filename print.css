@@ -1,0 +1,123 @@
+/* --- ESTILOS PARA LA IMPRESIÓN Y VISTA PREVIA DE REPORTES --- */
+
+@media screen {
+    #print-report-body { background-color: #555 !important; display: flex; flex-direction: column; align-items: center; gap: 20px; padding: 20px 0; }
+    #print-report-body .page { background: white !important; margin: 0; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
+}
+
+#print-report-body { color: #000 !important; font-family: system-ui, sans-serif; font-size: 10pt; }
+#print-report-body .page { width: 29.7cm; height: 20.9cm; padding: 1cm; box-sizing: border-box; page-break-after: always; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+#print-report-body .page:last-child { page-break-after: auto; }
+
+#print-report-body .page::before { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 60%; height: 60%; background-image: url('logo-avion-osc.png'); background-repeat: no-repeat; background-position: center; background-size: contain; opacity: 0.12; z-index: 1; }
+#print-report-body .page > * { position: relative; z-index: 2; }
+
+@media print {
+    @page { size: landscape; margin: 1cm; }
+    #print-report-body { background-color: transparent !important; }
+    #print-report-body .page { width: auto; height: auto; margin: 0; padding: 0; box-shadow: none !important; border: none !important; }
+}
+
+/* --- ESTILOS DE LA PÁGINA DE RESUMEN (CORREGIDOS) --- */
+.report-header { display: flex; align-items: center; gap: 1.5rem; padding-bottom: 0.3cm; border-bottom: 2px solid #000; }
+.report-logo { height: 60px; width: auto; }
+.report-header h1 { margin: 0; font-size: 18pt; color: #000; }
+/* --- INICIO DE LA CORRECCIÓN: Estilos para la nueva tabla de info --- */
+.info-details-table { width: 100%; border-collapse: collapse; margin: 0.3cm 0; border-bottom: 1px solid #ccc; }
+.info-details-table td { vertical-align: top; padding: 0.2cm 0; }
+.info-details-table p { margin: 3px 0; font-size: 10pt; }
+.info-licencias table { width: 100%; }
+.info-licencias td { padding: 1px 0; font-size: 9pt; }
+.info-reporte { text-align: right; }
+/* --- FIN DE LA CORRECCIÓN --- */
+#print-report-body .summary-page h3 { padding: 0.3cm 0 0.2cm; margin: 0; font-size: 13pt; color: #000; border: none; }
+.totals-grid-container { display: flex; gap: 1.5cm; }
+.totals-column { flex: 1; }
+
+/* --- INICIO DE LA CORRECCIÓN: Estilos para las tablas de totales --- */
+.totals-group h4 {
+    font-size: 10pt;
+    font-weight: bold;
+    margin: 8px 0 4px 0;
+    padding-left: 5px; /* Pequeño margen para el título */
+}
+
+.totals-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 15px;
+    table-layout: fixed; /* Forzar anchos de columna */
+}
+.totals-table td {
+    padding: 4px 8px; /* Aumentado padding horizontal */
+    font-size: 8.5pt;
+    border: 1px solid #ccc;
+}
+/* Definir anchos de columna fijos para la alineación perfecta */
+.totals-table td:nth-child(1) { width: 32%; }
+.totals-table td:nth-child(2) { width: 18%; text-align: center; font-family: 'Courier New', Courier, monospace; }
+.totals-table td:nth-child(3) { width: 32%; }
+.totals-table td:nth-child(4) { width: 18%; text-align: center; font-family: 'Courier New', Courier, monospace; }
+/* --- FIN DE LA CORRECCIÓN --- */
+
+.recency-table { width: 100%; margin: 8px 0; border-collapse: collapse; }
+.recency-table th, .recency-table td { padding: 4px; border: 1px solid #ccc; text-align: left; }
+.recency-table th { background-color: #EEE !important; font-weight: bold; }
+.recency-table td:not(:first-child) { text-align: center; }
+.report-footer { margin-top: auto; padding-top: 0.3cm; border-top: 1px solid #ccc; font-size: 8pt; font-style: italic; }
+
+/* MARCA DE AGUA VISIBLE A TRAVÉS DE TABLAS */
+#print-report-body .summary-page table,
+#print-report-body .logbook-page table { background-color: transparent !important; }
+#print-report-body .summary-page th, #print-report-body .summary-page td,
+#print-report-body .logbook-page th, #print-report-body .logbook-page td { background-color: transparent !important; }
+#print-report-body .recency-table th { background-color: rgba(238, 238, 238, 0.8) !important; }
+
+/* ESTILOS PARA LA TABLA DE BITÁCORA */
+.logbook-page .table-container { border: none; overflow: visible; flex-grow: 1; }
+#print-report-body .logbook-page table { width: 100%; border-collapse: collapse; table-layout: fixed; border: 2px solid #000; }
+#print-report-body .logbook-page thead { display: table-header-group; }
+#print-report-body .logbook-page th, #print-report-body .logbook-page td { border: 1px solid #333 !important; padding: 2px; font-size: 8pt; vertical-align: middle; text-align: center; word-break: break-word; }
+#print-report-body .logbook-page th { color: #000 !important; }
+#print-report-body .logbook-page td { vertical-align: top; font-family: 'Courier New', Courier, monospace; color: #000 !important; }
+#print-report-body .logbook-page thead tr:first-child th { white-space: nowrap; }
+#print-report-body .logbook-page thead tr:last-child th { height: 100px; padding: 2px; }
+#print-report-body .rotated-header { display: flex; align-items: center; justify-content: center; height: 100%; }
+#print-report-body .rotated-header > span { font-weight: bold; font-size: 8pt; writing-mode: vertical-rl; transform: rotate(180deg); }
+
+/* --- LÍNEAS DIVISORIAS PARA EL REPORTE (COPIA AUTÓNOMA) --- */
+/* Línea horizontal gruesa bajo los encabezados */
+#print-report-body #detailed-logbook-container thead tr:last-child th,
+#print-report-body #detailed-logbook-container thead tr:first-child th[rowspan] {
+    border-bottom: 2px solid #000 !important;
+}
+
+/* Líneas verticales gruesas (con prefijo de seguridad y nth-child corregidos para 29 columnas) */
+#print-report-body #detailed-logbook-container thead tr:first-child th:nth-child(3),
+#print-report-body #detailed-logbook-container thead tr:first-child th:nth-child(4),
+#print-report-body #detailed-logbook-container thead tr:first-child th:nth-child(5),
+#print-report-body #detailed-logbook-container thead tr:first-child th:nth-child(6),
+#print-report-body #detailed-logbook-container thead tr:first-child th:nth-child(7),
+#print-report-body #detailed-logbook-container thead tr:first-child th:nth-child(8),
+#print-report-body #detailed-logbook-container thead tr:first-child th:nth-child(9),
+#print-report-body #detailed-logbook-container thead tr:first-child th:nth-child(10),
+#print-report-body #detailed-logbook-container thead tr:first-child th:nth-child(11),
+#print-report-body #detailed-logbook-container thead tr:first-child th:nth-child(12),
+#print-report-body #detailed-logbook-container thead tr:last-child th:nth-child(2),
+#print-report-body #detailed-logbook-container thead tr:last-child th:nth-child(10),
+#print-report-body #detailed-logbook-container thead tr:last-child th:nth-child(12),
+#print-report-body #detailed-logbook-container thead tr:last-child th:nth-child(15),
+#print-report-body #detailed-logbook-container thead tr:last-child th:nth-child(17),
+#print-report-body #detailed-logbook-container thead tr:last-child th:nth-child(24),
+#print-report-body #detailed-logbook-container tbody td:nth-child(3),
+#print-report-body #detailed-logbook-container tbody td:nth-child(5),
+#print-report-body #detailed-logbook-container tbody td:nth-child(6),
+#print-report-body #detailed-logbook-container tbody td:nth-child(14),
+#print-report-body #detailed-logbook-container tbody td:nth-child(16),
+#print-report-body #detailed-logbook-container tbody td:nth-child(19),
+#print-report-body #detailed-logbook-container tbody td:nth-child(21),
+#print-report-body #detailed-logbook-container tbody td:nth-child(28),
+#print-report-body #detailed-logbook-container tbody td:nth-child(29),
+#print-report-body #detailed-logbook-container tbody td:nth-child(30) {
+    border-right: 2px solid #000 !important;
+}

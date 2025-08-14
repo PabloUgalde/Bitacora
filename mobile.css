@@ -1,0 +1,802 @@
+/* mobile.css */
+
+/* Reglas base para selectores de paginación (fuera de media query) */
+.desktop-only { display: block !important; }
+.mobile-only { display: none !important; }
+
+#hamburger-btn {
+    display: none; /* Oculto en escritorio */
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 10px;
+    z-index: 1001;
+    /* LA CORRECCIÓN: Evita que se encoja */
+    flex-shrink: 0; 
+}
+
+/* ====================================================================== */
+/* =            ESTILOS ÚNICOS PARA DISPOSITIVOS MÓVILES                = */
+/* ====================================================================== */
+
+@media (max-width: 800px) {
+
+    /* --- VISIBILIDAD DE ELEMENTOS ESCRITORIO/MÓVIL --- */
+    .desktop-only { display: none !important; }
+    .mobile-only { display: flex !important; }
+
+    /* --- AJUSTE DE TAMAÑO DE TÍTULO EN LOGBOOK --- */
+    #view-logbook .logbook-header h2 {
+        font-size: 1.25rem; /* Reducimos el tamaño del título */
+        line-height: 1.3;   /* Mejoramos el espaciado si se rompe en dos líneas */
+        margin-bottom: 0;   /* Quitamos el margen para que se alinee mejor */
+    }
+
+    /* --- HEADER Y NAVEGACIÓN --- */
+    header {
+        padding: 0.75rem 1rem;
+    }
+    .logo-text {
+        font-size: 1.25rem;
+    }
+    .pilot-epaulette {
+        width: 28px;
+        height: 35px;
+        padding: 6px;
+    }
+    .pilot-epaulette .stripe {
+        height: 6px;
+    }
+    #hamburger-btn {
+        display: block;
+    }
+    #main-nav {
+        position: fixed;
+        top: 0;
+        right: 0;
+        width: 90%;
+        max-width: 300px;
+        height: 100vh;
+        background-color: var(--surface-color);
+        border-left: 1px solid var(--border-color);
+        flex-direction: column;
+        justify-content: flex-start;
+        align-items: flex-start;
+        padding-top: 80px;
+        transform: translateX(100%);
+        transition: transform 0.3s ease-in-out;
+        z-index: 1000;
+    }
+    #main-nav.mobile-nav-open {
+        transform: translateX(0);
+    }
+    #main-nav .nav-link {
+        width: 100%;
+        text-align: left;
+        padding: 1rem 1.5rem;
+        font-size: 1.1rem;
+    }
+    #main-nav .nav-dropdown-menu {
+        position: static;
+        display: none;
+        background: none;
+        border: none;
+        box-shadow: none;
+        padding: 0;
+        margin: 0;
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease-out;
+    }
+    #main-nav .nav-dropdown-menu.mobile-submenu-open {
+        display: block;
+        max-height: 500px;
+        padding-left: 1.5rem;
+        padding-top: 0.5rem;
+    }
+    #main-nav .nav-dropdown-menu .nav-link {
+        font-size: 1rem;
+        padding: 0.75rem 1.5rem 0.75rem 2.5rem;
+        font-weight: 400;
+        color: var(--text-muted-color);
+    }
+    #main-nav .nav-dropdown-menu .nav-link:hover {
+        color: var(--primary-color);
+    }
+    #main-nav .nav-dropdown-menu hr { display: none; }
+    #hamburger-btn.open .hamburger-bar:nth-child(1) { transform: translateY(8px) rotate(45deg); }
+    #hamburger-btn.open .hamburger-bar:nth-child(2) { opacity: 0; }
+    #hamburger-btn.open .hamburger-bar:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
+
+    /* --- DASHBOARD Y VISTAS GENERALES --- */
+    main {
+        padding: 1rem;
+    }
+    h2 {
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    h3 {
+        font-size: 1.1rem;
+    }
+    .summary-card {
+        padding: 1rem;
+    }
+    .summary-card h3 {
+        font-size: 0.85rem;
+    }
+    .summary-card .value {
+        font-size: 2rem;
+    }
+
+    /* --- FORMULARIOS --- */
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+    #flight-form, .settings-container {
+        padding: 1.5rem 1rem;
+    }
+    .navigation-buttons {
+        flex-direction: column-reverse;
+        gap: 1rem;
+    }
+    .navigation-buttons button {
+        width: 100%;
+        margin-left: 0 !important;
+    }
+
+    /* --- LOGBOOK DETALLADO (TARJETAS) --- */
+    #detailed-logbook-container {
+        display: block; /* Anulamos el "display: flex" de escritorio */
+        overflow-y: auto; /* ¡AQUÍ ESTÁ LA MAGIA! Permite el scroll vertical */
+        min-height: 0;    /* Un truco esencial para que el scroll funcione correctamente dentro de un layout grid/flex */
+    }
+
+    #detailed-logbook-container .table-container {
+        display: none;
+    }
+    .logbook-cards-container {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    .flight-card {
+        background-color: var(--surface-color);
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 0.5rem 1rem;
+    }
+    .flight-card-main { grid-column: 1 / 2; }
+    .flight-card-date { font-size: 0.9rem; color: var(--text-muted-color); }
+    .flight-card-aircraft { font-size: 1.1rem; font-weight: 600; color: var(--text-color-light); }
+    .flight-card-route { font-size: 1rem; }
+    .flight-card-duration {
+        grid-column: 2 / 3;
+        grid-row: 1 / 3;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 0.5rem;
+        background-color: var(--background-color);
+        border-radius: 6px;
+    }
+    .flight-card-duration .value { font-size: 1.5rem; font-weight: 700; color: var(--primary-color); }
+    .flight-card-duration .label { font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted-color); }
+    .flight-card-details {
+        grid-column: 1 / -1;
+        display: none;
+        padding-top: 1rem;
+        margin-top: 1rem;
+        border-top: 1px solid var(--border-color);
+    }
+    .details-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 1rem;
+    }
+    .detail-item { font-size: 0.9rem; }
+    .detail-item .label {
+        color: var(--text-muted-color);
+        display: block;
+        margin-bottom: 0.25rem;
+        font-size: 0.8rem;
+    }
+    .flight-card-actions {
+        grid-column: 1 / -1;
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--border-color);
+    }
+    .flight-card-actions button {
+        flex-grow: 1;
+        padding: 0.6rem;
+        font-size: 0.9rem;
+    }
+
+    /* --- PULIDO DE CONTROLES DEL LOGBOOK MÓVIL (VERSIÓN FINAL Y SIMPLIFICADA) --- */
+
+    #view-logbook .logbook-header {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    #logbook-controls {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    /* Ocultamos el texto de los botones si usas el span */
+    .button-text {
+        display: none;
+    }
+    
+    /* LA CORRECCIÓN: Un selector más específico que anulará todo lo demás */
+    #logbook-controls button,
+    #logbook-controls .nav-dropdown > button {
+        width: 44px !important;
+        height: 44px !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        min-width: 44px !important; /* Asegura que no se encoja */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--border-radius);
+        border: 1px solid var(--border-color); 
+        background-color: var(--surface-color); 
+        transition: background-color 0.2s ease;
+    }
+    
+    /* El resto del código de los iconos ::before se mantiene exactamente igual */
+    #logbook-controls button::before,
+    #logbook-controls .nav-dropdown > button::before {
+        content: '';
+        width: 26px;
+        height: 26px;
+        background-color: var(--text-color-light);
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        transition: background-color 0.2s ease;
+    }
+
+    /* Aquí especificamos cada icono */
+    #sort-order-toggle::before {
+        -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M3 7.5 7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5' /%3E%3C/svg%3E");
+        mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M3 7.5 7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5' /%3E%3C/svg%3E");
+    }
+    #open-filter-modal-btn::before {
+        -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75' /%3E%3C/svg%3E");
+        mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75' /%3E%3C/svg%3E");
+    }
+    #open-print-modal-btn::before {
+        -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015-1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5Zm-3 0h.008v.008H15V10.5Z' /%3E%3C/svg%3E");
+        mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5Zm-3 0h.008v.008H15V10.5Z' /%3E%3C/svg%3E");
+    }
+
+    #sort-order-toggle:hover,
+    #open-filter-modal-btn:hover,
+    #open-print-modal-btn:hover {
+        background-color: var(--surface-hover-color);
+    }
+    #sort-order-toggle:hover::before,
+    #open-filter-modal-btn:hover::before,
+    #open-print-modal-btn:hover::before {
+        background-color: var(--primary-color);
+    }
+    
+    #sort-order-menu {
+        right: 0;
+        left: auto;
+    }
+
+    /* --- PAGINACIÓN MÓVIL (SOLUCIÓN FINAL CON MENÚ PERSONALIZADO) --- */
+    #pagination-controls {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+    .pagination-center { order: 1; display: flex; width: 100%; }
+    .pagination-center button { flex-grow: 1; }
+    .pagination-bottom-row { order: 2; display: flex; justify-content: space-between; align-items: center; width: 100%; }
+    .pagination-right { font-size: 0.9rem; text-align: right; }
+    
+    /* LA SOLUCIÓN: Ocultamos el <select> nativo */
+    .pagination-left select#items-per-page {
+        display: none;
+    }
+    /* Y mostramos nuestro nuevo botón-menú personalizado */
+    .pagination-left {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        position: relative; /* Para anclar el menú */
+    }
+    .pagination-left label { white-space: nowrap; margin-bottom: 0; }
+
+    /* Estilo del botón que reemplaza al select */
+    #items-per-page-btn {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 80px;
+        padding: 0.5rem 0.75rem;
+        background-color: var(--secondary-color);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        cursor: pointer;
+        color: var(--text-color);
+    }
+    #items-per-page-btn::after {
+        content: '▼';
+        font-size: 0.8rem;
+    }
+
+    /* Estilo del menú desplegable personalizado */
+    #items-per-page-menu {
+        display: none;
+        position: absolute;
+        bottom: 100%; /* Aparece ARRIBA del botón */
+        left: 0;
+        background-color: var(--surface-hover-color);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        z-index: 1100; /* Por encima de todo */
+        width: 100px;
+    }
+    #items-per-page-menu.active {
+        display: block;
+    }
+    #items-per-page-menu button {
+        display: block;
+        width: 100%;
+        padding: 0.75rem;
+        background: none;
+        border: none;
+        color: var(--text-color);
+        text-align: center;
+    }
+    #items-per-page-menu button:hover {
+        background-color: var(--primary-color);
+        color: #000;
+    }
+
+    /* ====================================================================== */
+    /* =     AJUSTES PARA TABLAS Y RESÚMENES EN DISPOSITIVOS MÓVILES        = */
+    /* ====================================================================== */
+
+    /* 1. LAYOUT DEL GRID DEL DASHBOARD A UNA SOLA COLUMNA */
+    .dashboard-grid-main {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+
+    /* ¡¡¡ESTA ES LA LÍNEA CLAVE QUE FALTABA!!! */
+    /* Anula el comportamiento por defecto de Flex/Grid que expande el contenedor. */
+    /* Esto permite que los hijos con overflow:auto funcionen correctamente. */
+    .dashboard-column {
+        min-width: 0;
+    }
+
+
+    /* 2. SOLUCIÓN PARA CONTENIDO DESBORDADO (TABLAS Y GRÁFICOS) */
+    .table-container,
+    .chart-container-half {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .table-container th,
+    .table-container td {
+        white-space: nowrap;
+    }
+
+    /* 3. AJUSTE DE CONTROLES EN LA PÁGINA DE RESÚMENES (Ya estaba bien) */
+    .summary-controls, .summary-filters {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+    }
+    .summary-controls .button-group {
+        align-self: flex-end;
+        width: auto;
+    }
+    .filter-group {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .filter-group select {
+        max-width: 60%;
+    }
+
+    /* 4. AJUSTE EN FORMULARIO DE FILTRO AVANZADO (MODAL) (Ya estaba bien) */
+    .filter-grid-6-col,
+    .filter-grid-2-col,
+    .filter-grid-3-col,
+    .side-by-side-sections {
+        grid-template-columns: 1fr;
+    }
+
+    /* ========= LA NUEVA REGLA VA AQUÍ ========= */
+    /* Desactiva la imagen de fondo fija del dashboard en móviles para evitar conflictos de capas */
+    .dashboard-hero-bg {
+        display: none;
+    }
+    .summary-card {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
+    /* ====================================================================== */
+    /* =     AJUSTES DE CONFIGURACIÓN PARA MÓVILES (VERSIÓN LIMPIA)         = */
+    /* ====================================================================== */
+
+    /* 1. Anula todos los grids de dos columnas y los convierte en una sola. */
+    .settings-grid.two-columns,
+    .personal-data-container,
+    .card-config-container {
+        grid-template-columns: 1fr;
+    }
+
+    /* 2. Reorganiza la tabla de Licencias para que sea vertical. */
+    .license-header {
+        display: none;
+    }
+    .license-item {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+    .license-item:last-child {
+        border-bottom: none;
+    }
+
+    /* 3. Apila los botones y controles. */
+    .input-with-button {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    .navigation-buttons {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    .navigation-buttons button {
+        width: 100% !important;
+        margin-left: 0 !important;
+    }
+    .filter-group {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    /* 4. Habilita el scroll dentro del acordeón en móviles. */
+    .accordion-content.active {
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    /* 6. FUERZA LAS TARJETAS DEL DASHBOARD A UNA SOLA COLUMNA */
+    .card-config-container {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ====================================================================== */
+/* =   ESTILOS BASE PARA CONTROLES DEL LOGBOOK (APLICABLE A AMBOS)      = */
+/* ====================================================================== */
+
+/* Ocultamos el texto si existiera dentro de los botones */
+#logbook-controls .button-text {
+    display: none;
+}
+
+/* LA REGLA CLAVE: Aplicamos el estilo de icono a TODOS los botones dentro de #logbook-controls */
+#logbook-controls button,
+#logbook-controls .nav-dropdown > button {
+    /* Tamaño y forma */
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    margin: 0;
+    min-width: 44px;
+    
+    /* Centrado del icono */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    /* Apariencia */
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+    background-color: var(--surface-color);
+    transition: background-color 0.2s ease;
+    cursor: pointer;
+}
+
+/* Plantilla base para el pseudoelemento del icono */
+#logbook-controls button::before,
+#logbook-controls .nav-dropdown > button::before {
+    content: '';
+    width: 24px;
+    height: 24px;
+    background-color: var(--text-color-light); /* Color del icono */
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+    transition: background-color 0.2s ease;
+}
+
+/* Icono específico para ORDENAR */
+#sort-order-toggle::before {
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M3 7.5 7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5' /%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M3 7.5 7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5' /%3E%3C/svg%3E");
+}
+
+/* Icono específico para FILTRAR */
+#open-filter-modal-btn::before {
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75' /%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75' /%3E%3C/svg%3E");
+}
+
+/* Icono específico para IMPRIMIR */
+#open-print-modal-btn::before {
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5Zm-3 0h.008v.008H15V10.5Z' /%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5Zm-3 0h.008v.008H15V10.5Z' /%3E%3C/svg%3E");
+}
+
+/* El botón de borrar filtro necesita su propio icono */
+#clear-logbook-filter-btn::before {
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='currentColor'%3E%3Cpath d='M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z' /%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='currentColor'%3E%3Cpath d='M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z' /%3E%3C/svg%3E");
+    background-color: var(--accent-color-red); /* Color rojo para este icono */
+}
+
+
+/* --- ESTADOS HOVER Y POSICIONAMIENTO (APLICABLE A AMBOS) --- */
+
+/* Efecto hover para TODOS los botones de icono */
+#logbook-controls button:hover,
+#logbook-controls .nav-dropdown > button:hover {
+    background-color: var(--surface-hover-color);
+}
+/* Efecto hover para el icono mismo, excepto el de borrar */
+#sort-order-toggle:hover::before,
+#open-filter-modal-btn:hover::before,
+#open-print-modal-btn:hover::before {
+    background-color: var(--primary-color);
+}
+
+/* Posicionamiento del menú desplegable */
+#sort-order-menu {
+    right: 0;
+    left: auto;
+}
+
+/* ====================================================================== */
+/* =            ESTILOS ÚNICOS PARA ESCRITORIO (Y MÁS GRANDES)          = */
+/* ====================================================================== */
+
+@media (min-width: 801px) {
+    #view-logbook .logbook-header {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    #logbook-controls {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    #active-filters-display {
+        /* Empuja el texto de filtros a la izquierda y los botones a la derecha */
+        margin-right: auto;
+    }
+}
+
+
+/* ====================================================================== */
+/* =            ESTILOS ÚNICOS PARA DISPOSITIVOS MÓVILES                = */
+/* ====================================================================== */
+
+@media (max-width: 800px) {
+
+    /* --- AJUSTE DE TAMAÑO DE TÍTULO EN LOGBOOK --- */
+    #view-logbook .logbook-header h2 {
+        font-size: 1.25rem;
+        line-height: 1.3;
+        margin-bottom: 0;
+    }
+    
+    #logbook-controls {
+        gap: 0.5rem; /* Menos espacio entre botones en móvil */
+    }
+
+    /* Ocultamos el texto de filtros en móvil para ahorrar espacio */
+    #active-filters-display,
+    #clear-logbook-filter-btn {
+        display: none !important;
+    }
+
+    /* --- PAGINACIÓN MÓVIL (SOLUCIÓN FINAL CON MENÚ PERSONALIZADO) --- */
+    #pagination-controls {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+    .pagination-center { order: 1; display: flex; width: 100%; }
+    .pagination-center button { flex-grow: 1; }
+    .pagination-bottom-row { order: 2; display: flex; justify-content: space-between; align-items: center; width: 100%; }
+    .pagination-right { font-size: 0.9rem; text-align: right; }
+    
+    .pagination-left select#items-per-page {
+        display: none;
+    }
+    .pagination-left {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        position: relative;
+    }
+    .pagination-left label { white-space: nowrap; margin-bottom: 0; }
+
+    #items-per-page-btn {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 80px;
+        padding: 0.5rem 0.75rem;
+        background-color: var(--secondary-color);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        cursor: pointer;
+        color: var(--text-color);
+    }
+    #items-per-page-btn::after {
+        content: '▼';
+        font-size: 0.8rem;
+    }
+
+    #items-per-page-menu {
+        display: none;
+        position: absolute;
+        bottom: 100%;
+        left: 0;
+        background-color: var(--surface-hover-color);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        z-index: 1100;
+        width: 100px;
+    }
+    #items-per-page-menu.active {
+        display: block;
+    }
+    #items-per-page-menu button {
+        display: block;
+        width: 100%;
+        padding: 0.75rem;
+        background: none;
+        border: none;
+        color: var(--text-color);
+        text-align: center;
+    }
+    #items-per-page-menu button:hover {
+        background-color: var(--primary-color);
+        color: #000;
+    }
+
+    /* ====================================================================== */
+    /* =     AJUSTES PARA TABLAS Y RESÚMENES EN DISPOSITIVOS MÓVILES        = */
+    /* ====================================================================== */
+
+    .dashboard-grid-main {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+    .dashboard-column {
+        min-width: 0;
+    }
+    .table-container,
+    .chart-container-half {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    .table-container th,
+    .table-container td {
+        white-space: nowrap;
+    }
+    .summary-controls, .summary-filters {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+    }
+    .summary-controls .button-group {
+        align-self: flex-end;
+        width: auto;
+    }
+    .filter-group {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .filter-group select {
+        max-width: 60%;
+    }
+    .filter-grid-6-col,
+    .filter-grid-2-col,
+    .filter-grid-3-col,
+    .side-by-side-sections {
+        grid-template-columns: 1fr;
+    }
+    .dashboard-hero-bg {
+        display: none;
+    }
+    .summary-card {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
+    
+    /* ====================================================================== */
+    /* =     AJUSTES DE CONFIGURACIÓN PARA MÓVILES (VERSIÓN LIMPIA)         = */
+    /* ====================================================================== */
+
+    .settings-grid.two-columns,
+    .personal-data-container,
+    .card-config-container {
+        grid-template-columns: 1fr;
+    }
+    .license-header {
+        display: none;
+    }
+    .license-item {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+    .license-item:last-child {
+        border-bottom: none;
+    }
+    .input-with-button {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    .navigation-buttons {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    .navigation-buttons button {
+        width: 100% !important;
+        margin-left: 0 !important;
+    }
+    .filter-group {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+    .accordion-content.active {
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    .card-config-container {
+        grid-template-columns: 1fr;
+    }
+
+}

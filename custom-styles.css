@@ -1,0 +1,201 @@
+/* --- ESTILOS PERSONALIZADOS PARA LÍNEAS DIVISORIAS DE TABLAS --- */
+/* Este archivo no será modificado en futuras actualizaciones. */
+
+/* ====================================================================== */
+/* =           1. LÍNEAS DIVISORIAS VERTICALES (SIN CAMBIOS)            = */
+/* ====================================================================== */
+/* Estas reglas ahora volverán a funcionar correctamente */
+#detailed-logbook-container thead tr:first-child th:nth-child(3),
+#detailed-logbook-container thead tr:first-child th:nth-child(4),
+#detailed-logbook-container thead tr:first-child th:nth-child(5),
+#detailed-logbook-container thead tr:first-child th:nth-child(6),
+#detailed-logbook-container thead tr:first-child th:nth-child(7),
+#detailed-logbook-container thead tr:first-child th:nth-child(8),
+#detailed-logbook-container thead tr:first-child th:nth-child(9),
+#detailed-logbook-container thead tr:first-child th:nth-child(10),
+#detailed-logbook-container thead tr:first-child th:nth-child(11),
+#detailed-logbook-container thead tr:first-child th:nth-child(12),
+#detailed-logbook-container thead tr:last-child th:nth-child(2),
+#detailed-logbook-container thead tr:last-child th:nth-child(10),
+#detailed-logbook-container thead tr:last-child th:nth-child(12),
+#detailed-logbook-container thead tr:last-child th:nth-child(15),
+#detailed-logbook-container thead tr:last-child th:nth-child(17),
+#detailed-logbook-container thead tr:last-child th:nth-child(24),
+#detailed-logbook-container tbody td:nth-child(3),
+#detailed-logbook-container tbody td:nth-child(5),
+#detailed-logbook-container tbody td:nth-child(6),
+#detailed-logbook-container tbody td:nth-child(14),
+#detailed-logbook-container tbody td:nth-child(16),
+#detailed-logbook-container tbody td:nth-child(19),
+#detailed-logbook-container tbody td:nth-child(21),
+#detailed-logbook-container tbody td:nth-child(28),
+#detailed-logbook-container tbody td:nth-child(29),
+#detailed-logbook-container tbody td:nth-child(30),
+#flight-preview-container thead tr:first-child th:nth-child(3),
+#flight-preview-container thead tr:first-child th:nth-child(4),
+#flight-preview-container thead tr:first-child th:nth-child(5),
+#flight-preview-container thead tr:first-child th:nth-child(6),
+#flight-preview-container thead tr:first-child th:nth-child(7),
+#flight-preview-container thead tr:first-child th:nth-child(8),
+#flight-preview-container thead tr:first-child th:nth-child(9),
+#flight-preview-container thead tr:first-child th:nth-child(10),
+#flight-preview-container thead tr:first-child th:nth-child(11),
+#flight-preview-container thead tr:last-child th:nth-child(2),
+#flight-preview-container thead tr:last-child th:nth-child(10),
+#flight-preview-container thead tr:last-child th:nth-child(12),
+#flight-preview-container thead tr:last-child th:nth-child(15),
+#flight-preview-container thead tr:last-child th:nth-child(17),
+#flight-preview-container thead tr:last-child th:nth-child(24),
+#flight-preview-container tbody td:nth-child(3),
+#flight-preview-container tbody td:nth-child(5),
+#flight-preview-container tbody td:nth-child(6),
+#flight-preview-container tbody td:nth-child(14),
+#flight-preview-container tbody td:nth-child(16),
+#flight-preview-container tbody td:nth-child(19),
+#flight-preview-container tbody td:nth-child(21),
+#flight-preview-container tbody td:nth-child(28),
+#flight-preview-container tbody td:nth-child(29),
+#summary-by-page-container thead tr:first-child th:nth-child(1),
+#summary-by-page-container thead tr:first-child th:nth-child(2),
+#summary-by-page-container thead tr:first-child th:nth-child(3),
+#summary-by-page-container thead tr:first-child th:nth-child(4),
+#summary-by-page-container thead tr:first-child th:nth-child(5),
+#summary-by-page-container thead tr:first-child th:nth-child(6),
+#summary-by-page-container thead tr:first-child th:nth-child(7),
+#summary-by-page-container tbody td:nth-child(1),
+#summary-by-page-container tbody td:nth-child(2),
+#summary-by-page-container tbody td:nth-child(10),
+#summary-by-page-container tbody td:nth-child(12),
+#summary-by-page-container tbody td:nth-child(15),
+#summary-by-page-container tbody td:nth-child(17),
+#summary-by-page-container tbody td:nth-child(24),
+#summary-by-page-container thead tr:last-child th:nth-child(8),
+#summary-by-page-container thead tr:last-child th:nth-child(10),
+#summary-by-page-container thead tr:last-child th:nth-child(13),
+#summary-by-page-container thead tr:last-child th:nth-child(15),
+#summary-by-page-container thead tr:last-child th:nth-child(22) {
+    border-right: 2px solid #606060;
+}
+
+
+/* ====================================================================== */
+/* =           2. BORDES INFERIORES PARA TABLAS NO-STICKY               = */
+/* ====================================================================== */
+
+#flight-preview-container thead tr:last-child th,
+#flight-preview-container thead tr:first-child th[rowspan],
+#summary-by-page-container thead tr:last-child th,
+#summary-by-page-container thead tr:first-child th[rowspan] {
+    border-bottom: 2px solid #606060;
+}
+
+
+/* ====================================================================== */
+/* =        3. SOLUCIÓN DEFINITIVA PARA TABLA STICKY (#detailed-logbook)    = */
+/* ====================================================================== */
+
+/* --- Configuración base para elementos STICKY --- */
+#detailed-logbook-container thead { 
+    position: sticky; 
+    top: 0; 
+    z-index: 10; 
+}
+#detailed-logbook-container tbody td:nth-child(1) { 
+    position: sticky; 
+    left: 0; 
+    z-index: 5; 
+}
+#detailed-logbook-container thead tr:first-child th[rowspan] { 
+    position: sticky; 
+    left: 0; 
+    z-index: 15; 
+}
+#detailed-logbook-container thead tr:first-child th:nth-child(1) { 
+    z-index: 20; 
+}
+
+/* --- Fondos sólidos y preparación para pseudo-elementos --- */
+#detailed-logbook-container thead th { 
+    position: relative; /* CRÍTICO: Permite posicionar el ::after */
+    background-color: #2a2a2a;
+    /* LA CORRECCIÓN: Eliminamos SOLO el borde inferior para no destruir el derecho */
+    border-bottom: none !important;
+}
+#detailed-logbook-container tbody td:nth-child(1) { 
+    background-color: var(--surface-color); 
+}
+#detailed-logbook-container tbody tr:nth-child(even) td:nth-child(1) { 
+    background-color: #242424; 
+}
+
+/* --- DIBUJAMOS LAS LÍNEAS HORIZONTALES CON PSEUDO-ELEMENTOS --- */
+
+/* 1. Creamos una línea delgada por defecto en la parte inferior de TODAS las celdas del encabezado */
+#detailed-logbook-container thead th::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 1px;
+    background-color: #606060;
+}
+
+/* 2. Hacemos que la línea sea GRUESA para las celdas que forman el borde final */
+#detailed-logbook-container thead tr:last-child th::after,
+#detailed-logbook-container thead tr:first-child th[rowspan]::after {
+    height: 2px;
+}
+
+/* --- RESUMEN POR PÁGINA: ENCABEZADO Y COLUMNA FIJA --- */
+.summary-page-table h3 { position: sticky; left: 0; padding-left: 1rem; margin-bottom: 0.5rem; margin-top: 1rem; background-color: var(--surface-color); width: fit-content; z-index: 40; }
+#summary-by-page-container .sticky-col { position: sticky; left: 0; z-index: 20; font-weight: 600; background-color: #2a2a2a; }
+#summary-by-page-container thead .sticky-col { z-index: 30; }
+
+/* --- AJUSTE DE ANCHO PARA ENCABEZADOS DE TABLA LARGOS --- */
+#detailed-logbook-container thead tr:last-child th:nth-child(18),
+#detailed-logbook-container thead tr:last-child th:nth-child(21),
+#flight-preview-container thead tr:last-child th:nth-child(18),
+#flight-preview-container thead tr:last-child th:nth-child(21) {
+    min-width: 120px;
+}
+
+/* --- CORRECCIÓN DE ESTILOS PARA MENÚ DESPLEGABLE --- */
+
+#logbook-controls #sort-order-menu {
+    /* Estilos que ya deberías tener, asegúrate de que estén */
+    position: absolute;
+    background-color: var(--surface-hover-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    z-index: 1100;
+    right: 0;
+    left: auto;
+    
+    /* --- INICIO DE LAS NUEVAS REGLAS --- */
+    display: flex; /* Lo convertimos en un contenedor flex */
+    flex-direction: column; /* Apila los elementos verticalmente */
+    padding: 0.5rem 0; /* Añade un poco de espacio vertical interno */
+    min-width: 200px; /* Le damos un ancho mínimo para que se vea bien */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); /* Sombra para que destaque */
+}
+
+#logbook-controls #sort-order-menu .sort-option {
+    /* Estilos para cada opción del menú */
+    padding: 0.75rem 1.25rem;
+    color: var(--text-color-light);
+    text-decoration: none;
+    white-space: nowrap; /* Evita que el texto se rompa en dos líneas */
+    transition: background-color 0.2s;
+}
+
+#logbook-controls #sort-order-menu .sort-option:hover {
+    background-color: var(--primary-color);
+    color: var(--background-color);
+}
+
+#logbook-controls #sort-order-menu .sort-option.active {
+    font-weight: 600;
+    color: var(--primary-color);
+    background-color: rgba(212, 175, 55, 0.1); /* Un fondo sutil para la opción activa */
+}
