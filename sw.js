@@ -16,7 +16,8 @@ const APP_SHELL_FILES = [
     './backup-manager.js',
     './logo-avion.png',
     './icon-192.png',
-    './icon-512.png'
+    './icon-512.png',
+    './favicon.ico'
 ];
 
 // Evento de instalación: se guarda el app shell en la caché.
