@@ -10,9 +10,10 @@ const app = {
         app.setupEventListeners();
         app.setupLogbookActionsListener();
         if ('serviceWorker' in navigator) {
+            // Usamos la ruta relativa que ahora será resuelta correctamente por la etiqueta <base>
             navigator.serviceWorker.register('./sw.js')
-            .then(() => console.log('Service Worker Registrado'))
-            .catch(error => console.error('Error al registrar Service Worker:', error));
+                .then((reg) => console.log('Service Worker Registrado. Scope:', reg.scope))
+                .catch(error => console.error('Error al registrar Service Worker:', error));
             }
     },
 

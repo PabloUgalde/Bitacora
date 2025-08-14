@@ -1,10 +1,12 @@
-const CACHE_NAME = 'flight-log-cache-v1.0';
+const CACHE_NAME = 'flight-log-cache-v1.00';
 // Lista de archivos que componen el "cascarón" de la aplicación.
 const APP_SHELL_FILES = [
+    './',
     './index.html',
     './style.css',
     './custom-styles.css',
     './mobile.css',
+    './print.css',
     './app.js',
     './api.js',
     './ui.js',
@@ -15,6 +17,7 @@ const APP_SHELL_FILES = [
     './data-importer.js',
     './backup-manager.js',
     './logo-avion.png',
+    './logo-avion-osc.png',
     './icon-192.png',
     './icon-512.png',
     './favicon.ico'
