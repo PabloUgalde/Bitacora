@@ -186,7 +186,7 @@ createFlightObject: (data) => {
         "Diurno": data.condiciones.Diurno, "Nocturno": data.condiciones.Nocturno, "IFR": data.condiciones.IFR,
         "NO": parseInt(data.approaches.no) || 0, "Tipo": data.approaches.tipo.toUpperCase(),
         "Simulador o Entrenador de Vuelo": data.roles.simulador, "Travesia": data.roles.travesia, "Solo": data.roles.solo,
-        "Piloto al Mando (PIC)": data.roles.pic, "Copilo-to (SIC)": data.roles.sic,
+        "Piloto al Mando (PIC)": data.roles.pic, "Copiloto (SIC)": data.roles.sic,
         "Instruccion Recibida": data.roles.instruccion, "Como Instructor": data.roles.instructor,
         "Observaciones": data.observaciones,
         "Pagina Bitacora a Replicar": pageNumber, // Usamos el número de página calculado.
