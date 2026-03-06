@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <base href="/Bitacora/">
+    <!-- <base href="/Bitacora/"> -->
     <title>Bitácora de Vuelo Pro (v22 - Tema Premium)</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
@@ -129,13 +129,14 @@
                 </div>
             </form>
         </div>
+<!-- REGISTRO DETALLADO -->
         <div id="view-logbook" class="view">
             <div class="logbook-header">
                 <h2>Registro Detallado de Vuelos</h2>
                 <div id="logbook-controls">
                     <div class="nav-dropdown">
                         <button id="sort-order-toggle" class="next-btn" title="Ordenar Vuelos">
-                        <span class="button-text">Ordenar por: Carga ⇕</span>
+                            <span class="button-text">Ordenar por: Carga ⇕</span>
                         </button>
                         <div class="nav-dropdown-menu" id="sort-order-menu">
                             <a href="#" class="sort-option" data-sort="natural">Orden de Carga</a>
@@ -153,39 +154,54 @@
                     </button>
                 </div>
             </div>
-            <div id="detailed-logbook-container">
-            </div>
-                <div id="pagination-controls">
-                    <!-- Fila 1: Botones (RESTAURADOS) -->
-                    <div id="pagination-buttons" class="pagination-center"></div>
-
-                    <!-- Fila 2: Selector y texto -->
-                    <div class="pagination-bottom-row">
-                        <div class="pagination-left">
-                            <label for="items-per-page">Vuelos por página:</label>
-                            <!-- El <select> nativo para escritorio -->
-                            <select id="items-per-page-desktop" class="desktop-only">
-                                <option value="50" selected>50</option>
-                                <option value="100">100</option>
-                                <option value="150">150</option>
-                                <option value="200">200</option>
-                            </select>
-                            <!-- El menú personalizado para móvil -->
-                            <div id="items-per-page-custom-select" class="mobile-only">
-                                <button id="items-per-page-btn">15</button>
-                                <div id="items-per-page-menu">
-                                    <button data-value="15">15</button>
-                                    <button data-value="30">30</button>
-                                    <button data-value="50">50</button>
-                                </div>
+            <div id="detailed-logbook-container"></div>
+            <div id="pagination-controls">
+                <div id="pagination-buttons" class="pagination-center"></div>
+                <div class="pagination-bottom-row">
+                    <div class="pagination-left">
+                        <label for="items-per-page">Vuelos por página:</label>
+                        <select id="items-per-page-desktop" class="desktop-only">
+                            <option value="50" selected>50</option>
+                            <option value="100">100</option>
+                            <option value="150">150</option>
+                            <option value="200">200</option>
+                        </select>
+                        <div id="items-per-page-custom-select" class="mobile-only">
+                            <button id="items-per-page-btn">15</button>
+                            <div id="items-per-page-menu">
+                                <button data-value="15">15</button>
+                                <button data-value="30">30</button>
+                                <button data-value="50">50</button>
                             </div>
                         </div>
-                        <div id="pagination-info" class="pagination-right"></div>
+                    </div>
+                    <div id="pagination-info" class="pagination-right"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RESUMEN POR PÁGINA -->
+        <div id="view-summaries-by-page" class="view">
+            <div class="logbook-header"><h2>Resumen por Página</h2></div>
+            <div id="summary-by-page-container"></div>
+        </div>
+
+        <!-- RESUMEN ANUAL / MENSUAL -->
+        <div id="view-summary-by-time" class="view">
+            <div class="summary-controls">
+                <h2>Resumen Anual y Mensual</h2>
+                <div class="summary-filters">
+                    <div class="filter-group">
+                        <label for="time-summary-year-select">Año:</label>
+                        <select id="time-summary-year-select"></select>
                     </div>
                 </div>
+            </div>
+            <div id="yearly-summary-table-container"></div>
+            <div id="monthly-breakdown-container"></div>
         </div>
-        <div id="view-summaries-by-page" class="view"><div class="logbook-header"><h2>Resumen por Página</h2></div><div id="summary-by-page-container"></div></div>
-        <div id="view-summary-by-time" class="view"><div class="summary-controls"><h2>Resumen Anual y Mensual</h2><div class="summary-filters"><div class="filter-group"><label for="time-summary-year-select">Seleccionar Año:</label><select id="time-summary-year-select"></select></div></div></div><div id="yearly-summary-table-container"></div><div id="monthly-breakdown-container"></div></div>
+
+        <!-- RESUMEN POR TIPO DE AVIÓN -->
         <div id="view-summary-by-type" class="view">
             <div class="summary-controls">
                 <h2>Resumen por Tipo de Avión</h2>
@@ -200,14 +216,93 @@
                     </div>
                 </div>
             </div>
-            <div id="type-summary-table-container">
-                <!-- La tabla se generará aquí -->
-            </div>
+            <div id="type-summary-table-container"></div>
         </div>
-        <div id="view-summary-by-airport" class="view"><div class="summary-controls"><h2>Resumen por Aeródromo</h2><div class="summary-filters"><div class="filter-group"><label for="airport-summary-year-select">Año:</label><select id="airport-summary-year-select"></select></div><div class="filter-group"><label for="airport-summary-month-select">Mes:</label><select id="airport-summary-month-select"></select></div></div></div><div id="airport-summary-table-container"></div></div>
-        <div id="view-summary-by-aircraft" class="view"><div class="summary-controls"><h2>Resumen por Aeronave</h2><div class="summary-filters"><div class="filter-group"><label for="aircraft-summary-year-select">Año:</label><select id="aircraft-summary-year-select"></select></div><div class="filter-group"><label for="aircraft-summary-month-select">Mes:</label><select id="aircraft-summary-month-select"></select></div><div class="filter-group"><label>Agrupar por:</label><div class="button-group" id="aircraft-group-by-buttons"><button class="toggle-btn active" data-value="Aeronave Marca y Modelo">Modelo</button><button class="toggle-btn" data-value="Matricula Aeronave">Matrícula</button></div></div></div></div><div id="aircraft-summary-table-container"></div></div>
-        <div id="view-summary-ifr" class="view"><div class="summary-controls"><h2>Resumen IFR</h2><div class="summary-filters"><div class="filter-group"><label for="ifr-summary-year-select">Año:</label><select id="ifr-summary-year-select"></select></div><div class="filter-group"><label for="ifr-summary-month-select">Mes:</label><select id="ifr-summary-month-select"></select></div><div class="filter-group"><label>Agrupar por:</label><div class="button-group" id="ifr-group-by-buttons"><button class="toggle-btn active" data-value="Aeronave Marca y Modelo">Modelo</button><button class="toggle-btn" data-value="Matricula Aeronave">Matrícula</button></div></div></div></div><div id="ifr-summary-table-container"></div></div>
-        
+
+        <!-- RESUMEN POR AERONAVE -->
+        <div id="view-summary-by-aircraft" class="view">
+            <div class="summary-controls">
+                <h2>Resumen por Aeronave</h2>
+                <div class="summary-filters">
+                    <div class="filter-group"><label for="aircraft-summary-year-select">Año:</label><select id="aircraft-summary-year-select"></select></div>
+                    <div class="filter-group"><label for="aircraft-summary-month-select">Mes:</label><select id="aircraft-summary-month-select"></select></div>
+                    <div class="filter-group">
+                        <label>Agrupar por:</label>
+                        <div class="button-group" id="aircraft-group-by-buttons">
+                            <button class="toggle-btn active" data-value="Aeronave Marca y Modelo">Modelo</button>
+                            <button class="toggle-btn" data-value="Matricula Aeronave">Matrícula</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="aircraft-summary-table-container"></div>
+        </div>
+
+        <!-- RESUMEN POR AERÓDROMO -->
+        <div id="view-summary-by-airport" class="view">
+            <div class="summary-controls">
+                <h2>Resumen por Aeródromo</h2>
+                <div class="summary-filters">
+                    <div class="filter-group"><label for="airport-summary-year-select">Año:</label><select id="airport-summary-year-select"></select></div>
+                    <div class="filter-group"><label for="airport-summary-month-select">Mes:</label><select id="airport-summary-month-select"></select></div>
+                </div>
+            </div>
+            <div id="airport-summary-table-container"></div>
+        </div>
+
+        <!-- RESUMEN IFR Y RECENCIA -->
+        <div id="view-summary-ifr" class="view">
+            <div class="summary-controls">
+                <h2>Resumen IFR y Recencia</h2>
+                <!-- Añadimos este wrapper que faltaba para mantener consistencia con los otros resúmenes -->
+                <div class="summary-filters">
+                    <div class="filter-group">
+                        <label for="ifr-filter-mode">Modo de Filtro:</label>
+                        <select id="ifr-filter-mode">
+                            <option value="recency">Recencia (Días móviles)</option>
+                            <option value="calendar">Calendario (Mes/Año)</option>
+                        </select>
+                    </div>
+
+                    <!-- Grupo 1: Recencia -->
+                    <div class="filter-group" id="ifr-recency-group">
+                        <label for="ifr-period-select">Período:</label>
+                        <select id="ifr-period-select">
+                            <option value="30">Últimos 30 días</option>
+                            <option value="60" selected>Últimos 60 días</option>
+                            <option value="90">Últimos 90 días</option>
+                            <option value="180">Últimos 180 días</option>
+                            <option value="365">Último Año</option>
+                        </select>
+                    </div>
+
+                    <!-- Grupo 2: Calendario -->
+                    <div id="ifr-calendar-group" style="display: none; gap: 1.5rem; align-items: center;">
+                        <div class="filter-group">
+                            <label for="ifr-summary-year-select">Año:</label>
+                            <select id="ifr-summary-year-select"></select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="ifr-summary-month-select">Mes:</label>
+                            <select id="ifr-summary-month-select"></select>
+                        </div>
+                    </div>
+
+                    <!-- Botones de Agrupar -->
+                    <div class="filter-group">
+                        <label>Agrupar por:</label>
+                        <div class="button-group" id="ifr-group-by-buttons">
+                            <button class="toggle-btn active" data-value="Aeronave Marca y Modelo">Modelo</button>
+                            <button class="toggle-btn" data-value="Matricula Aeronave">Matrícula</button>
+                        </div>
+                    </div>
+                </div> <!-- Cierre de summary-filters -->
+            </div> <!-- Cierre de summary-controls -->
+            
+            <div id="ifr-summary-table-container"></div>
+        </div> <!-- Cierre de view-summary-ifr -->
+
+        <!-- VISTA DE CONFIGURACIÓN (Aquí estaba el error, faltaba esta etiqueta) -->
         <div id="view-settings" class="view">
             <h2>Configuración</h2>
             <div class="settings-container accordion-container">
@@ -222,7 +317,6 @@
                             
                             <!-- COLUMNA IZQUIERDA: GESTIÓN DE DATOS -->
                             <div class="config-section">
-                                <!-- Subsección: Fuente de Datos -->
                                 <div class="sub-section">
                                     <h4>Fuente de Datos y Gestión</h4>
                                     <p>Elige tu modo de almacenamiento y gestiona tus datos desde archivos Excel.</p>
@@ -245,22 +339,18 @@
                                     </div>
                                 </div>
 
-                                <!-- Subsección: Respaldo Automático -->
                                 <div class="sub-section">
                                     <h4>Respaldo Automático</h4>
-                                    <p>Configura una carpeta para guardar copias de seguridad automáticas.</p>
-                                        <div id="backup-folder-display" class="backup-info">
-                                            <!-- El estado y la ruta se mostrarán aquí -->
-                                        </div>
-                                        <div class="filter-group" style="margin-bottom: 1rem;">
-                                            <label for="backup-retention-select">Guardar respaldos por:</label>
-                                            <select id="backup-retention-select">
-                                                <option value="0">Siempre</option>
-                                                <option value="7">7 días</option>
-                                                <option value="30" selected>30 días</option>
-                                                <option value="90">90 días</option>
-                                            </select>
-                                        </div>
+                                    <div id="backup-folder-display" class="backup-info"></div>
+                                    <div class="filter-group" style="margin-bottom: 1rem;">
+                                        <label for="backup-retention-select">Guardar respaldos por:</label>
+                                        <select id="backup-retention-select">
+                                            <option value="0">Siempre</option>
+                                            <option value="7">7 días</option>
+                                            <option value="30" selected>30 días</option>
+                                            <option value="90">90 días</option>
+                                        </select>
+                                    </div>
                                     <div id="local-data-management">
                                         <div class="navigation-buttons" style="border: none; padding-top: 0.5rem; flex-wrap: wrap; justify-content: flex-start; gap: 1rem;">
                                             <button id="setup-backup-btn" type="button" class="next-btn" style="width: auto; margin-left: 0;">Configurar Carpeta</button>
@@ -275,16 +365,13 @@
                             <div class="config-section" style="margin-top: 2rem;">
                                 <h4>Tarjetas del Dashboard</h4>
                                 <p>La tarjeta "Horas Totales" es fija. Personaliza las 7 restantes.</p>
-                                <div id="dashboard-cards-config-container" class="card-config-container">
-                                    <!-- Las ranuras se generarán aquí -->
-                                </div>
+                                <div id="dashboard-cards-config-container" class="card-config-container"></div>
                             </div>
-
                         </div>
                     </div>
                 </div>
 
-                <!-- ACORDEÓN 2: DATOS DEL PILOTO Y LICENCIAS (FUSIONADO) -->
+                <!-- ACORDEÓN 2: DATOS DEL PILOTO Y LICENCIAS -->
                 <div class="accordion-item">
                     <button class="accordion-header">
                         <h3>Datos del Piloto y Licencias</h3><span class="accordion-icon">▼</span>
@@ -294,36 +381,14 @@
                             <div class="config-section">
                                 <form id="pilot-data-form">
                                     <h4>Datos Personales</h4>
-                                    <!-- NUEVA ESTRUCTURA PARA DATOS PERSONALES -->
                                     <div class="personal-data-container">
-                                        <div class="personal-data-item">
-                                            <label for="profile-nombre">Nombre</label>
-                                            <input type="text" id="profile-nombre">
-                                        </div>
-                                        <div class="personal-data-item">
-                                            <label for="profile-rut">R.U.T.</label>
-                                            <input type="text" id="profile-rut">
-                                        </div>
-                                        <div class="personal-data-item">
-                                            <label for="profile-nacimiento">Fecha de Nacimiento</label>
-                                            <input type="date" id="profile-nacimiento">
-                                        </div>
-                                        <div class="personal-data-item">
-                                            <label for="profile-ci">Carné de Identidad</label>
-                                            <input type="text" id="profile-ci">
-                                        </div>
-                                        <div class="personal-data-item">
-                                            <label for="profile-telefono">Teléfono</label>
-                                            <input type="tel" id="profile-telefono">
-                                        </div>
-                                        <div class="personal-data-item">
-                                            <label for="profile-email">E-mail</label>
-                                            <input type="email" id="profile-email">
-                                        </div>
-                                        <div class="personal-data-item full-width">
-                                            <label for="profile-domicilio">Domicilio</label>
-                                            <input type="text" id="profile-domicilio">
-                                        </div>
+                                        <div class="personal-data-item"><label for="profile-nombre">Nombre</label><input type="text" id="profile-nombre"></div>
+                                        <div class="personal-data-item"><label for="profile-rut">R.U.T.</label><input type="text" id="profile-rut"></div>
+                                        <div class="personal-data-item"><label for="profile-nacimiento">Fecha de Nacimiento</label><input type="date" id="profile-nacimiento"></div>
+                                        <div class="personal-data-item"><label for="profile-ci">Carné de Identidad</label><input type="text" id="profile-ci"></div>
+                                        <div class="personal-data-item"><label for="profile-telefono">Teléfono</label><input type="tel" id="profile-telefono"></div>
+                                        <div class="personal-data-item"><label for="profile-email">E-mail</label><input type="email" id="profile-email"></div>
+                                        <div class="personal-data-item full-width"><label for="profile-domicilio">Domicilio</label><input type="text" id="profile-domicilio"></div>
                                     </div>
                                 </form>
                             </div>
@@ -349,112 +414,91 @@
                     <p id="settings-status" class="status"></p>
                     <button id="save-settings-btn" type="button" class="submit-btn" style="width: auto; margin-left: auto;">Guardar Toda la Configuración</button>
                 </div>
-                
             </div>
-        </div>
-        <div id="restore-modal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header"><h3>Selecciona un Respaldo para Restaurar</h3><span class="close-button">×</span></div>
-                <p>Se encontraron los siguientes respaldos. El más reciente está arriba.</p>
-                <div id="backup-list-container"></div>
-            </div>
-        </div>
-        <div id="filter-modal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Filtro Avanzado</h3>
-                    <span class="close-button">×</span>
-                </div>
-                <form id="advanced-filter-form">
-                    <!-- SECCIÓN 1: DATOS GENERALES -->
-                    <div class="filter-section">
-                        <h4>Datos Generales</h4>
-                        <!-- Cuadrícula para la primera fila de 6 campos -->
-                        <div class="filter-grid-6-col">
-                            <div><label>Aeronave</label><input type="text" id="filter-aeronave" data-filter-key="Aeronave Marca y Modelo"></div>
-                            <div><label>Matrícula</label><input type="text" id="filter-matricula" data-filter-key="Matricula Aeronave"></div>
-                            <div><label>Desde</label><input type="text" id="filter-desde" data-filter-key="Desde"></div>
-                            <div><label>Hasta</label><input type="text" id="filter-hasta" data-filter-key="Hasta"></div>
-                            <div><label>Fecha Desde</label><input type="date" id="filter-date-from" data-filter-key="Fecha-min"></div>
-                            <div><label>Fecha Hasta</label><input type="date" id="filter-date-to" data-filter-key="Fecha-max"></div>
-                        </div>
-                        <!-- Cuadrícula para la segunda fila de 2 campos -->
-                        <div class="filter-grid-2-col" style="margin-top: 1rem;">
-                            <div><label>Observaciones contiene</label><input type="text" id="filter-observaciones" data-filter-key="Observaciones"></div>
-                            <div><label>Página de Bitácora (Nº exacto)</label><input type="number" id="filter-pagina" data-filter-key="Pagina Bitacora a Replicar"></div>
-                        </div>
-                    </div>
+        </div> <!-- CIERRE DE VIEW-SETTINGS -->
+    </main> <!-- CIERRE DE MAIN -->
 
-                    <!-- CONTENEDOR PRINCIPAL PARA LAS DOS SECCIONES INFERIORES -->
-                    <div class="side-by-side-sections">
-                        <!-- SECCIÓN 2: TIEMPOS Y ATERRIZAJES (IZQUIERDA) -->
-                        <div class="filter-section">
-                            <h4>Tiempos y Aterrizajes (mínimo)</h4>
-                            <div class="filter-grid-2-col">
-                                <div><label>Duración Total ≥</label><input type="number" step="0.1" min="0" id="filter-duracion-min" data-filter-key="Duracion Total de Vuelo-min" placeholder="Ej: 1.5"></div>
-                                <div><label>IFR ≥</label><input type="number" step="0.1" min="0" id="filter-ifr-min" data-filter-key="IFR-min"></div>
-                                <div><label>Diurno ≥</label><input type="number" step="0.1" min="0" id="filter-diurno-min" data-filter-key="Diurno-min"></div>
-                                <div><label>Aterrizajes Día ≥</label><input type="number" min="0" id="filter-aterrizajes-dia-min" data-filter-key="Aterrizajes Dia-min"></div>
-                                <div><label>Nocturno ≥</label><input type="number" step="0.1" min="0" id="filter-nocturno-min" data-filter-key="Nocturno-min"></div>
-                                <div><label>Aterrizajes Noche ≥</label><input type="number" min="0" id="filter-aterrizajes-noche-min" data-filter-key="Aterrizajes Noche-min"></div>
-                            </div>
-                        </div>
-
-                        <!-- SECCIÓN 3: ROLES (DERECHA) -->
-                        <div class="filter-section">
-                            <h4>Roles (mínimo)</h4>
-                            <div class="filter-grid-3-col">
-                                <div><label>PIC ≥</label><input type="number" step="0.1" min="0" id="filter-pic-min" data-filter-key="Piloto al Mando (PIC)-min"></div>
-                                <div><label>SIC ≥</label><input type="number" step="0.1" min="0" id="filter-sic-min" data-filter-key="Copiloto (SIC)-min"></div>
-                                <div><label>Instructor ≥</label><input type="number" step="0.1" min="0" id="filter-instructor-min" data-filter-key="Como Instructor-min"></div>
-                                <div><label>Instrucción ≥</label><input type="number" step="0.1" min="0" id="filter-instruccion-min" data-filter-key="Instruccion Recibida-min"></div>
-                                <div><label>Solo ≥</label><input type="number" step="0.1" min="0" id="filter-solo-min" data-filter-key="Solo-min"></div>
-                                <div><label>Travesía ≥</label><input type="number" step="0.1" min="0" id="filter-travesia-min" data-filter-key="Travesia-min"></div>
-                                <!-- Campo de simulador que ocupa todo el ancho de la última fila -->
-                                <div class="full-width-item">
-                                    <label>Simulador ≥</label>
-                                    <input type="number" step="0.1" min="0" id="filter-simulador-min" data-filter-key="Simulador o Entrenador de Vuelo-min">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="navigation-buttons">
-                        <button type="button" id="reset-filter-btn" class="prev-btn">Limpiar Filtros</button>
-                        <button type="submit" id="apply-filter-btn" class="next-btn">Aplicar Filtro</button>
-                    </div>
-                </form>
-            </div>
+    <!-- MODAL RESTAURAR -->
+    <div id="restore-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header"><h3>Selecciona un Respaldo para Restaurar</h3><span class="close-button">×</span></div>
+            <p>Se encontraron los siguientes respaldos. El más reciente está arriba.</p>
+            <div id="backup-list-container"></div>
         </div>
-    </main>
-<!-- Pega esto al final de <main>, antes de la etiqueta de cierre </main> -->
-<div id="print-modal" class="modal">
-    <div class="modal-content" style="max-width: 550px;">
-        <div class="modal-header">
-            <h3>Generar Reporte de Vuelo</h3>
-            <span class="close-button">×</span>
-        </div>
-        <form id="print-report-form">
-            <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
-                <div>
-                    <label for="print-page-from">Desde la página Nº:</label>
-                    <input type="number" id="print-page-from" min="1" placeholder="Ej: 1">
-                </div>
-                <div>
-                    <label for="print-page-to">Hasta la página Nº:</label>
-                    <input type="number" id="print-page-to" min="1" placeholder="Última">
-                </div>
-            </div>
-            <div class="form-group-full" style="margin-top: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
-                <input type="checkbox" id="print-include-summary" checked style="width: auto;">
-                <label for="print-include-summary" style="margin-bottom: 0;">Incluir página de resumen de totales</label>
-            </div>
-            <div class="navigation-buttons">
-                <button type="submit" class="next-btn">Generar e Imprimir</button>
-            </div>
-        </form>
     </div>
-</div>
+
+    <!-- MODAL FILTRO AVANZADO -->
+    <div id="filter-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header"><h3>Filtro Avanzado</h3><span class="close-button">×</span></div>
+            <form id="advanced-filter-form">
+                <div class="filter-section">
+                    <h4>Datos Generales</h4>
+                    <div class="filter-grid-6-col">
+                        <div><label>Aeronave</label><input type="text" id="filter-aeronave" data-filter-key="Aeronave Marca y Modelo"></div>
+                        <div><label>Matrícula</label><input type="text" id="filter-matricula" data-filter-key="Matricula Aeronave"></div>
+                        <div><label>Desde</label><input type="text" id="filter-desde" data-filter-key="Desde"></div>
+                        <div><label>Hasta</label><input type="text" id="filter-hasta" data-filter-key="Hasta"></div>
+                        <div><label>Fecha Desde</label><input type="date" id="filter-date-from" data-filter-key="Fecha-min"></div>
+                        <div><label>Fecha Hasta</label><input type="date" id="filter-date-to" data-filter-key="Fecha-max"></div>
+                    </div>
+                    <div class="filter-grid-2-col" style="margin-top: 1rem;">
+                        <div><label>Observaciones contiene</label><input type="text" id="filter-observaciones" data-filter-key="Observaciones"></div>
+                        <div><label>Página de Bitácora (Nº exacto)</label><input type="number" id="filter-pagina" data-filter-key="Pagina Bitacora a Replicar"></div>
+                    </div>
+                </div>
+
+                <div class="side-by-side-sections">
+                    <div class="filter-section">
+                        <h4>Tiempos y Aterrizajes (mínimo)</h4>
+                        <div class="filter-grid-2-col">
+                            <div><label>Duración Total ≥</label><input type="number" step="0.1" id="filter-duracion-min" data-filter-key="Duracion Total de Vuelo-min"></div>
+                            <div><label>IFR ≥</label><input type="number" step="0.1" id="filter-ifr-min" data-filter-key="IFR-min"></div>
+                            <div><label>Diurno ≥</label><input type="number" step="0.1" id="filter-diurno-min" data-filter-key="Diurno-min"></div>
+                            <div><label>Aterrizajes Día ≥</label><input type="number" id="filter-aterrizajes-dia-min" data-filter-key="Aterrizajes Dia-min"></div>
+                            <div><label>Nocturno ≥</label><input type="number" step="0.1" id="filter-nocturno-min" data-filter-key="Nocturno-min"></div>
+                            <div><label>Aterrizajes Noche ≥</label><input type="number" id="filter-aterrizajes-noche-min" data-filter-key="Aterrizajes Noche-min"></div>
+                        </div>
+                    </div>
+                    <div class="filter-section">
+                        <h4>Roles (mínimo)</h4>
+                        <div class="filter-grid-3-col">
+                            <div><label>PIC ≥</label><input type="number" step="0.1" data-filter-key="Piloto al Mando (PIC)-min"></div>
+                            <div><label>SIC ≥</label><input type="number" step="0.1" data-filter-key="Copiloto (SIC)-min"></div>
+                            <div><label>Instructor ≥</label><input type="number" step="0.1" data-filter-key="Como Instructor-min"></div>
+                            <div><label>Instrucción ≥</label><input type="number" step="0.1" data-filter-key="Instruccion Recibida-min"></div>
+                            <div><label>Solo ≥</label><input type="number" step="0.1" data-filter-key="Solo-min"></div>
+                            <div><label>Travesía ≥</label><input type="number" step="0.1" data-filter-key="Travesia-min"></div>
+                            <div class="full-width-item"><label>Simulador ≥</label><input type="number" step="0.1" data-filter-key="Simulador o Entrenador de Vuelo-min"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="navigation-buttons">
+                    <button type="button" id="reset-filter-btn" class="prev-btn">Limpiar Filtros</button>
+                    <button type="submit" class="next-btn">Aplicar Filtro</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL IMPRIMIR -->
+    <div id="print-modal" class="modal">
+        <div class="modal-content" style="max-width: 550px;">
+            <div class="modal-header"><h3>Generar Reporte de Vuelo</h3><span class="close-button">×</span></div>
+            <form id="print-report-form">
+                <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
+                    <div><label for="print-page-from">Desde la página Nº:</label><input type="number" id="print-page-from" min="1"></div>
+                    <div><label for="print-page-to">Hasta la página Nº:</label><input type="number" id="print-page-to" min="1"></div>
+                </div>
+                <div class="form-group-full" style="margin-top: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <input type="checkbox" id="print-include-summary" checked style="width: auto;"><label for="print-include-summary">Incluir página de totales</label>
+                </div>
+                <div class="navigation-buttons"><button type="submit" class="next-btn">Generar e Imprimir</button></div>
+            </form>
+        </div>
+    </div>
+
 <!-- ====================================================== -->
 <!-- =         MODAL DE SINCRONIZACIÓN DE DATOS (v2)      = -->
 <!-- ====================================================== -->

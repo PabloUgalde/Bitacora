@@ -1,4 +1,4 @@
-// Este es el archivo principal que orquesta toda la aplicación.
+// --- app.js (VERSIÓN RESTAURADA Y CORREGIDA) ---
 
 const app = {
     initialize: async () => {
@@ -10,7 +10,6 @@ const app = {
         app.setupEventListeners();
         app.setupLogbookActionsListener();
         if ('serviceWorker' in navigator) {
-            // Usamos la ruta relativa que ahora será resuelta correctamente por la etiqueta <base>
             navigator.serviceWorker.register('./sw.js')
                 .then((reg) => console.log('Service Worker Registrado. Scope:', reg.scope))
                 .catch(error => console.error('Error al registrar Service Worker:', error));
@@ -81,6 +80,7 @@ const app = {
             const isGoogle = dataSource === 'google_sheets';
             document.getElementById('google-sheets-url-container').classList.toggle('hidden', !isGoogle);
         };
+
         document.getElementById('data-source-select').addEventListener('change', (e) => {
             const selectedValue = e.target.value;
             updateDataSourceView();
@@ -90,10 +90,7 @@ const app = {
             }
         });
 
-        // ========================================================== //
-        // = LÓGICA DE NAVEGACIÓN Y DROPDOWNS (VERSIÓN CONSOLIDADA) = //
-        // ========================================================== //
-
+        // NAVEGACIÓN Y DROPDOWNS
         const navDropdownToggle = document.getElementById('summaries-dropdown-toggle');
         const navDropdownMenu = document.getElementById('summaries-dropdown-menu');
         const sortDropdownToggle = document.getElementById('sort-order-toggle');
@@ -101,7 +98,6 @@ const app = {
         const hamburgerBtn = document.getElementById('hamburger-btn');
         const mainNav = document.getElementById('main-nav');
         
-        // Listener para el menú de "Resúmenes" (Escritorio)
         if (navDropdownToggle && navDropdownMenu) {
             navDropdownToggle.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -110,7 +106,6 @@ const app = {
             });
         }
 
-        // Listener para el menú de "Ordenar por"
         if (sortDropdownToggle && sortDropdownMenu) {
             sortDropdownToggle.addEventListener('click', () => {
                 sortDropdownMenu.classList.toggle('active');
@@ -129,160 +124,168 @@ const app = {
             });
         }
         
-        // Listener para la navegación principal (Header)
         document.querySelector('header').addEventListener('click', (e) => {
             const link = e.target.closest('.nav-link');
             if (link && link.dataset.view) {
                 e.preventDefault();
-                if (logbookState.editingFlightId) {
-                    ui.resetFlightForm();
-                }
+                if (logbookState.editingFlightId) ui.resetFlightForm();
                 ui.showView(link.dataset.view);
                 if (navDropdownMenu) navDropdownMenu.classList.remove('active');
             }
         });
 
-        // Formulario de Vuelo
+        // FORMULARIO DE VUELO
         document.getElementById('flight-form').addEventListener('submit', app.handleFlightSubmit);
         document.getElementById('review-flight-btn').addEventListener('click', app.handleFlightReview);
         document.querySelectorAll('#flight-form .next-btn').forEach(btn => btn.addEventListener('click', () => ui.goToStep(ui.getCurrentStep() + 1)));
         document.querySelectorAll('#flight-form .prev-btn').forEach(btn => btn.addEventListener('click', () => ui.goToStep(ui.getCurrentStep() - 1)));
-        document.getElementById('condicionIFR').addEventListener('input', () => {
-            document.getElementById('ifr-approaches-container').classList.toggle('hidden', !(parseFloat(document.getElementById('condicionIFR').value) > 0));
+        document.getElementById('condicionIFR').addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value) || 0;
+            document.getElementById('ifr-approaches-container').classList.toggle('hidden', val <= 0);
         });
         
-        // Modales
+        // MODALES
         const filterModal = document.getElementById('filter-modal');
         const restoreModal = document.getElementById('restore-modal');
         const printModal = document.getElementById('print-modal');
-        const syncModal = document.getElementById('sync-prompt-modal');
 
         document.getElementById('open-filter-modal-btn').addEventListener('click', app.openFilterModal);
+        
+        // --- RESTAURADO: Listeners de cierre (X) de los modales ---
         filterModal.querySelector('.close-button').addEventListener('click', app.closeFilterModal);
-        restoreModal.querySelector('.close-button').addEventListener('click', () => backupManager.closeRestoreModal());
         printModal.querySelector('.close-button').addEventListener('click', () => printModal.classList.remove('open'));
+        restoreModal.querySelector('.close-button').addEventListener('click', () => backupManager.closeRestoreModal());
         
-        document.getElementById('advanced-filter-form').addEventListener('submit', (e) => { e.preventDefault(); logbookState.filters = {}; document.getElementById('advanced-filter-form').querySelectorAll('input[data-filter-key]').forEach(input => { if (input.value) { logbookState.filters[input.dataset.filterKey] = input.value; } }); logbookState.currentPage = 1; render.detailedLog(); app.closeFilterModal(); });
-        document.getElementById('reset-filter-btn').addEventListener('click', () => { logbookState.filters = {}; document.getElementById('advanced-filter-form').reset(); logbookState.currentPage = 1; render.detailedLog(); app.closeFilterModal(); });
-        
+        document.getElementById('advanced-filter-form').addEventListener('submit', (e) => { 
+            e.preventDefault(); 
+            logbookState.filters = {}; 
+            document.getElementById('advanced-filter-form').querySelectorAll('input[data-filter-key]').forEach(input => { 
+                if (input.value) logbookState.filters[input.dataset.filterKey] = input.value; 
+            }); 
+            logbookState.currentPage = 1; 
+            render.detailedLog(); 
+            app.closeFilterModal(); 
+        });
+
+        // --- RESTAURADO: Botón reset dentro del modal de filtro ---
+        document.getElementById('reset-filter-btn').addEventListener('click', () => {
+            logbookState.filters = {};
+            document.getElementById('advanced-filter-form').reset();
+            logbookState.currentPage = 1;
+            render.detailedLog();
+            app.closeFilterModal();
+        });
+
+        // REPORTE DE IMPRESIÓN
         document.getElementById('open-print-modal-btn').addEventListener('click', () => {
             const lastPageNumber = ui.getLastPageNumber();
             document.getElementById('print-page-to').placeholder = `Última (${lastPageNumber})`;
-            if (!document.getElementById('print-page-from').value) { document.getElementById('print-page-from').value = 1; }
+            if (!document.getElementById('print-page-from').value) document.getElementById('print-page-from').value = 1;
             printModal.classList.add('open');
         });
-        document.getElementById('print-report-form').addEventListener('submit', (e) => { e.preventDefault(); reportGenerator.generate(); printModal.classList.remove('open'); });
 
-        // Controles de Logbook
+        // --- RESTAURADO: Listener del formulario de impresión (Este era el error) ---
+        document.getElementById('print-report-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            reportGenerator.generate();
+            printModal.classList.remove('open');
+        });
+
+        // PAGINACIÓN Y LOGBOOK
         const paginationControls = document.getElementById('pagination-controls');
         if (paginationControls) {
             paginationControls.addEventListener('click', (e) => {
                 if (e.target.closest('.prev-btn') && !e.target.closest('.prev-btn').disabled) {
-                    logbookState.currentPage--;
-                    render.detailedLog();
+                    logbookState.currentPage--; render.detailedLog();
                 }
                 if (e.target.closest('.next-btn') && !e.target.closest('.next-btn').disabled) {
-                    logbookState.currentPage++;
-                    render.detailedLog();
+                    logbookState.currentPage++; render.detailedLog();
                 }
             });
+            // Listener para selector de items por página
             const itemsPerPageSelect = document.getElementById('items-per-page-desktop');
             if (itemsPerPageSelect) {
                 itemsPerPageSelect.addEventListener('change', (e) => {
-                    const value = parseInt(e.target.value, 10);
-                    logbookState.itemsPerPage = value;
+                    logbookState.itemsPerPage = parseInt(e.target.value, 10);
                     logbookState.currentPage = 1;
                     render.detailedLog();
                 });
             }
-            const itemsBtn = document.getElementById('items-per-page-btn');
-            const itemsMenu = document.getElementById('items-per-page-menu');
-            if (itemsBtn && itemsMenu) {
-                itemsBtn.addEventListener('click', () => itemsMenu.classList.toggle('active'));
-                itemsMenu.addEventListener('click', (e) => {
-                    if (e.target.dataset.value) {
-                        const value = parseInt(e.target.dataset.value, 10);
-                        logbookState.itemsPerPage = value;
-                        logbookState.currentPage = 1;
-                        itemsBtn.textContent = value;
-                        render.detailedLog();
-                        itemsMenu.classList.remove('active');
-                    }
-                });
-            }
         }
         
-        const clearFilterBtn = document.getElementById('clear-logbook-filter-btn');
-        if (clearFilterBtn) {
-            clearFilterBtn.addEventListener('click', () => {
-                logbookState.filters = {};
-                const filterForm = document.getElementById('advanced-filter-form');
-                if (filterForm) filterForm.reset();
-                logbookState.currentPage = 1;
-                render.detailedLog();
+        document.getElementById('clear-logbook-filter-btn').addEventListener('click', () => {
+            logbookState.filters = {};
+            document.getElementById('advanced-filter-form').reset();
+            logbookState.currentPage = 1;
+            render.detailedLog();
+        });
+
+        // === LISTENERS DE TODOS LOS RESÚMENES ===
+        document.getElementById('time-summary-year-select').addEventListener('change', summaryRenderer.byTime);
+        document.getElementById('type-summary-year-select').addEventListener('change', summaryRenderer.byType);
+        document.getElementById('type-summary-month-select').addEventListener('change', summaryRenderer.byType);
+        
+        document.getElementById('airport-summary-year-select').addEventListener('change', summaryRenderer.byAirport);
+        document.getElementById('airport-summary-month-select').addEventListener('change', summaryRenderer.byAirport);
+        
+        document.getElementById('aircraft-summary-year-select').addEventListener('change', summaryRenderer.byAircraft);
+        document.getElementById('aircraft-summary-month-select').addEventListener('change', summaryRenderer.byAircraft);
+        document.getElementById('aircraft-group-by-buttons').addEventListener('click', (e) => {
+            const target = e.target.closest('.toggle-btn');
+            if (target && !target.classList.contains('active')) {
+                document.querySelectorAll('#aircraft-group-by-buttons .toggle-btn').forEach(btn => btn.classList.remove('active'));
+                target.classList.add('active');
+                summaryRenderer.byAircraft();
+            }
+        });
+
+        // === LISTENERS RESUMEN IFR ===
+        const ifrFilterMode = document.getElementById('ifr-filter-mode');
+        if (ifrFilterMode) {
+            ifrFilterMode.addEventListener('change', (e) => {
+                const isRecency = e.target.value === 'recency';
+                document.getElementById('ifr-recency-group').style.display = isRecency ? 'flex' : 'none';
+                document.getElementById('ifr-calendar-group').style.display = isRecency ? 'none' : 'flex';
+                summaryRenderer.byIFR(); 
             });
         }
 
-        // Controles de Resúmenes
-        document.getElementById('time-summary-year-select').addEventListener('change', summaryRenderer.byTime);
-        document.getElementById('type-summary-year-select').addEventListener('change', () => { summaryRenderer.populateTypeSummaryFilters(); summaryRenderer.byType();});
-        document.getElementById('type-summary-month-select').addEventListener('change', summaryRenderer.byType);
-        document.getElementById('airport-summary-year-select').addEventListener('change', () => { summaryRenderer.populateAirportSummaryFilters(); summaryRenderer.byAirport(); });
-        document.getElementById('airport-summary-month-select').addEventListener('change', summaryRenderer.byAirport);
-        document.getElementById('aircraft-summary-year-select').addEventListener('change', () => { summaryRenderer.populateAircraftSummaryFilters(); summaryRenderer.byAircraft(); });
-        document.getElementById('aircraft-summary-month-select').addEventListener('change', summaryRenderer.byAircraft);
-        document.getElementById('aircraft-group-by-buttons').addEventListener('click', (e) => { const target = e.target.closest('.toggle-btn'); if (target && !target.classList.contains('active')) { document.querySelectorAll('#aircraft-group-by-buttons .toggle-btn').forEach(btn => btn.classList.remove('active')); target.classList.add('active'); summaryRenderer.byAircraft(); } });
-        document.getElementById('ifr-summary-year-select').addEventListener('change', summaryRenderer.byIFR);
-        document.getElementById('ifr-summary-month-select').addEventListener('change', summaryRenderer.byIFR);
-        document.getElementById('ifr-group-by-buttons').addEventListener('click', (e) => { const target = e.target.closest('.toggle-btn'); if (target && !target.classList.contains('active')) { document.querySelectorAll('#ifr-group-by-buttons .toggle-btn').forEach(btn => btn.classList.remove('active')); target.classList.add('active'); summaryRenderer.byIFR(); } });
+        const ifrPeriod = document.getElementById('ifr-period-select');
+        if (ifrPeriod) ifrPeriod.addEventListener('change', summaryRenderer.byIFR);
+
+        const ifrYear = document.getElementById('ifr-summary-year-select');
+        if (ifrYear) ifrYear.addEventListener('change', summaryRenderer.byIFR);
+
+        const ifrMonth = document.getElementById('ifr-summary-month-select');
+        if (ifrMonth) ifrMonth.addEventListener('change', summaryRenderer.byIFR);
+
+        const ifrGroup = document.getElementById('ifr-group-by-buttons');
+        if (ifrGroup) {
+            ifrGroup.addEventListener('click', (e) => {
+                const target = e.target.closest('.toggle-btn');
+                if (target && !target.classList.contains('active')) {
+                    document.querySelectorAll('#ifr-group-by-buttons .toggle-btn').forEach(btn => btn.classList.remove('active'));
+                    target.classList.add('active');
+                    summaryRenderer.byIFR();
+                }
+            });
+        }
         
-        // Controles de Configuración
+        // CONFIGURACIÓN Y OTROS
         document.getElementById('save-settings-btn').addEventListener('click', app.saveSettings);
-        document.getElementById('load-from-sheets-btn').addEventListener('click', async () => {
-            const url = document.getElementById('google-sheets-url').value;
-            const statusEl = document.getElementById('data-status');
-            statusEl.textContent = 'Cargando desde Google Sheets...';
-            statusEl.className = 'status';
-            const result = await api.loadFlightsFromGoogleSheets(url);
-            if (result.success) {
-                flightData = result.data;
-                api.saveFlightsToLocalStorage();
-                logbookState.sortOrder = 'natural';
-                app.updateSortButtonText();
-                statusEl.textContent = result.message;
-                statusEl.className = 'status success';
-                alert(result.message + " La aplicación se recargará para reflejar los cambios.");
-                location.reload();
-            } else {
-                statusEl.textContent = `Error: ${result.message}`;
-                statusEl.className = 'status error';
-                alert(`Error al cargar desde Google Sheets: ${result.message}`);
-            }
-        });
-        document.getElementById('upload-excel-btn').addEventListener('click', () => document.getElementById('excel-file-input').click());
-        document.getElementById('excel-file-input').addEventListener('change', async (event) => { const file = event.target.files[0]; if (file) { const result = await dataImporter.processExcelFile(file); if (result.success) { flightData = result.data; api.saveFlightsToLocalStorage(); logbookState.sortOrder = 'natural'; app.updateSortButtonText(); ui.showView('view-dashboard'); } } });
-        document.getElementById('download-excel-btn').addEventListener('click', () => api.exportToExcel());
-        document.getElementById('sync-to-sheets-btn').addEventListener('click', async () => {
-            const statusEl = document.getElementById('data-status');
-            statusEl.textContent = 'Sincronizando... Esto puede tardar unos segundos.';
-            statusEl.className = 'status';
-            const result = await api.syncAllFlightsToSheets(); if (result.success) { statusEl.textContent = `¡Éxito! ${result.message}`; statusEl.className = 'status success'; alert(result.message); } else { statusEl.textContent = `Error: ${result.message}`; statusEl.className = 'status error'; alert(`Error durante la sincronización: ${result.message}`);}
-        });
-        document.getElementById('clear-local-data-btn').addEventListener('click', () => { if (confirm("¿Estás seguro de que quieres borrar todos los datos locales?")) { localStorage.removeItem('flightLogData'); location.reload(); } });
         document.getElementById('setup-backup-btn').addEventListener('click', () => backupManager.setupBackupFolder());
         document.getElementById('restore-backup-btn').addEventListener('click', () => backupManager.restoreFromBackup());
+        
         document.querySelectorAll('.accordion-header').forEach(header => {
             header.addEventListener('click', () => {
-                const content = header.nextElementSibling;
                 header.classList.toggle('active');
-                content.classList.toggle('active');
+                header.nextElementSibling.classList.toggle('active');
             });
         });
 
         // Listeners del Modal de Sincronización
         document.getElementById('sync-action-merge').addEventListener('click', async () => {
             const syncModal = document.getElementById('sync-prompt-modal');
-            console.log("Acción: Sincronizar y Fusionar");
             ui.showNotification("Iniciando sincronización...", "info");
             const sheetsResult = await api.loadFlightsFromGoogleSheets(userProfile.googleSheetsUrl || document.getElementById('google-sheets-url').value);
             if (!sheetsResult.success) {
@@ -306,31 +309,29 @@ const app = {
             }
             userProfile.dataSource = 'google_sheets';
             await api.saveProfile(userProfile);
-            alert("¡Sincronización completada! La aplicación se recargará con los datos fusionados.");
+            alert("¡Sincronización completada!");
             location.reload();
         });
+        
         document.getElementById('sync-action-replace').addEventListener('click', async () => {
-            console.log("Acción: Reemplazar Local");
             userProfile.dataSource = 'google_sheets';
             await api.saveProfile(userProfile);
-            alert("Fuente de datos cambiada. Se usarán los datos de Google Sheets. La aplicación se recargará.");
             location.reload();
         });
+        
         document.getElementById('sync-action-cancel').addEventListener('click', () => {
             const syncModal = document.getElementById('sync-prompt-modal');
-            console.log("Acción: Cancelar");
             document.getElementById('data-source-select').value = 'local';
             document.getElementById('google-sheets-url-container').classList.add('hidden');
             syncModal.classList.remove('open');
         });
         
-        // LÓGICA DEL MENÚ MÓVIL (CORREGIDA)
+        // MENÚ MÓVIL
         if (hamburgerBtn && mainNav) {
             hamburgerBtn.addEventListener('click', () => {
                 hamburgerBtn.classList.toggle('open');
                 mainNav.classList.toggle('mobile-nav-open');
             });
-            const dropdownToggleMobile = mainNav.querySelector('#summaries-dropdown-toggle');
             const dropdownMenuMobile = mainNav.querySelector('#summaries-dropdown-menu');
             mainNav.addEventListener('click', (e) => {
                 const link = e.target.closest('.nav-link');
@@ -346,32 +347,30 @@ const app = {
             });
         }
 
-        // ========================================================== //
-        // =  LISTENER GLOBAL UNIFICADO PARA CERRAR ELEMENTOS         = //
-        // ========================================================== //
+        // CIERRE GLOBAL DE ELEMENTOS AL HACER CLICK FUERA
         if (!window.globalClickListenerAttached) {
-            const itemsMenu = document.getElementById('items-per-page-menu');
-            const itemsBtn = document.getElementById('items-per-page-btn');
-            
-            window.addEventListener('click', (e) => {
-                // Cierra modales
-                if (e.target === filterModal) app.closeFilterModal();
-                if (e.target === restoreModal) backupManager.closeRestoreModal();
-                if (e.target === printModal) printModal.classList.remove('open');
+            // Variable para rastrear dónde empezó el clic
+            let mousedownTarget = null;
 
-                // Cierra menú de "Resúmenes" de escritorio
+            window.addEventListener('mousedown', (e) => {
+                mousedownTarget = e.target;
+            });
+
+            window.addEventListener('click', (e) => {
+                // Solo cerramos si el clic EMPEZÓ y TERMINÓ en el mismo elemento de fondo
+                // Esto evita cierres accidentales al seleccionar texto o arrastrar el mouse
+                if (e.target === mousedownTarget) {
+                    if (filterModal && e.target === filterModal) app.closeFilterModal();
+                    if (restoreModal && e.target === restoreModal) backupManager.closeRestoreModal();
+                    if (printModal && e.target === printModal) printModal.classList.remove('open');
+                }
+
+                // Lógica de menús desplegables (estos no se ven afectados por el arrastre)
                 if (navDropdownMenu && navDropdownToggle && !navDropdownToggle.contains(e.target) && !navDropdownMenu.contains(e.target)) {
                     navDropdownMenu.classList.remove('active');
                 }
-
-                // Cierra menú de "Ordenar por"
                 if (sortDropdownMenu && sortDropdownToggle && !sortDropdownToggle.contains(e.target) && !sortDropdownMenu.contains(e.target)) {
                     sortDropdownMenu.classList.remove('active');
-                }
-                
-                // Cierra menú móvil de "Items por página"
-                if (itemsMenu && itemsBtn && !itemsBtn.contains(e.target) && !itemsMenu.contains(e.target)) {
-                    itemsMenu.classList.remove('active');
                 }
             });
             window.globalClickListenerAttached = true;
@@ -392,14 +391,7 @@ const app = {
         const selectedCards = [];
         for (let i = 0; i < 7; i++) {
             const selectEl = document.getElementById(`card-slot-select-${i}`);
-            if (selectEl) {
-                selectedCards.push(selectEl.value);
-            }
-        }
-        const uniqueCards = new Set(selectedCards);
-        if (uniqueCards.size !== selectedCards.length) {
-            alert("Error: No puedes seleccionar la misma tarjeta en múltiples ranuras. Por favor, elige una métrica diferente para cada una.");
-            return;
+            if (selectEl) selectedCards.push(selectEl.value);
         }
         const profileToSave = {
             dataSource: document.getElementById('data-source-select').value,
@@ -418,13 +410,8 @@ const app = {
         });
         userProfile = profileToSave;
         localStorage.setItem('flightLogUserProfile', JSON.stringify(userProfile));
-        console.log("Perfil de usuario guardado en localStorage (sin crear backup).");
         ui.updateFormForRole();
-        const statusEl = document.getElementById('settings-status');
-        statusEl.textContent = `¡Configuración guardada con éxito!`;
-        statusEl.className = 'status success';
-        setTimeout(() => statusEl.textContent = '', 4000);
-        alert("Configuración guardada. Tus cambios se han guardado y respaldado.");
+        ui.showNotification("¡Configuración guardada!", "success");
     },
 
     loadSettings: () => {
@@ -438,6 +425,7 @@ const app = {
         if (googleUrlInput) { googleUrlInput.value = userProfile.googleSheetsUrl || ''; }
         if (userProfile.personal) { Object.keys(userProfile.personal).forEach(id => { const i = document.getElementById(id); if (i) i.value = userProfile.personal[id]; }); }
         if (userProfile.licenses) { Object.keys(userProfile.licenses).forEach(id => { const i = document.getElementById(id); if (i) i.value = userProfile.licenses[id]; }); }
+        
         const cardsContainer = document.getElementById('dashboard-cards-config-container');
         if (cardsContainer) {
             cardsContainer.innerHTML = ''; 
@@ -459,10 +447,7 @@ const app = {
                 cardsContainer.appendChild(slotEl);
             }
         }
-        const backupSelect = document.getElementById('backup-retention-select');
-        if (backupSelect && userProfile.backupRetentionDays) {
-            backupSelect.value = userProfile.backupRetentionDays;
-        }
+        if (userProfile.backupRetentionDays) document.getElementById('backup-retention-select').value = userProfile.backupRetentionDays;
         ui.showBackupFolderPath(); 
         ui.updateFormForRole();
     },
@@ -472,50 +457,31 @@ const app = {
     handleFlightSubmit: async (e) => {
         e.preventDefault();
         const submitBtn = e.target.querySelector('.submit-btn');
-        if (!submitBtn || submitBtn.disabled) { return; }
+        if (!submitBtn || submitBtn.disabled) return;
         submitBtn.disabled = true;
         submitBtn.textContent = 'Guardando...';
 
         const result = ui.validateAndGetData();
         if (result.isValid) {
             const isEditing = !!logbookState.editingFlightId;
-            let success = false;
             try {
-                if (isEditing) {
-                    success = await api.updateFlight(logbookState.editingFlightId, result.data);
-                } else {
-                    success = await api.saveFlight(result.data);
-                }
+                const success = isEditing ? await api.updateFlight(logbookState.editingFlightId, result.data) : await api.saveFlight(result.data);
                 if (success) {
-                    const successMessage = `¡Vuelo ${isEditing ? 'actualizado' : 'guardado'} con éxito!`;
                     if (isEditing && userProfile.dataSource === 'google_sheets') {
-                        alert(successMessage + " La aplicación se recargará para reflejar los cambios desde la fuente de datos principal.");
+                        alert("Vuelo actualizado. Recargando...");
                         location.reload();
                     } else {
-                        const statusMessage = document.getElementById('status-message');
-                        statusMessage.textContent = successMessage;
-                        statusMessage.className = 'status success';
+                        ui.showNotification(`¡Vuelo ${isEditing ? 'actualizado' : 'guardado'}!`, "success");
                         ui.resetFlightForm();
-                        setTimeout(() => { 
-                            ui.showView('view-dashboard');
-                            statusMessage.textContent = ''; 
-                        }, 1500);
+                        setTimeout(() => ui.showView('view-dashboard'), 1000);
                     }
-                } else {
-                    alert("Hubo un error al guardar el vuelo.");
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = isEditing ? 'Guardar Cambios' : 'Guardar Vuelo Definitivo';
                 }
             } catch (error) {
-                console.error("Error durante el guardado del vuelo:", error);
-                alert("Ocurrió un error crítico al guardar. Revisa la consola para más detalles.");
+                console.error(error);
                 submitBtn.disabled = false;
-                submitBtn.textContent = isEditing ? 'Guardar Cambios' : 'Guardar Vuelo Definitivo';
             }
         } else {
             submitBtn.disabled = false;
-            const originalText = document.getElementById('flight-form-title').textContent.includes('Editar') ? 'Guardar Cambios' : 'Guardar Vuelo Definitivo';
-            submitBtn.textContent = originalText;
         }
     },
 };

@@ -149,36 +149,89 @@ const summaryRenderer = {
         monthsInYear.forEach(monthIndex => monthSelect.add(new Option(monthNames[monthIndex], monthIndex)));
         if (monthsInYear.includes(parseInt(currentMonthVal))) { monthSelect.value = currentMonthVal; }
     },
-    byIFR: () => {
+// Reemplaza la función byIFR completa en summary-renderer.js
+byIFR: () => {
         summaryRenderer.populateIFRSummaryFilters(); 
         const tableContainer = document.getElementById('ifr-summary-table-container');
         const activeButton = document.querySelector('#ifr-group-by-buttons .toggle-btn.active');
+        const filterMode = document.getElementById('ifr-filter-mode').value;
+        
         if (!tableContainer || !activeButton) return;
-        const yearSelect = document.getElementById('ifr-summary-year-select');
-        const monthSelect = document.getElementById('ifr-summary-month-select');
+
         const groupByKey = activeButton.dataset.value;
-        let filteredData = flightData.filter(f => f.IFR > 0);
-        const selectedYear = yearSelect.value;
-        const selectedMonth = monthSelect.value;
-        if (selectedYear !== 'all') { filteredData = filteredData.filter(f => f.Fecha.getUTCFullYear() === parseInt(selectedYear, 10)); }
-        if (selectedMonth !== 'all') { filteredData = filteredData.filter(f => f.Fecha.getUTCMonth() === parseInt(selectedMonth, 10)); }
-        if (filteredData.length === 0) { tableContainer.innerHTML = "<div class='table-container'><p style='padding: 1rem; text-align: center;'>No hay vuelos IFR para el período seleccionado.</p></div>"; return; }
-        const aircraftGroups = filteredData.reduce((acc, flight) => { const key = flight[groupByKey]; if (key) { if (!acc[key]) acc[key] = []; acc[key].push(flight); } return acc; }, {});
-        if (groupByKey === 'Matricula Aeronave') {
-            const summaryHeaders = ["IFR", "Diurno", "Nocturno", "NO", "Aterrizajes Dia", "Aterrizajes Noche", "Travesia", "Solo", "Piloto al Mando (PIC)", "Copiloto (SIC)", "Instruccion Recibida", "Como Instructor"];
-            const aircraftTotals = Object.entries(aircraftGroups).map(([key, flights]) => ({ key: key, totals: calculateTotals(flights, summaryHeaders) })).sort((a, b) => b.totals.IFR - a.totals.IFR);
-            let tableHtml = `<div class="table-container"><table><thead><tr><th>Matrícula</th><th>Hrs IFR</th><th>Hrs Día</th><th>Hrs Noche</th><th>Aprox.</th><th>Aterrizajes (D/N)</th><th>Travesía</th><th>Solo</th><th>PIC</th><th>SIC</th><th>Instrucción</th><th>Instructor</th></tr></thead><tbody>`;
-            aircraftTotals.forEach(data => { const landings = (data.totals["Aterrizajes Dia"] || 0) + (data.totals["Aterrizajes Noche"] || 0); tableHtml += `<tr><td><strong>${data.key}</strong></td><td>${(data.totals.IFR || 0).toFixed(1)}</td><td>${(data.totals.Diurno || 0).toFixed(1)}</td><td>${(data.totals.Nocturno || 0).toFixed(1)}</td><td>${Math.round(data.totals.NO || 0)}</td><td>${landings} (${Math.round(data.totals["Aterrizajes Dia"] || 0)}/${Math.round(data.totals["Aterrizajes Noche"] || 0)})</td><td>${(data.totals.Travesia || 0).toFixed(1)}</td><td>${(data.totals.Solo || 0).toFixed(1)}</td><td>${(data.totals["Piloto al Mando (PIC)"] || 0).toFixed(1)}</td><td>${(data.totals["Copiloto (SIC)"] || 0).toFixed(1)}</td><td>${(data.totals["Instruccion Recibida"] || 0).toFixed(1)}</td><td>${(data.totals["Como Instructor"] || 0).toFixed(1)}</td></tr>`; });
-            tableHtml += `</tbody></table></div>`;
-            tableContainer.innerHTML = tableHtml;
+        let filteredData = flightData.filter(f => (parseFloat(f.IFR) > 0 || parseInt(f.NO) > 0));
+
+        // Lógica según el MODO seleccionado
+        if (filterMode === 'recency') {
+            // MODO RECENCIA: Calculamos días hacia atrás desde hoy
+            const days = parseInt(document.getElementById('ifr-period-select').value);
+            const limitDate = new Date();
+            limitDate.setUTCHours(0,0,0,0);
+            limitDate.setDate(limitDate.getDate() - days);
+            filteredData = filteredData.filter(f => f.Fecha >= limitDate);
         } else {
-            const summaryHeaders = ["IFR", "Diurno", "Nocturno", "NO", "Aterrizajes Dia", "Aterrizajes Noche", "Simulador o Entrenador de Vuelo", "Travesia", "Solo", "Piloto al Mando (PIC)", "Copiloto (SIC)", "Instruccion Recibida", "Como Instructor"];
-            const aircraftTotals = Object.entries(aircraftGroups).map(([key, flights]) => ({ key: key, totals: calculateTotals(flights, summaryHeaders) })).sort((a, b) => b.totals.IFR - a.totals.IFR);
-            let tableHtml = `<div class="table-container"><table><thead><tr><th>Modelo</th><th>Hrs IFR</th><th>Hrs Día</th><th>Hrs Noche</th><th>Aprox.</th><th>Aterrizajes (D/N)</th><th>Simulador</th><th>Travesía</th><th>Solo</th><th>PIC</th><th>SIC</th><th>Instrucción</th><th>Instructor</th></tr></thead><tbody>`;
-            aircraftTotals.forEach(data => { const landings = (data.totals["Aterrizajes Dia"] || 0) + (data.totals["Aterrizajes Noche"] || 0); tableHtml += `<tr><td><strong>${data.key}</strong></td><td>${(data.totals.IFR || 0).toFixed(1)}</td><td>${(data.totals.Diurno || 0).toFixed(1)}</td><td>${(data.totals.Nocturno || 0).toFixed(1)}</td><td>${Math.round(data.totals.NO || 0)}</td><td>${landings} (${Math.round(data.totals["Aterrizajes Dia"] || 0)}/${Math.round(data.totals["Aterrizajes Noche"] || 0)})</td><td>${(data.totals["Simulador o Entrenador de Vuelo"] || 0).toFixed(1)}</td><td>${(data.totals.Travesia || 0).toFixed(1)}</td><td>${(data.totals.Solo || 0).toFixed(1)}</td><td>${(data.totals["Piloto al Mando (PIC)"] || 0).toFixed(1)}</td><td>${(data.totals["Copiloto (SIC)"] || 0).toFixed(1)}</td><td>${(data.totals["Instruccion Recibida"] || 0).toFixed(1)}</td><td>${(data.totals["Como Instructor"] || 0).toFixed(1)}</td></tr>`; });
-            tableHtml += `</tbody></table></div>`;
-            tableContainer.innerHTML = tableHtml;
+            // MODO CALENDARIO: Mes y Año específicos
+            const yearSelect = document.getElementById('ifr-summary-year-select');
+            const monthSelect = document.getElementById('ifr-summary-month-select');
+            if (yearSelect && yearSelect.value !== 'all') {
+                filteredData = filteredData.filter(f => f.Fecha.getUTCFullYear() === parseInt(yearSelect.value));
+            }
+            if (monthSelect && monthSelect.value !== 'all') {
+                filteredData = filteredData.filter(f => f.Fecha.getUTCMonth() === parseInt(monthSelect.value));
+            }
         }
+
+        if (filteredData.length === 0) {
+            tableContainer.innerHTML = "<div class='table-container'><p style='padding: 1rem; text-align: center;'>No hay actividad IFR en este período.</p></div>";
+            return;
+        }
+
+        const groups = filteredData.reduce((acc, flight) => {
+            const key = flight[groupByKey] || "Desconocido";
+            if (!acc[key]) acc[key] = [];
+            acc[key].push(flight);
+            return acc;
+        }, {});
+
+        const summaryHeaders = ["IFR", "Diurno", "Nocturno", "NO", "Aterrizajes Dia", "Aterrizajes Noche", "Simulador o Entrenador de Vuelo"];
+        
+        const results = Object.entries(groups).map(([key, flights]) => {
+            const totals = calculateTotals(flights, summaryHeaders);
+            const flightsWithApp = flights.filter(f => parseInt(f.NO) > 0).sort((a, b) => a.Fecha - b.Fecha);
+            const oldestAppDate = flightsWithApp.length > 0 ? flightsWithApp[0].Fecha : null;
+            return { key, totals, oldestAppDate };
+        }).sort((a, b) => b.totals.IFR - a.totals.IFR);
+
+        let tableHtml = `<div class="table-container"><table>
+            <thead>
+                <tr>
+                    <th>${groupByKey === 'Matricula Aeronave' ? 'Matrícula' : 'Modelo'}</th>
+                    <th>Horas IFR</th>
+                    <th>Total Aprox (NO)</th>
+                    <th>Aprox. más antigua</th>
+                    <th>Hrs Sim</th>
+                    <th>Aterrizajes (D/N)</th>
+                </tr>
+            </thead>
+            <tbody>`;
+
+        results.forEach(data => {
+            const dateStr = data.oldestAppDate ? data.oldestAppDate.toLocaleDateString('es-CL', {timeZone: 'UTC'}) : '---';
+            const isWarning = data.oldestAppDate && (new Date() - data.oldestAppDate) > (180 * 24 * 60 * 60 * 1000);
+            const dateStyle = isWarning ? 'color: #ff4444; font-weight: bold;' : '';
+
+            tableHtml += `<tr>
+                <td><strong>${data.key}</strong></td>
+                <td style="text-align: center;">${data.totals.IFR.toFixed(1)}</td>
+                <td style="text-align: center;">${Math.round(data.totals.NO)}</td>
+                <td style="text-align: center; ${dateStyle}">${dateStr}</td>
+                <td style="text-align: center;">${data.totals["Simulador o Entrenador de Vuelo"].toFixed(1)}</td>
+                <td style="text-align: center;">${Math.round(data.totals["Aterrizajes Dia"])}/${Math.round(data.totals["Aterrizajes Noche"])}</td>
+            </tr>`;
+        });
+
+        tableHtml += `</tbody></table></div>`;
+        tableContainer.innerHTML = tableHtml;
     },
     
     // --- RESUMEN POR AERÓDROMO (RECUPERADO) ---

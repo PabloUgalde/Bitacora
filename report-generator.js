@@ -3,19 +3,31 @@
 const reportGenerator = {
 
     generate: () => {
-        // ... (Esta función no cambia)
         const fromPage = parseInt(document.getElementById('print-page-from').value, 10) || 1;
         const toPageInput = document.getElementById('print-page-to');
         const toPage = parseInt(toPageInput.value, 10) || ui.getLastPageNumber();
         const includeSummary = document.getElementById('print-include-summary').checked;
-        const flightsForReport = flightData.filter(flight => {
-            const pageNum = flight["Pagina Bitacora a Replicar"];
-            return pageNum >= fromPage && pageNum <= toPage;
-        });
+
+        // LÓGICA DE FILTROS:
+        // Si el usuario tiene filtros puestos en la tabla, imprimimos logbookState.filteredData
+        const hasActiveFilters = Object.keys(logbookState.filters).length > 0;
+        let flightsForReport;
+
+        if (hasActiveFilters) {
+            flightsForReport = logbookState.filteredData;
+            console.log("Generando reporte basado en filtros activos");
+        } else {
+            flightsForReport = flightData.filter(flight => {
+                const pageNum = flight["Pagina Bitacora a Replicar"];
+                return pageNum >= fromPage && pageNum <= toPage;
+            });
+        }
+
         if (flightsForReport.length === 0) {
-            alert("No se encontraron vuelos en el rango de páginas especificado.");
+            alert("No hay vuelos para los criterios seleccionados.");
             return;
         }
+
         const reportHtml = reportGenerator.buildReportHtml(flightsForReport, includeSummary, fromPage, toPage);
         const reportWindow = window.open('', '_blank');
         reportWindow.document.write(reportHtml);

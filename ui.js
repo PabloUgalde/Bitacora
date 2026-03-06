@@ -240,8 +240,12 @@ createFlightObject: (data) => {
             document.getElementById('fecha').value = ui.getTodayString();
             ui.setFlightFormMode('add'); // Esto ya cambia el texto del botón
             ui.goToStep(0);
-
-            // --- INICIO DE LA CORRECCIÓN ---
+            
+            // Forzamos a que el contenedor de aproximaciones se oculte al resetear
+            const ifrContainer = document.getElementById('ifr-approaches-container');
+            if (ifrContainer) {
+                ifrContainer.classList.add('hidden');
+            }
             // Nos aseguramos de que el botón de envío esté siempre habilitado
             // cuando el formulario se resetea.
             const submitBtn = form.querySelector('.submit-btn');
