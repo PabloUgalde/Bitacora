@@ -32,7 +32,7 @@ const ui = {
 
     populateAircraftTypes: () => {
     const select = document.getElementById('tipoAvion');
-    if (!select || select.options.length > 1) return; // Si no existe o ya está poblado, no hacer nada
+
 
     // Limpiamos y añadimos la opción por defecto
     select.innerHTML = '<option value="" disabled selected>Selecciona un tipo...</option>';
@@ -140,7 +140,14 @@ const ui = {
                 break;
             }
         }
-        tipoAvionSelect.value = tipoAvion;
+        tipoAvionSelect.innerHTML = '<option value="" disabled>Selecciona un tipo...</option>';
+        AIRCRAFT_TYPE_HEADERS.forEach(type => {
+            const option = document.createElement('option');
+            option.value = type;
+            option.textContent = type;
+        tipoAvionSelect.appendChild(option);
+});
+tipoAvionSelect.value = tipoAvion;
         document.getElementById('ifr-approaches-container').classList.toggle('hidden', !(flight.IFR > 0));
     },
 
@@ -192,7 +199,7 @@ createFlightObject: (data) => {
         "Pagina Bitacora a Replicar": pageNumber, // Usamos el número de página calculado.
     };
     AIRCRAFT_TYPE_HEADERS.forEach(type => { newFlight[type] = 0; });
-    if (data.roles.simulador <= 0 && data.tipoAvion && AIRCRAFT_TYPE_HEADERS.includes(data.tipoAvion)) {
+    if (data.tipoAvion && AIRCRAFT_TYPE_HEADERS.includes(data.tipoAvion)) {
         newFlight[data.tipoAvion] = data.duracion;
     }
     return newFlight;

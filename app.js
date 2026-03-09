@@ -478,6 +478,7 @@ const app = {
                 }
             } catch (error) {
                 console.error(error);
+                alert("Error: " + error.message);
                 submitBtn.disabled = false;
             }
         } else {

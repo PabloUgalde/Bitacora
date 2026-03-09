@@ -52,27 +52,20 @@ const api = {
     },
     
     // --- FUNCIÓN DE COMUNICACIÓN CENTRALIZADA ---
-    async _postToSheets(payload) {
-        try {
-            // Añadimos mode: 'no-cors'. Esto "dispara y olvida" la solicitud.
-            // El navegador la envía pero no espera leer la respuesta, evitando el error de CORS.
-            await fetch(userProfile.googleSheetsUrl, {
-                method: 'POST',
-                body: JSON.stringify(payload),
-                mode: 'no-cors' 
-            });
-
-            // Como no podemos leer la respuesta, asumimos que fue exitosa (actualización optimista).
-            // La funcionalidad en Google Sheets seguirá ejecutándose correctamente.
-            return { success: true, message: 'Solicitud enviada a Google Sheets.' };
-
-        } catch (error) {
-            // Este bloque 'catch' ahora solo se activará para errores de red genuinos
-            // (ej. el usuario no tiene conexión a internet).
-            console.error("Error de Red Genuino al enviar a Google Sheets:", error);
-            return { success: false, message: `Error de red: ${error.message}` };
-        }
-    },
+        async _postToSheets(payload) {
+            try {
+                await fetch(userProfile.googleSheetsUrl, {
+                    method: 'POST',
+                    body: JSON.stringify(payload),
+                    mode: 'no-cors'
+                    // SIN headers - no poner Content-Type
+                });
+                return { success: true, message: 'Solicitud enviada a Google Sheets.' };
+            } catch (error) {
+                console.error("Error de Red al enviar a Google Sheets:", error);
+                return { success: false, message: `Error de red: ${error.message}` };
+            }
+        },
 
     // --- CARGA INICIAL ---
     loadInitialFlights: async () => {
