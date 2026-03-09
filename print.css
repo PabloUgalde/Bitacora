@@ -16,6 +16,7 @@
     @page { size: landscape; margin: 1cm; }
     #print-report-body { background-color: transparent !important; }
     #print-report-body .page { width: auto; height: auto; margin: 0; padding: 0; box-shadow: none !important; border: none !important; }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 }
 
 /* --- ESTILOS DE LA PÁGINA DE RESUMEN (CORREGIDOS) --- */
@@ -78,7 +79,7 @@
 #print-report-body .logbook-page table { width: 100%; border-collapse: collapse; table-layout: fixed; border: 2px solid #000; }
 #print-report-body .logbook-page thead { display: table-header-group; }
 #print-report-body .logbook-page th, #print-report-body .logbook-page td { border: 1px solid #333 !important; padding: 2px; font-size: 8pt; vertical-align: middle; text-align: center; word-break: break-word; }
-#print-report-body .logbook-page th { color: #000 !important; }
+#print-report-body .logbook-page th { color: #000 !important; background-color: rgba(238, 238, 238, 0.85) !important; }
 #print-report-body .logbook-page td { vertical-align: top; font-family: 'Courier New', Courier, monospace; color: #000 !important; }
 #print-report-body .logbook-page thead tr:first-child th { white-space: nowrap; }
 #print-report-body .logbook-page thead tr:last-child th { height: 100px; padding: 2px; }
@@ -120,4 +121,101 @@
 #print-report-body #detailed-logbook-container tbody td:nth-child(29),
 #print-report-body #detailed-logbook-container tbody td:nth-child(30) {
     border-right: 2px solid #000 !important;
+}
+
+/* --- ESTILOS PARA FIRMAS EN EL REPORTE --- */
+.signature-container {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 1.5cm;
+    gap: 1.5cm;
+}
+.signature-box {
+    flex: 1;
+    text-align: center;
+}
+.signature-line {
+    border-top: 1px solid #000;
+    margin-top: 1.2cm;
+    margin-bottom: 0.1cm;
+}
+.signature-text {
+    font-size: 8pt;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+.certification-statement {
+    margin-top: 0.8cm;
+    font-style: italic;
+    font-size: 10pt;
+    text-align: left;
+}
+
+/* Asegurar que la tabla de info y totales mantenga su forma original */
+.info-details-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+.info-details-table td { vertical-align: top; padding: 5px 0; }
+.totals-grid-container { display: flex; gap: 30px; }
+.totals-column { flex: 1; }
+.totals-table { width: 100%; border-collapse: collapse; }
+.totals-table td { padding: 3px 5px; border: 1px solid #ccc; font-size: 9pt; }
+
+/* Ajustes para compactar el resumen */
+#print-report-body .summary-page h3 {
+    padding: 2px 0;
+    margin: 5px 0;
+}
+
+.totals-table td {
+    padding: 2px 4px !important; /* Menos relleno en las celdas */
+    font-size: 8.5pt !important;
+}
+
+.recency-table th, 
+.recency-table td {
+    padding: 3px !important;
+    font-size: 8.5pt !important;
+}
+
+/* Evitar saltos de página dentro del resumen */
+.summary-page {
+    page-break-inside: avoid;
+}
+
+/* Asegura que las líneas de firma sean negras sólidas al imprimir */
+@media print {
+    .summary-page div[style*="border-top"] {
+        border-top-color: #000 !important;
+        border-top-width: 1.5pt !important;
+    }
+}
+/* --- ESTILOS REPARADOS PARA EL RESUMEN --- */
+
+/* La página general mantiene su comportamiento de impresión */
+#print-report-body .page {
+    page-break-after: always;
+    position: relative;
+}
+
+/* Solo para la página de resumen */
+#print-report-body .page.summary-page {
+    display: block !important; /* Volvemos a bloque estándar para evitar errores de flujo */
+    height: 19cm; /* Altura fija para landscape A4 */
+    overflow: visible !important; /* CRÍTICO: Permitir que se vea todo */
+}
+
+/* Estilo para las tablas internas para ganar espacio */
+.summary-page .totals-table td {
+    padding: 2px 4px !important;
+    font-size: 8pt !important;
+}
+
+.summary-page .recency-table td, 
+.summary-page .recency-table th {
+    padding: 3px !important;
+    font-size: 8.5pt !important;
+}
+
+.summary-page h3 {
+    margin: 5px 0 !important;
+    font-size: 11pt !important;
 }
