@@ -11,6 +11,11 @@ const summaryRenderer = {
             container.innerHTML = "<p>No hay páginas para resumir.</p>";
             return;
         }
+        const fromInput = document.getElementById('page-summary-from');
+        const toInput = document.getElementById('page-summary-to');
+        const fromPage = fromInput && fromInput.value ? parseInt(fromInput.value) : null;
+        const toPage = toInput && toInput.value ? parseInt(toInput.value) : null;
+        
         const summaryStructure = [HEADER_STRUCTURE.find(h => h.name === 'Duracion Total de Vuelo'), HEADER_STRUCTURE.find(h => h.name === 'Avión'), HEADER_STRUCTURE.find(h => h.name === 'Aterrizajes'), HEADER_STRUCTURE.find(h => h.name === 'Condición de Vuelo'), HEADER_STRUCTURE.find(h => h.name === 'APP'), HEADER_STRUCTURE.find(h => h.name === 'Tipo de Tiempo de Vuelo')].filter(Boolean);
         const summaryHeaders = summaryStructure.flatMap(group => group.isGroup ? group.children : [group.name]);
         let headerHtml = '<thead><tr><th rowspan="2" class="sticky-col">Info Página</th>';
@@ -18,7 +23,13 @@ const summaryRenderer = {
         headerHtml += '</tr><tr>';
         summaryStructure.forEach(header => { if (header.isGroup) { header.children.forEach(child => { headerHtml += `<th>${child.replace("Aterrizajes ", "").replace(/o Entrenador de Vuelo|de Vuelo/g, "").trim()}</th>`; }); } });
         headerHtml += '</tr></thead>';
-        const pageNumbers = [...new Set(flightData.map(f => f["Pagina Bitacora a Replicar"]))].sort((a, b) => a - b);
+        let pageNumbers = [...new Set(flightData.map(f => f["Pagina Bitacora a Replicar"]))].sort((a, b) => a - b);
+            if (fromPage) pageNumbers = pageNumbers.filter(p => p >= fromPage);
+            if (toPage) pageNumbers = pageNumbers.filter(p => p <= toPage);
+            if (pageNumbers.length === 0) {
+                container.innerHTML = "<p>No hay páginas en ese rango.</p>";
+                return;
+            }
         let previousTotals = calculateTotals([], summaryHeaders);
         let content = '';
         pageNumbers.forEach(pageNumber => {

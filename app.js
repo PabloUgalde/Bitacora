@@ -372,6 +372,12 @@ const app = {
                 if (sortDropdownMenu && sortDropdownToggle && !sortDropdownToggle.contains(e.target) && !sortDropdownMenu.contains(e.target)) {
                     sortDropdownMenu.classList.remove('active');
                 }
+            document.getElementById('page-summary-filter-btn').addEventListener('click', summaryRenderer.byPage);
+            document.getElementById('page-summary-reset-btn').addEventListener('click', () => {
+                document.getElementById('page-summary-from').value = '';
+                document.getElementById('page-summary-to').value = '';
+                summaryRenderer.byPage();
+                });
             });
             window.globalClickListenerAttached = true;
         }

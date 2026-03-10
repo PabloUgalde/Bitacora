@@ -182,7 +182,23 @@
 
         <!-- RESUMEN POR PÁGINA -->
         <div id="view-summaries-by-page" class="view">
-            <div class="logbook-header"><h2>Resumen por Página</h2></div>
+            <div class="summary-controls">
+                <h2>Resumen por Página</h2>
+                <div class="summary-filters">
+                    <div class="filter-group">
+                        <label for="page-summary-from">Desde página:</label>
+                        <input type="number" id="page-summary-from" min="1" placeholder="Ej: 1" style="width: 80px;">
+                    </div>
+                    <div class="filter-group">
+                        <label for="page-summary-to">Hasta página:</label>
+                        <input type="number" id="page-summary-to" min="1" placeholder="Ej: 10" style="width: 80px;">
+                    </div>
+                    <div class="filter-group">
+                        <button id="page-summary-filter-btn" class="next-btn" style="width: auto; padding: 0.5rem 1rem;">Aplicar</button>
+                        <button id="page-summary-reset-btn" class="prev-btn" style="width: auto; padding: 0.5rem 1rem; margin-left: 0.5rem;">Ver Todo</button>
+                    </div>
+                </div>
+            </div>
             <div id="summary-by-page-container"></div>
         </div>
 
