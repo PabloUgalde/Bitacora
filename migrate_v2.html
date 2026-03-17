@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bitácora — Migración v2 (localStorage)</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@400;600;800&display=swap');
+  :root {
+    --bg: #0a0e14; --surface: #111720; --surface2: #1a2232; --border: #1e2d42;
+    --accent: #3b82f6; --accent2: #06b6d4; --success: #10b981;
+    --warning: #f59e0b; --error: #ef4444; --text: #e2e8f0; --muted: #64748b;
+    --mono: 'JetBrains Mono', monospace; --sans: 'Syne', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--mono); min-height: 100vh; padding: 40px 24px; }
+  .header { max-width: 720px; margin: 0 auto 40px; }
+  .header h1 { font-family: var(--sans); font-weight: 800; font-size: 28px; color: #fff; margin-bottom: 8px; }
+  .header h1 span { color: var(--accent2); }
+  .header p { color: var(--muted); font-size: 13px; line-height: 1.6; }
+  .card { max-width: 720px; margin: 0 auto 20px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; }
+  .card-title { font-family: var(--sans); font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin-bottom: 16px; }
+  label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; margin-top: 14px; }
+  label:first-of-type { margin-top: 0; }
+  input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; color: var(--text); font-family: var(--mono); font-size: 13px; outline: none; transition: border-color 0.2s; }
+  input:focus { border-color: var(--accent); }
+  input::placeholder { color: var(--muted); opacity: 0.5; }
+  .hint { font-size: 11px; color: var(--muted); margin-top: 5px; line-height: 1.5; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 11px 22px; font-family: var(--sans); font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s; margin-top: 20px; }
+  .btn:hover { background: #2563eb; }
+  .btn:disabled { background: var(--muted); cursor: not-allowed; }
+  .btn-secondary { background: var(--surface2); border: 1px solid var(--border); color: var(--text); }
+  .btn-secondary:hover { background: var(--border); }
+  .steps { display: flex; gap: 0; margin-bottom: 28px; }
+  .step { flex: 1; padding: 12px 16px; border-bottom: 2px solid var(--border); font-size: 12px; color: var(--muted); }
+  .step.active { border-bottom-color: var(--accent); color: var(--accent); }
+  .step.done { border-bottom-color: var(--success); color: var(--success); }
+  .step-num { font-weight: 700; margin-right: 6px; }
+  #log { background: #060a0f; border: 1px solid var(--border); border-radius: 8px; padding: 16px; font-size: 12px; line-height: 1.8; max-height: 320px; overflow-y: auto; margin-top: 16px; }
+  .log-line { display: flex; gap: 12px; }
+  .log-time { color: var(--muted); flex-shrink: 0; }
+  .log-msg.info  { color: var(--accent2); }
+  .log-msg.ok    { color: var(--success); }
+  .log-msg.warn  { color: var(--warning); }
+  .log-msg.error { color: var(--error); }
+  .log-msg.plain { color: var(--text); }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 16px; }
+  .stat { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; }
+  .stat-val { font-family: var(--sans); font-size: 26px; font-weight: 800; color: #fff; line-height: 1; }
+  .stat-label { font-size: 11px; color: var(--muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.8px; }
+  .progress-bar { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; margin-top: 12px; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 2px; width: 0%; transition: width 0.3s; }
+  .hidden { display: none !important; }
+  .alert { padding: 12px 16px; border-radius: 8px; font-size: 13px; line-height: 1.6; margin-bottom: 16px; }
+  .alert-warn { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); color: var(--warning); }
+  .alert-ok { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); color: var(--success); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.2); border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite; display: inline-block; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Bitácora <span>→ Supabase v2</span></h1>
+  <p>Lee los vuelos directamente desde localStorage y sube solo los que faltan en Supabase. Abre este archivo desde <code>pablougalde.github.io/Bitacora/</code> para tener acceso al localStorage correcto.</p>
+</div>
+
+<div class="card" style="padding: 0 24px;">
+  <div class="steps">
+    <div class="step active" id="step-tab-1"><span class="step-num">01</span> Configurar</div>
+    <div class="step" id="step-tab-2"><span class="step-num">02</span> Comparar</div>
+    <div class="step" id="step-tab-3"><span class="step-num">03</span> Migrar</div>
+    <div class="step" id="step-tab-4"><span class="step-num">04</span> Resultado</div>
+  </div>
+</div>
+
+<!-- PASO 1 -->
+<div class="card" id="panel-1">
+  <div class="card-title">Credenciales Supabase</div>
+
+  <div class="alert alert-ok" id="ls-status"></div>
+
+  <label>Supabase Project URL</label>
+  <input type="text" id="supabase-url" placeholder="https://xxxxxxxxxxxx.supabase.co">
+
+  <label>Supabase Service Role Key (Legacy)</label>
+  <input type="password" id="supabase-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+  <p class="hint">Settings → API → Legacy anon, service_role API keys → service_role</p>
+
+  <label>Tu user_id en Supabase (UUID)</label>
+  <input type="text" id="user-id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+
+  <div style="display:flex; gap:12px; flex-wrap:wrap;">
+    <button class="btn" onclick="loadAndCompare()">
+      <span id="btn1-icon">→</span> Comparar con Supabase
+    </button>
+  </div>
+</div>
+
+<!-- PASO 2 -->
+<div class="card hidden" id="panel-2">
+  <div class="card-title">Comparación localStorage vs Supabase</div>
+  <div class="stats" id="compare-stats"></div>
+  <div id="missing-preview" style="margin-top:16px; font-size:12px; color:var(--muted); line-height:1.8;"></div>
+  <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:20px;">
+    <button class="btn" onclick="startMigration()" id="btn-migrate">
+      → Migrar vuelos faltantes
+    </button>
+    <button class="btn btn-secondary" onclick="setStep(1)">← Volver</button>
+  </div>
+</div>
+
+<!-- PASO 3 -->
+<div class="card hidden" id="panel-3">
+  <div class="card-title">Migrando vuelos faltantes...</div>
+  <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
+  <p style="font-size:12px; color:var(--muted); margin-top:8px;" id="progress-label">0 / 0 vuelos</p>
+  <div id="log"></div>
+</div>
+
+<!-- PASO 4 -->
+<div class="card hidden" id="panel-4">
+  <div class="card-title">Migración completada</div>
+  <div class="stats" id="result-stats"></div>
+  <div id="result-msg" style="margin-top:16px; font-size:13px; line-height:1.7; color:var(--muted);"></div>
+</div>
+
+<script>
+// ── Leer localStorage ────────────────────────────────────────────────────────
+const raw = localStorage.getItem('flightLogData');
+let localFlights = [];
+
+if (raw) {
+  try {
+    localFlights = JSON.parse(raw).map(f => {
+      if (!f) return null;
+      if (f.ID !== undefined) { f.id = String(f.ID); delete f.ID; }
+      else if (f.id !== undefined) { f.id = String(f.id); }
+      if (!f.id) return null;
+      f.Fecha = new Date(f.Fecha);
+      return f;
+    }).filter(Boolean);
+  } catch(e) { localFlights = []; }
+}
+
+// Mostrar estado del localStorage
+const lsEl = document.getElementById('ls-status');
+if (localFlights.length > 0) {
+  const totalHrs = localFlights.reduce((s,f) => s + (parseFloat(f['Duracion Total de Vuelo']) || 0), 0);
+  lsEl.textContent = `✓ localStorage detectado: ${localFlights.length} vuelos, ${totalHrs.toFixed(1)} horas totales`;
+  lsEl.className = 'alert alert-ok';
+} else {
+  lsEl.textContent = '⚠ No se encontraron vuelos en localStorage. Asegúrate de abrir este archivo desde pablougalde.github.io/Bitacora/migrate_v2.html';
+  lsEl.className = 'alert alert-warn';
+}
+
+// ── UI helpers ───────────────────────────────────────────────────────────────
+let logEl = null;
+let missingFlights = [];
+let migratedCount = 0, errorCount = 0;
+
+function log(msg, type='plain') {
+  if (!logEl) return;
+  const now = new Date().toLocaleTimeString('es-CL', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const line = document.createElement('div');
+  line.className = 'log-line';
+  line.innerHTML = `<span class="log-time">${now}</span><span class="log-msg ${type}">${msg}</span>`;
+  logEl.appendChild(line);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function setStep(n) {
+  [1,2,3,4].forEach(i => {
+    document.getElementById(`step-tab-${i}`).className = 'step' + (i < n ? ' done' : i === n ? ' active' : '');
+    const p = document.getElementById(`panel-${i}`);
+    if (p) p.classList.toggle('hidden', i !== n);
+  });
+}
+
+function setProgress(cur, total) {
+  const pct = total ? Math.round(cur/total*100) : 0;
+  document.getElementById('progress').style.width = pct + '%';
+  document.getElementById('progress-label').textContent = `${cur} / ${total} vuelos (${pct}%)`;
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ── Paso 1 → 2: comparar ────────────────────────────────────────────────────
+async function loadAndCompare() {
+  const supUrl = document.getElementById('supabase-url').value.trim().replace(/\/$/, '');
+  const supKey = document.getElementById('supabase-key').value.trim();
+  const userId = document.getElementById('user-id').value.trim();
+
+  if (!supUrl || !supKey || !userId) { alert('Completa todos los campos.'); return; }
+  if (localFlights.length === 0) { alert('No hay vuelos en localStorage. Abre este archivo desde el dominio correcto.'); return; }
+
+  document.getElementById('btn1-icon').innerHTML = '<span class="spinner"></span>';
+  document.querySelector('#panel-1 .btn').disabled = true;
+
+  try {
+    // Traer todos los IDs que ya están en Supabase
+    const existingIds = await fetchExistingIds(supUrl, supKey, userId);
+
+    // Calcular faltantes
+    missingFlights = localFlights.filter(f => !existingIds.has(f.id));
+
+    showComparison(localFlights.length, existingIds.size, missingFlights);
+    setStep(2);
+  } catch(err) {
+    alert(`Error al conectar con Supabase:\n${err.message}`);
+  } finally {
+    document.getElementById('btn1-icon').textContent = '→';
+    document.querySelector('#panel-1 .btn').disabled = false;
+  }
+}
+
+async function fetchExistingIds(supUrl, supKey, userId) {
+  const ids = new Set();
+  let offset = 0;
+  const limit = 1000;
+
+  while (true) {
+    const res = await fetch(
+      `${supUrl}/rest/v1/flights?select=id&user_id=eq.${userId}&limit=${limit}&offset=${offset}`,
+      { headers: { 'apikey': supKey, 'Authorization': `Bearer ${supKey}` } }
+    );
+    if (!res.ok) throw new Error(`Supabase respondió ${res.status}: ${await res.text()}`);
+    const data = await res.json();
+    data.forEach(r => ids.add(r.id));
+    if (data.length < limit) break;
+    offset += limit;
+  }
+  return ids;
+}
+
+function showComparison(localCount, supCount, missing) {
+  document.getElementById('compare-stats').innerHTML = `
+    <div class="stat">
+      <div class="stat-val">${localCount}</div>
+      <div class="stat-label">En localStorage</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val">${supCount}</div>
+      <div class="stat-label">En Supabase</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val" style="color:${missing.length > 0 ? 'var(--warning)' : 'var(--success)'}">${missing.length}</div>
+      <div class="stat-label">Faltantes</div>
+    </div>
+  `;
+
+  const preview = document.getElementById('missing-preview');
+  if (missing.length === 0) {
+    preview.innerHTML = '<span style="color:var(--success)">✓ Supabase ya tiene todos los vuelos. No hay nada que migrar.</span>';
+    document.getElementById('btn-migrate').disabled = true;
+  } else {
+    const missingHrs = missing.reduce((s,f) => s + (parseFloat(f['Duracion Total de Vuelo']) || 0), 0);
+    const dates = missing.filter(f => f.Fecha && !isNaN(f.Fecha)).map(f => f.Fecha);
+    const minD = dates.length ? new Date(Math.min(...dates)).toLocaleDateString('es-CL') : '—';
+    const maxD = dates.length ? new Date(Math.max(...dates)).toLocaleDateString('es-CL') : '—';
+    preview.innerHTML = `
+      Vuelos a migrar: <span style="color:var(--text)">${missing.length}</span> &nbsp;|&nbsp;
+      Horas: <span style="color:var(--text)">${missingHrs.toFixed(1)}</span> &nbsp;|&nbsp;
+      Rango: <span style="color:var(--text)">${minD} → ${maxD}</span>
+    `;
+  }
+}
+
+// ── Paso 2 → 3: migrar faltantes ────────────────────────────────────────────
+async function startMigration() {
+  const supUrl = document.getElementById('supabase-url').value.trim().replace(/\/$/, '');
+  const supKey = document.getElementById('supabase-key').value.trim();
+  const userId = document.getElementById('user-id').value.trim();
+
+  setStep(3);
+  logEl = document.getElementById('log');
+  migratedCount = errorCount = 0;
+
+  log(`Migrando ${missingFlights.length} vuelos faltantes...`, 'info');
+
+  // Upsert aeronaves de los vuelos faltantes
+  const aircraftMap = await upsertAircraft(supUrl, supKey, userId);
+
+  // Insertar en lotes de 50
+  const BATCH = 50;
+  for (let i = 0; i < missingFlights.length; i += BATCH) {
+    const batch = missingFlights.slice(i, i + BATCH);
+    await migrateBatch(batch, supUrl, supKey, userId, aircraftMap);
+    setProgress(Math.min(i + BATCH, missingFlights.length), missingFlights.length);
+    await sleep(100);
+  }
+
+  setProgress(missingFlights.length, missingFlights.length);
+  log('─────────────────────────────────────', 'plain');
+  log(`✓ Listo: ${migratedCount} insertados, ${errorCount} errores`, errorCount ? 'warn' : 'ok');
+  showResult();
+}
+
+async function upsertAircraft(supUrl, supKey, userId) {
+  const unique = {};
+  missingFlights.forEach(f => {
+    const mat = f['Matricula Aeronave'];
+    if (mat && !unique[mat]) unique[mat] = f['Aeronave Marca y Modelo'] || '';
+  });
+
+  const rows = Object.entries(unique).map(([matricula, marca_modelo]) => ({ user_id: userId, marca_modelo, matricula }));
+  if (!rows.length) return {};
+
+  log(`Verificando ${rows.length} aeronave(s)...`, 'info');
+  const res = await fetch(`${supUrl}/rest/v1/aircraft`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'apikey': supKey, 'Authorization': `Bearer ${supKey}`, 'Prefer': 'return=representation,resolution=merge-duplicates' },
+    body: JSON.stringify(rows)
+  });
+
+  if (!res.ok) { log(`Error aeronaves: ${await res.text()}`, 'error'); return {}; }
+  const data = await res.json();
+  const map = {};
+  (data || []).forEach(a => { map[a.matricula] = a.id; });
+  return map;
+}
+
+async function migrateBatch(flights, supUrl, supKey, userId, aircraftMap) {
+  const rows = flights.map(f => flightToRow(f, userId, aircraftMap));
+  const res = await fetch(`${supUrl}/rest/v1/flights`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'apikey': supKey, 'Authorization': `Bearer ${supKey}`, 'Prefer': 'return=minimal,resolution=ignore-duplicates' },
+    body: JSON.stringify(rows)
+  });
+
+  if (res.status === 201 || res.status === 200 || res.status === 204) {
+    migratedCount += flights.length;
+    const d0 = flights[0].Fecha instanceof Date ? flights[0].Fecha.toISOString().split('T')[0] : '?';
+    const d1 = flights[flights.length-1].Fecha instanceof Date ? flights[flights.length-1].Fecha.toISOString().split('T')[0] : '?';
+    log(`  ✓ ${flights.length} vuelos (${d0} → ${d1})`, 'ok');
+  } else {
+    log(`  ⚠ Error en lote, intentando uno a uno...`, 'warn');
+    for (const f of flights) {
+      const r = await fetch(`${supUrl}/rest/v1/flights`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': supKey, 'Authorization': `Bearer ${supKey}`, 'Prefer': 'return=minimal,resolution=ignore-duplicates' },
+        body: JSON.stringify([flightToRow(f, userId, aircraftMap)])
+      });
+      if (r.ok || r.status === 409) { migratedCount++; }
+      else { errorCount++; log(`  ✗ ${f.id}: ${(await r.text()).slice(0,80)}`, 'error'); }
+    }
+  }
+}
+
+function flightToRow(f, userId, aircraftMap) {
+  const fecha = f.Fecha instanceof Date && !isNaN(f.Fecha)
+    ? `${f.Fecha.getUTCFullYear()}-${String(f.Fecha.getUTCMonth()+1).padStart(2,'0')}-${String(f.Fecha.getUTCDate()).padStart(2,'0')}`
+    : null;
+  return {
+    id: f.id, user_id: userId,
+    aircraft_id: aircraftMap[f['Matricula Aeronave']] || null,
+    fecha,
+    aeronave_marca_modelo: f['Aeronave Marca y Modelo'] || null,
+    matricula_aeronave:    f['Matricula Aeronave'] || null,
+    desde:                 f['Desde'] || null,
+    hasta:                 f['Hasta'] || null,
+    duracion_total:        parseFloat(f['Duracion Total de Vuelo']) || 0,
+    lsa:                   parseFloat(f['LSA']) || 0,
+    monomotor:             parseFloat(f['Monomotor']) || 0,
+    multimotor:            parseFloat(f['Multimotor']) || 0,
+    turbo_helice:          parseFloat(f['Turbo Helice']) || 0,
+    turbo_jet:             parseFloat(f['Turbo Jet']) || 0,
+    helicoptero:           parseFloat(f['Helicoptero']) || 0,
+    planeador:             parseFloat(f['Planeador']) || 0,
+    ultraliviano:          parseFloat(f['Ultraliviano']) || 0,
+    aterrizajes_dia:       parseInt(f['Aterrizajes Dia']) || 0,
+    aterrizajes_noche:     parseInt(f['Aterrizajes Noche']) || 0,
+    diurno:                parseFloat(f['Diurno']) || 0,
+    nocturno:              parseFloat(f['Nocturno']) || 0,
+    ifr:                   parseFloat(f['IFR']) || 0,
+    no_app:                parseInt(f['NO']) || 0,
+    tipo_app:              f['Tipo'] || null,
+    simulador:             parseFloat(f['Simulador o Entrenador de Vuelo']) || 0,
+    travesia:              parseFloat(f['Travesia']) || 0,
+    solo:                  parseFloat(f['Solo']) || 0,
+    pic:                   parseFloat(f['Piloto al Mando (PIC)']) || 0,
+    sic:                   parseFloat(f['Copiloto (SIC)']) || 0,
+    instruccion_recibida:  parseFloat(f['Instruccion Recibida']) || 0,
+    como_instructor:       parseFloat(f['Como Instructor']) || 0,
+    observaciones:         f['Observaciones'] || null,
+    pagina_bitacora:       parseInt(f['Pagina Bitacora a Replicar']) || null,
+  };
+}
+
+function showResult() {
+  setStep(4);
+  document.getElementById('result-stats').innerHTML = `
+    <div class="stat">
+      <div class="stat-val" style="color:var(--success)">${migratedCount}</div>
+      <div class="stat-label">Insertados</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val" style="color:${errorCount ? 'var(--error)' : 'var(--success)'};">${errorCount}</div>
+      <div class="stat-label">Errores</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val">${364 + migratedCount}</div>
+      <div class="stat-label">Total en Supabase</div>
+    </div>
+  `;
+  document.getElementById('result-msg').innerHTML = errorCount === 0
+    ? `<span style="color:var(--success)">✓ Migración exitosa.</span> Verifica en Supabase → Table Editor que ahora tienes 444 vuelos.<br><br>
+       Luego elimina este archivo <code>migrate_v2.html</code> de tu repositorio.`
+    : `<span style="color:var(--warning)">⚠ Completado con ${errorCount} error(es).</span> Puedes volver a ejecutar — los duplicados se ignoran automáticamente.`;
+}
+</script>
+</body>
+</html>
