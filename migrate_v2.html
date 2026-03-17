@@ -334,21 +334,24 @@ async function upsertAircraft(supUrl, supKey, userId) {
     .filter(mat => !map[mat])
     .map(mat => ({ user_id: userId, marca_modelo: unique[mat], matricula: mat }));
 
-  if (toInsert.length > 0) {
-    const res = await fetch(`${supUrl}/rest/v1/aircraft`, {
+  // Insertar nuevas una por una ignorando duplicados
+  for (const row of toInsert) {
+    await fetch(`${supUrl}/rest/v1/aircraft`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': supKey, 'Authorization': `Bearer ${supKey}`, 'Prefer': 'return=representation' },
-      body: JSON.stringify(toInsert)
+      headers: { 'Content-Type': 'application/json', 'apikey': supKey, 'Authorization': `Bearer ${supKey}`, 'Prefer': 'return=minimal,resolution=ignore-duplicates' },
+      body: JSON.stringify([row])
     });
-    if (res.ok) {
-      const inserted = await res.json();
-      inserted.forEach(a => { map[a.matricula] = a.id; });
-      log(`  ${inserted.length} aeronave(s) nuevas registradas`, 'ok');
-    } else {
-      log(`  Error insertando aeronaves: ${await res.text()}`, 'warn');
-    }
-  } else {
-    log(`  Todas las aeronaves ya existian`, 'ok');
+  }
+
+  // Re-fetch todas para tener el map completo
+  const refetch = await fetch(
+    `${supUrl}/rest/v1/aircraft?select=id,matricula&user_id=eq.${userId}`,
+    { headers: { 'apikey': supKey, 'Authorization': `Bearer ${supKey}` } }
+  );
+  if (refetch.ok) {
+    const all = await refetch.json();
+    all.forEach(a => { map[a.matricula] = a.id; });
+    log(`  ${all.length} aeronave(s) disponibles`, 'ok');
   }
 
   return map;
