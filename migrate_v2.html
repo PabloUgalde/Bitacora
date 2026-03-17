@@ -199,7 +199,7 @@ async function loadAndCompare() {
 
   try {
     // Traer todos los IDs que ya están en Supabase
-    const existingIds = await fetchExistingKeys(supUrl, supKey, userId);
+    const existingKeys = await fetchExistingKeys(supUrl, supKey, userId);
 
     // Calcular faltantes
     missingFlights = localFlights.filter(f => !existingKeys.has(flightKey(f.Fecha, f["Matricula Aeronave"], f["Duracion Total de Vuelo"])));
