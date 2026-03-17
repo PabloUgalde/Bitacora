@@ -132,11 +132,17 @@ let localFlights = [];
 
 if (raw) {
   try {
+    const seenIds = new Set();
     localFlights = JSON.parse(raw).map(f => {
       if (!f) return null;
       if (f.ID !== undefined) { f.id = String(f.ID); delete f.ID; }
       else if (f.id !== undefined) { f.id = String(f.id); }
       if (!f.id) return null;
+      // Si el ID ya fue visto, generar uno nuevo único
+      if (seenIds.has(f.id)) {
+        f.id = 'migrated_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9);
+      }
+      seenIds.add(f.id);
       f.Fecha = new Date(f.Fecha);
       return f;
     }).filter(Boolean);
