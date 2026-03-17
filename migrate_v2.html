@@ -199,12 +199,12 @@ async function loadAndCompare() {
 
   try {
     // Traer todos los IDs que ya están en Supabase
-    const existingIds = await fetchExistingIds(supUrl, supKey, userId);
+    const existingIds = await fetchExistingKeys(supUrl, supKey, userId);
 
     // Calcular faltantes
-    missingFlights = localFlights.filter(f => !existingIds.has(f.id));
+    missingFlights = localFlights.filter(f => !existingKeys.has(flightKey(f.Fecha, f["Matricula Aeronave"], f["Duracion Total de Vuelo"])));
 
-    showComparison(localFlights.length, existingIds.size, missingFlights);
+    showComparison(localFlights.length, existingKeys.size, missingFlights);
     setStep(2);
   } catch(err) {
     alert(`Error al conectar con Supabase:\n${err.message}`);
@@ -214,23 +214,33 @@ async function loadAndCompare() {
   }
 }
 
-async function fetchExistingIds(supUrl, supKey, userId) {
-  const ids = new Set();
+// Genera una clave única por vuelo basada en fecha + matrícula + duración
+function flightKey(fecha, matricula, duracion) {
+  const d = fecha instanceof Date && !isNaN(fecha)
+    ? `${fecha.getUTCFullYear()}-${String(fecha.getUTCMonth()+1).padStart(2,'0')}-${String(fecha.getUTCDate()).padStart(2,'0')}`
+    : String(fecha || '');
+  const m = String(matricula || '').trim().toUpperCase();
+  const h = parseFloat(duracion || 0).toFixed(2);
+  return `${d}|${m}|${h}`;
+}
+
+async function fetchExistingKeys(supUrl, supKey, userId) {
+  const keys = new Set();
   let offset = 0;
   const limit = 1000;
 
   while (true) {
     const res = await fetch(
-      `${supUrl}/rest/v1/flights?select=id&user_id=eq.${userId}&limit=${limit}&offset=${offset}`,
+      `${supUrl}/rest/v1/flights?select=fecha,matricula_aeronave,duracion_total&user_id=eq.${userId}&limit=${limit}&offset=${offset}`,
       { headers: { 'apikey': supKey, 'Authorization': `Bearer ${supKey}` } }
     );
     if (!res.ok) throw new Error(`Supabase respondió ${res.status}: ${await res.text()}`);
     const data = await res.json();
-    data.forEach(r => ids.add(r.id));
+    data.forEach(r => keys.add(flightKey(r.fecha, r.matricula_aeronave, r.duracion_total)));
     if (data.length < limit) break;
     offset += limit;
   }
-  return ids;
+  return keys;
 }
 
 function showComparison(localCount, supCount, missing) {
