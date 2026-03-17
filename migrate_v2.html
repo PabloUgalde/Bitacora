@@ -313,20 +313,44 @@ async function upsertAircraft(supUrl, supKey, userId) {
     if (mat && !unique[mat]) unique[mat] = f['Aeronave Marca y Modelo'] || '';
   });
 
-  const rows = Object.entries(unique).map(([matricula, marca_modelo]) => ({ user_id: userId, marca_modelo, matricula }));
-  if (!rows.length) return {};
+  const matriculas = Object.keys(unique);
+  if (!matriculas.length) return {};
 
-  log(`Verificando ${rows.length} aeronave(s)...`, 'info');
-  const res = await fetch(`${supUrl}/rest/v1/aircraft`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'apikey': supKey, 'Authorization': `Bearer ${supKey}`, 'Prefer': 'return=representation,resolution=merge-duplicates' },
-    body: JSON.stringify(rows)
-  });
+  log(`Verificando ${matriculas.length} aeronave(s)...`, 'info');
 
-  if (!res.ok) { log(`Error aeronaves: ${await res.text()}`, 'error'); return {}; }
-  const data = await res.json();
+  // Traer las que ya existen
+  const existRes = await fetch(
+    `${supUrl}/rest/v1/aircraft?select=id,matricula&user_id=eq.${userId}`,
+    { headers: { 'apikey': supKey, 'Authorization': `Bearer ${supKey}` } }
+  );
   const map = {};
-  (data || []).forEach(a => { map[a.matricula] = a.id; });
+  if (existRes.ok) {
+    const existing = await existRes.json();
+    existing.forEach(a => { map[a.matricula] = a.id; });
+  }
+
+  // Insertar solo las nuevas
+  const toInsert = matriculas
+    .filter(mat => !map[mat])
+    .map(mat => ({ user_id: userId, marca_modelo: unique[mat], matricula: mat }));
+
+  if (toInsert.length > 0) {
+    const res = await fetch(`${supUrl}/rest/v1/aircraft`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': supKey, 'Authorization': `Bearer ${supKey}`, 'Prefer': 'return=representation' },
+      body: JSON.stringify(toInsert)
+    });
+    if (res.ok) {
+      const inserted = await res.json();
+      inserted.forEach(a => { map[a.matricula] = a.id; });
+      log(`  ${inserted.length} aeronave(s) nuevas registradas`, 'ok');
+    } else {
+      log(`  Error insertando aeronaves: ${await res.text()}`, 'warn');
+    }
+  } else {
+    log(`  Todas las aeronaves ya existian`, 'ok');
+  }
+
   return map;
 }
 
