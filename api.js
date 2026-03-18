@@ -286,18 +286,21 @@ const api = {
                     .from('profiles')
                     .select('*')
                     .eq('id', userId)
-                    .single();
+                    .maybeSingle(); 
                 if (!error && data) {
                     const profile = {
                         dataSource: 'supabase',
                         userRole:   data.user_role || 'student',
                         dashboardCards: data.dashboard_cards || [],
                         licenses:   data.licencias || {},
+                        plan:       data.plan || 'lite',           // ← agregar
+                        planExpiresAt: data.plan_expires_at || null, // ← agregar
                         personal: {
+                            'profile-pais':       data.pais || 'CL',
                             'profile-nombre':     data.full_name || '',
                             'profile-rut':        data.rut || '',
                             'profile-nacimiento': data.fecha_nacimiento || '',
-                            'profile-documento':         data.carnet || '',
+                            'profile-documento':  data.carnet || '',
                             'profile-telefono':   data.telefono || '',
                             'profile-email':      data.email || '',
                             'profile-domicilio':  data.domicilio || '',

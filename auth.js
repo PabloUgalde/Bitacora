@@ -15,9 +15,10 @@ const auth = {
     // ── Inicialización ────────────────────────────────────────────
     init: async () => {
         if (!window.supabase) {
-            console.error("Supabase SDK no cargó. Verifica la conexión a internet y el CDN.");
+            console.error("Supabase SDK no cargó. ");
             return false;
         }
+        delete document.body.dataset.listenersAttached;  // ← agregar aquí
         supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
             // Verificar si ya hay sesión activa
@@ -42,10 +43,9 @@ const auth = {
             auth._showError(auth._translateError(error.message));
             return false;
         }
-    currentUser = data.user;
-    auth._hideAuthScreen();
-    await app.initialize();
-    return true;
+        // Recargar página — evita listeners duplicados
+        window.location.reload();
+        return true;
     },
 
     // ── Registro ──────────────────────────────────────────────────
@@ -102,10 +102,9 @@ const auth = {
         await supabaseClient.auth.signOut();
         currentUser = null;
         if (typeof flightData !== 'undefined') flightData = [];
-        // Pequeña pausa para que Supabase limpie la sesión
+        delete document.body.dataset.listenersAttached;  // ← fuera del setTimeout
         setTimeout(() => {
             auth._showAuthScreen('login');
-            // Re-habilitar el botón de submit
             const btn = document.querySelector('#auth-overlay .auth-submit-btn');
             if (btn) {
                 btn.disabled = false;
@@ -271,7 +270,7 @@ const auth = {
                 <button class="auth-submit-btn" data-label="Guardar contraseña" onclick="auth.updatePassword(
                     document.getElementById('auth-new-password').value
                 )">Guardar contraseña</button>
-            </form>
+            </>
         </div>`;
 
         // Estilos del overlay

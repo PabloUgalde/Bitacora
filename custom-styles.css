@@ -217,3 +217,353 @@
     border-color: #ef4444;
     background-color: rgba(239, 68, 68, 0.05);
 }
+/* ====================================================================== */
+/* =           SISTEMA DE LICENCIAS Y HABILITACIONES                   = */
+/* ====================================================================== */
+
+.lic-sys { display: flex; flex-direction: column; gap: 20px; }
+
+/* Sección */
+.lic-section {
+    background: #141414;
+    border: 1px solid #222;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.lic-section-title {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: #c9a84c;
+    padding: 10px 16px;
+    background: #1a1710;
+    border-bottom: 1px solid #2a2210;
+}
+
+.lic-section-body {
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Fila de datos */
+.lic-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 10px;
+    background: #181818;
+    border: 1px solid #252525;
+    border-radius: 6px;
+}
+
+/* Campo */
+.lic-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    min-width: 120px;
+}
+
+.lic-field.flex2 { flex: 2; }
+
+.lic-field label {
+    font-size: 11px;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
+.lic-field input,
+.lic-field select {
+    background: #1e1e1e;
+    border: 1px solid #2a2a2a;
+    border-radius: 6px;
+    padding: 7px 10px;
+    color: #e2e8f0;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+    width: 100%;
+}
+
+.lic-field input:focus,
+.lic-field select:focus { border-color: #c9a84c; }
+
+/* Botón eliminar */
+.lic-remove {
+    background: none;
+    border: none;
+    color: #444;
+    cursor: pointer;
+    font-size: 13px;
+    padding: 6px 8px;
+    border-radius: 4px;
+    align-self: flex-end;
+    margin-bottom: 1px;
+    transition: color 0.15s, background 0.15s;
+    flex-shrink: 0;
+}
+.lic-remove:hover { color: #ef4444; background: rgba(239,68,68,0.1); }
+
+/* Texto vacío */
+.lic-empty {
+    color: #444;
+    font-size: 13px;
+    font-style: italic;
+    padding: 4px 0;
+}
+
+/* Botón agregar */
+.lic-add-btn {
+    background: transparent;
+    border: 1px dashed #2a2a2a;
+    color: #c9a84c;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    text-align: center;
+    width: 100%;
+    margin-top: 4px;
+}
+.lic-add-btn:hover { border-color: #c9a84c50; background: #1a1710; }
+
+@media (max-width: 600px) {
+    .lic-row { flex-direction: column; }
+    .lic-field { min-width: unset; width: 100%; }
+    .lic-remove { align-self: flex-end; }
+}
+
+/* ====================================================================== */
+/* =           LAYOUT DE CONFIGURACIÓN CON PANEL LATERAL               = */
+/* ====================================================================== */
+
+/* Layout principal */
+.settings-layout {
+    display: flex;
+    gap: 0;
+    min-height: 600px;
+    background: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+}
+
+/* ── Sidebar ───────────────────────────────────────────────────────── */
+.settings-sidebar {
+    width: 220px;
+    flex-shrink: 0;
+    background: #0d0d0d;
+    border-right: 1px solid #1a1a1a;
+    padding: 20px 0;
+}
+
+.settings-sidebar-section {
+    margin-bottom: 8px;
+}
+
+.settings-sidebar-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #3a3a3a;
+    padding: 8px 20px 4px;
+}
+
+.settings-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 9px 20px;
+    font-size: 13px;
+    color: #666;
+    background: none;
+    border: none;
+    border-left: 2px solid transparent;
+    cursor: pointer;
+    text-align: left;
+    transition: color 0.15s, background 0.15s, border-color 0.15s;
+}
+
+.settings-nav-item:hover {
+    color: #aaa;
+    background: #141414;
+}
+
+.settings-nav-item.active {
+    color: #c9a84c;
+    background: #1a1710;
+    border-left-color: #c9a84c;
+}
+
+.settings-nav-icon {
+    font-size: 14px;
+    width: 18px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+/* ── Mobile tabs ───────────────────────────────────────────────────── */
+.settings-tabs {
+    display: none;
+    overflow-x: auto;
+    background: #0d0d0d;
+    border-bottom: 1px solid #1a1a1a;
+    padding: 0 8px;
+    gap: 0;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+.settings-tabs::-webkit-scrollbar { display: none; }
+
+.settings-tab-item {
+    padding: 12px 14px;
+    font-size: 12px;
+    color: #555;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color 0.15s, border-color 0.15s;
+}
+
+.settings-tab-item.active {
+    color: #c9a84c;
+    border-bottom-color: #c9a84c;
+}
+
+/* ── Content area ──────────────────────────────────────────────────── */
+.settings-content {
+    flex: 1;
+    overflow-y: auto;
+    min-width: 0;
+}
+
+/* ── Panels ────────────────────────────────────────────────────────── */
+.settings-panel {
+    display: none;
+    padding: 28px 32px;
+}
+
+.settings-panel.active {
+    display: block;
+}
+
+.settings-panel-header {
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #1a1a1a;
+}
+
+.settings-panel-header h3 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+    margin: 0 0 4px;
+}
+
+.settings-panel-header p {
+    font-size: 13px;
+    color: #555;
+    margin: 0;
+}
+
+.settings-panel-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 20px;
+    margin-top: 24px;
+    border-top: 1px solid #1a1a1a;
+}
+
+/* ── Botones de configuración ──────────────────────────────────────── */
+.settings-save-btn {
+    width: auto !important;
+    padding: 10px 24px !important;
+}
+
+.settings-btn-primary {
+    background: #c9a84c;
+    color: #000;
+    border: none;
+    border-radius: var(--border-radius);
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    width: 100%;
+    text-align: left;
+}
+.settings-btn-primary:hover { opacity: 0.9; }
+
+.settings-btn-success {
+    background: #1e4a1e;
+    color: #4a9a4a;
+    border: 1px solid #2d6a2d;
+    border-radius: var(--border-radius);
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+    width: 100%;
+    text-align: left;
+}
+.settings-btn-success:hover { background: #254a25; }
+
+.settings-btn-secondary {
+    background: transparent;
+    color: #888;
+    border: 1px solid #333;
+    border-radius: var(--border-radius);
+    padding: 10px 20px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+    width: 100%;
+    text-align: left;
+}
+.settings-btn-secondary:hover { border-color: #555; color: #ccc; }
+
+.settings-btn-danger {
+    background: transparent;
+    color: #c05050;
+    border: 1px solid #7a2020;
+    border-radius: var(--border-radius);
+    padding: 10px 20px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s;
+    width: 100%;
+    text-align: left;
+}
+.settings-btn-danger:hover { background: rgba(192,80,80,0.1); }
+
+/* ── Responsive ────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+    .settings-layout {
+        flex-direction: column;
+        min-height: unset;
+    }
+    .settings-sidebar {
+        display: none;
+    }
+    .settings-tabs {
+        display: flex;
+    }
+    .settings-panel {
+        padding: 20px 16px;
+    }
+}

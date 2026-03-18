@@ -320,124 +320,176 @@
         </div> <!-- Cierre de view-summary-ifr -->
 
         <!-- VISTA DE CONFIGURACIÓN (Aquí estaba el error, faltaba esta etiqueta) -->
+    <!-- VISTA DE CONFIGURACIÓN CON PANEL LATERAL -->
         <div id="view-settings" class="view">
-            <h2>Configuración</h2>
-            <div class="settings-container accordion-container">
-                
-                <!-- ACORDEÓN 1: APP, DATOS Y DASHBOARD -->
-                <div class="accordion-item">
-                    <button class="accordion-header">
-                        <h3>Configuración de la App y Dashboard</h3><span class="accordion-icon">▼</span>
-                    </button>
-                    <div class="accordion-content">
-                        <div class="settings-grid two-columns">
-                            
-                            <!-- COLUMNA IZQUIERDA: GESTIÓN DE DATOS -->
-                            <div class="config-section">
-                                <div class="sub-section">
-                                    <h4>Gestión de Datos</h4>
-                                    <p>Tus vuelos se guardan automáticamente en la nube. Descarga una copia local cuando quieras.</p>
-                                    <!-- Campos ocultos para compatibilidad con app.js -->
-                                    <select id="data-source-select" style="display:none"><option value="supabase" selected>Supabase</option></select>
-                                    <input type="url" id="google-sheets-url" style="display:none">
-                                    <div id="google-sheets-url-container" class="hidden"></div>
-                                    <div class="navigation-buttons" style="border: none; padding-top: 1rem; flex-wrap: wrap; justify-content: flex-start; gap: 1rem;">
-                                        <input type="file" id="excel-file-input" accept=".xlsx, .xls" style="display: none;">
-                                        <button id="upload-excel-btn" type="button" class="next-btn" style="width: auto; margin-left: 0;">Importar Excel</button>
-                                        <button id="download-excel-btn" type="button" class="submit-btn" style="width: auto;">Exportar Excel</button>
-                                        <button id="download-csv-btn" type="button" class="submit-btn" style="width: auto; background-color: #4CAF50;">Exportar CSV</button>
-                                        <p id="data-status" class="status" style="width: 100%; margin: 0.5rem 0 0 0;"></p>
+            <div class="settings-layout">
+
+                <!-- SIDEBAR -->
+                <aside class="settings-sidebar">
+                    <div class="settings-sidebar-section">
+                        <div class="settings-sidebar-label">Perfil</div>
+                        <button class="settings-nav-item active" data-panel="panel-personal">
+                            <span class="settings-nav-icon">👤</span> Datos Personales
+                        </button>
+                        <button class="settings-nav-item" data-panel="panel-licencias">
+                            <span class="settings-nav-icon">📋</span> Licencias y Habilitaciones
+                        </button>
+                    </div>
+                    <div class="settings-sidebar-section">
+                        <div class="settings-sidebar-label">Aplicación</div>
+                        <button class="settings-nav-item" data-panel="panel-dashboard">
+                            <span class="settings-nav-icon">◈</span> Dashboard
+                        </button>
+                    </div>
+                    <div class="settings-sidebar-section">
+                        <div class="settings-sidebar-label">Cuenta</div>
+                        <button class="settings-nav-item" data-panel="panel-cuenta">
+                            <span class="settings-nav-icon">✦</span> Plan y Suscripción
+                        </button>
+                        <button class="settings-nav-item" data-panel="panel-datos">
+                            <span class="settings-nav-icon">⬇</span> Gestión de Datos
+                        </button>
+                    </div>
+                </aside>
+
+                <!-- MOBILE TABS -->
+                <div class="settings-tabs">
+                    <button class="settings-tab-item active" data-panel="panel-personal">Piloto</button>
+                    <button class="settings-tab-item" data-panel="panel-licencias">Licencias</button>
+                    <button class="settings-tab-item" data-panel="panel-dashboard">Dashboard</button>
+                    <button class="settings-tab-item" data-panel="panel-cuenta">Cuenta</button>
+                    <button class="settings-tab-item" data-panel="panel-datos">Datos</button>
+                </div>
+
+                <!-- CONTENT -->
+                <div class="settings-content">
+
+                    <!-- PANEL: DATOS PERSONALES -->
+                    <div class="settings-panel active" id="panel-personal">
+                        <div class="settings-panel-header">
+                            <h3>Datos Personales</h3>
+                            <p>Información del piloto que aparecerá en tus reportes.</p>
+                        </div>
+                        <form id="pilot-data-form">
+                            <div class="personal-data-container">
+                                <div class="personal-data-item">
+                                    <label for="profile-pais">País</label>
+                                    <select id="profile-pais"></select>
+                                </div>
+                                <div class="personal-data-item">
+                                    <label for="profile-nombre">Nombre completo</label>
+                                    <input type="text" id="profile-nombre">
+                                </div>
+                                <div class="personal-data-item">
+                                    <label for="profile-documento">RUT / Documento</label>
+                                    <input type="text" id="profile-documento" placeholder="12.345.678-9">
+                                </div>
+                                <div class="personal-data-item">
+                                    <label for="profile-nacimiento">Fecha de Nacimiento</label>
+                                    <input type="date" id="profile-nacimiento">
+                                </div>
+                                <div class="personal-data-item">
+                                    <label for="profile-telefono">Teléfono</label>
+                                    <div style="display:flex; gap:8px; align-items:center;">
+                                        <select id="profile-tel-prefix" style="width:160px; flex-shrink:0;"></select>
+                                        <input type="tel" id="profile-telefono" placeholder="9 1234 5678" style="flex:1; min-width:0;">
                                     </div>
                                 </div>
-
-                                <div class="sub-section">
-                                    <h4>Respaldo en la Nube</h4>
-                                    <p>Todos tus vuelos están respaldados automáticamente en Supabase. No se requiere configuración adicional.</p>
-                                    <!-- Campos ocultos para compatibilidad con backup-manager.js -->
-                                    <select id="backup-retention-select" style="display:none"><option value="0">Siempre</option></select>
-                                    <div id="backup-folder-display" style="display:none"></div>
-                                    <div class="navigation-buttons" style="border: none; padding-top: 0.5rem; flex-wrap: wrap; justify-content: flex-start; gap: 1rem;">
-                                        <button id="clear-local-data-btn" type="button" class="prev-btn" style="background-color: var(--accent-color-red); width: auto; margin-left: 0;">Borrar caché local</button>
-                                    </div>
+                                <div class="personal-data-item">
+                                    <label for="profile-email">E-mail</label>
+                                    <input type="email" id="profile-email">
+                                </div>
+                                <div class="personal-data-item full-width">
+                                    <label for="profile-domicilio">Domicilio</label>
+                                    <input type="text" id="profile-domicilio">
                                 </div>
                             </div>
+                        </form>
+                        <div class="settings-panel-footer">
+                            <button id="save-settings-btn" type="button" class="submit-btn settings-save-btn">Guardar Configuración</button>
+                        </div>
+                    </div>
 
-                            <!-- COLUMNA DERECHA: TARJETAS DEL DASHBOARD -->
-                            <div class="config-section" style="margin-top: 2rem;">
-                                <h4>Tarjetas del Dashboard</h4>
-                                <p>La tarjeta "Horas Totales" es fija. Personaliza las 7 restantes.</p>
-                                <div id="dashboard-cards-config-container" class="card-config-container"></div>
+                    <!-- PANEL: LICENCIAS Y HABILITACIONES -->
+                    <div class="settings-panel" id="panel-licencias">
+                        <div class="settings-panel-header">
+                            <h3>Licencias y Habilitaciones</h3>
+                            <p>El rol (Alumno/Piloto) se determina automáticamente según las licencias ingresadas.</p>
+                        </div>
+                        <div id="licenses-container"></div>
+                        <div class="settings-panel-footer">
+                            <button type="button" class="submit-btn settings-save-btn" onclick="document.getElementById('save-settings-btn').click()">Guardar Configuración</button>
+                        </div>
+                    </div>
+
+                    <!-- PANEL: DASHBOARD -->
+                    <div class="settings-panel" id="panel-dashboard">
+                        <div class="settings-panel-header">
+                            <h3>Visualización del Dashboard</h3>
+                            <p>La tarjeta "Horas Totales" es fija. Personaliza las 7 restantes.</p>
+                        </div>
+                        <div id="dashboard-cards-config-container" class="card-config-container"></div>
+                        <div class="settings-panel-footer">
+                            <button type="button" class="submit-btn settings-save-btn" onclick="document.getElementById('save-settings-btn').click()">Guardar Configuración</button>
+                        </div>
+                    </div>
+
+                    <!-- PANEL: CUENTA Y SUSCRIPCIÓN -->
+                    <div class="settings-panel" id="panel-cuenta">
+                        <div class="settings-panel-header">
+                            <h3>Plan y Suscripción</h3>
+                            <p>Gestiona tu plan activo y sesión.</p>
+                        </div>
+                        <div class="settings-grid two-columns">
+                            <div class="config-section">
+                                <h4>Plan Actual</h4>
+                                <div id="plan-status-display" style="margin-bottom:1rem;"></div>
+                                <select id="backup-retention-select" style="display:none"><option value="0">Siempre</option></select>
+                                <div id="backup-folder-display" style="display:none"></div>
+                            </div>
+                            <div class="config-section">
+                                <h4>Sesión</h4>
+                                <p style="color:var(--text-muted-color); font-size:0.9rem; margin-bottom:1rem;">Gestiona tu sesión activa en este dispositivo.</p>
+                                <div style="display:flex; flex-direction:column; gap:0.75rem;">
+                                    <button id="clear-local-data-btn" type="button" class="settings-btn-danger">Borrar caché local</button>
+                                    <button type="button" class="settings-btn-secondary" onclick="auth.logout()">Cerrar sesión</button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- ACORDEÓN 2: DATOS DEL PILOTO Y LICENCIAS -->
-                <div class="accordion-item">
-                    <button class="accordion-header">
-                        <h3>Datos del Piloto y Licencias</h3><span class="accordion-icon">▼</span>
-                    </button>
-                    <div class="accordion-content">
+                    <!-- PANEL: GESTIÓN DE DATOS -->
+                    <div class="settings-panel" id="panel-datos">
+                        <div class="settings-panel-header">
+                            <h3>Gestión de Datos</h3>
+                            <p>Exporta o importa tus vuelos en distintos formatos.</p>
+                        </div>
                         <div class="settings-grid two-columns">
                             <div class="config-section">
-                                <form id="pilot-data-form">
-                                    <h4>Datos Personales</h4>
-                                    <div class="personal-data-container">
-                                        <div class="personal-data-item">
-                                            <label for="profile-pais">País</label>
-                                            <select id="profile-pais"></select>
-                                        </div>
-                                        <div class="personal-data-item">
-                                            <label for="profile-nombre">Nombre</label>
-                                            <input type="text" id="profile-nombre">
-                                        </div>
-                                        <div class="personal-data-item">
-                                            <label for="profile-documento">RUT / Documento</label>
-                                            <input type="text" id="profile-documento" placeholder="12.345.678-9">
-                                        </div>
-                                        <div class="personal-data-item">
-                                            <label for="profile-nacimiento">Fecha de Nacimiento</label>
-                                            <input type="date" id="profile-nacimiento">
-                                        </div>
-                                        <div class="personal-data-item">
-                                            <label for="profile-telefono">Teléfono</label>
-                                            <div style="display:flex; gap:8px; align-items:center;">
-                                                <select id="profile-tel-prefix" style="width:160px; flex-shrink:0;"></select>
-                                                <input type="tel" id="profile-telefono" placeholder="9 1234 5678" style="flex:1; min-width:0;">
-                                            </div>
-                                        </div>
-                                        <div class="personal-data-item">
-                                            <label for="profile-email">E-mail</label>
-                                            <input type="email" id="profile-email">
-                                        </div>
-                                        <div class="personal-data-item full-width">
-                                            <label for="profile-domicilio">Domicilio</label>
-                                            <input type="text" id="profile-domicilio">
-                                        </div>
-                                    </div>
-                                </form>
+                                <h4>Exportar datos</h4>
+                                <p>Descarga una copia de tus vuelos en el formato que prefieras.</p>
+                                <div style="display:flex; flex-direction:column; gap:0.75rem; margin-top:1rem;">
+                                    <button id="download-excel-btn" type="button" class="settings-btn-primary">Exportar Excel (.xlsx)</button>
+                                    <button id="download-csv-btn" type="button" class="settings-btn-success">Exportar CSV</button>
+                                </div>
                             </div>
                             <div class="config-section">
-                                <form id="licenses-data-form">
-                                    <h4>Licencias</h4>
-                                    <p>El rol (Alumno/Piloto) se determina automáticamente.</p>
-                                    <div class="licenses-container">
-                                        <div class="license-header"><span>Descripción</span><span>Número</span><span>Fecha</span></div>
-                                        <div class="license-item"><label>Alumno Piloto</label><input type="text" id="lic-ap-numero" data-license-type="student"><input type="date" id="lic-ap-fecha"></div>
-                                        <div class="license-item"><label>Piloto Deportivo</label><input type="text" id="lic-pd-numero" data-license-type="pilot"><input type="date" id="lic-pd-fecha"></div>
-                                        <div class="license-item"><label>Piloto Privado</label><input type="text" id="lic-pp-numero" data-license-type="pilot"><input type="date" id="lic-pp-fecha"></div>
-                                        <div class="license-item"><label>Piloto Comercial</label><input type="text" id="lic-pc-numero" data-license-type="pilot"><input type="date" id="lic-pc-fecha"></div>
-                                        <div class="license-item"><label>Piloto de TLA</label><input type="text" id="lic-ptla-numero" data-license-type="pilot"><input type="date" id="lic-ptla-fecha"></div>
-                                    </div>
-                                </form>
+                                <h4>Importar datos</h4>
+                                <p>Carga vuelos desde un archivo Excel previamente exportado.</p>
+                                <div style="display:flex; flex-direction:column; gap:0.75rem; margin-top:1rem;">
+                                    <input type="file" id="excel-file-input" accept=".xlsx, .xls" style="display:none;">
+                                    <button id="upload-excel-btn" type="button" class="settings-btn-secondary">Importar Excel (.xlsx)</button>
+                                    <p id="data-status" class="status"></p>
+                                </div>
                             </div>
                         </div>
+                        <!-- Campos ocultos para compatibilidad -->
+                        <select id="data-source-select" style="display:none"><option value="supabase" selected>Supabase</option></select>
+                        <input type="url" id="google-sheets-url" style="display:none">
+                        <div id="google-sheets-url-container" class="hidden"></div>
+                        <p id="settings-status" class="status"></p>
                     </div>
-                </div>
 
-                <div class="navigation-buttons">
-                    <p id="settings-status" class="status"></p>
-                    <button id="save-settings-btn" type="button" class="submit-btn" style="width: auto; margin-left: auto;">Guardar Toda la Configuración</button>
                 </div>
             </div>
         </div> <!-- CIERRE DE VIEW-SETTINGS -->
@@ -565,6 +617,8 @@
     <script src="api.js"></script>
     <script src="auth.js"></script>
     <script src="profile-validator.js"></script>
+    <script src="plan.js"></script>
+    <script src="licenses-system.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

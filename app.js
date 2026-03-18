@@ -4,6 +4,7 @@ const app = {
     initialize: async () => {
         await api.loadInitialFlights(); // CARGA PRIMERO EL PERFIL Y LOS DATOS
         app.loadSettings(); // LUEGO, POBLA LA UI CON ESOS DATOS
+        plan.apply(); 
         await backupManager.initialize();
         app.updateSortButtonText();
         ui.showView('view-dashboard');
@@ -72,6 +73,8 @@ const app = {
     },
 
     setupEventListeners: () => {
+        if (document.body.dataset.listenersAttached) return;
+        document.body.dataset.listenersAttached = 'true';
         // Lógica de Fuente de Datos
         const updateDataSourceView = () => {
             const dataSourceSelect = document.getElementById('data-source-select');
@@ -137,8 +140,18 @@ const app = {
         // FORMULARIO DE VUELO
         document.getElementById('flight-form').addEventListener('submit', app.handleFlightSubmit);
         document.getElementById('review-flight-btn').addEventListener('click', app.handleFlightReview);
-        document.querySelectorAll('#flight-form .next-btn').forEach(btn => btn.addEventListener('click', () => ui.goToStep(ui.getCurrentStep() + 1)));
-        document.querySelectorAll('#flight-form .prev-btn').forEach(btn => btn.addEventListener('click', () => ui.goToStep(ui.getCurrentStep() - 1)));
+        document.querySelectorAll('#flight-form .next-btn').forEach(btn => {
+            btn.replaceWith(btn.cloneNode(true));
+        });
+        document.querySelectorAll('#flight-form .next-btn').forEach(btn => {
+            btn.addEventListener('click', () => ui.goToStep(ui.getCurrentStep() + 1));
+        });
+        document.querySelectorAll('#flight-form .prev-btn').forEach(btn => {
+            btn.replaceWith(btn.cloneNode(true));
+        });
+        document.querySelectorAll('#flight-form .prev-btn').forEach(btn => {
+            btn.addEventListener('click', () => ui.goToStep(ui.getCurrentStep() - 1));
+        });
         document.getElementById('condicionIFR').addEventListener('input', (e) => {
             const val = parseFloat(e.target.value) || 0;
             document.getElementById('ifr-approaches-container').classList.toggle('hidden', val <= 0);
@@ -277,10 +290,13 @@ const app = {
         document.getElementById('download-csv-btn')?.addEventListener('click', () => api.exportToCSV());
         document.getElementById('clear-local-data-btn')?.addEventListener('click', () => backupManager.clearLocalCache());
         
-        document.querySelectorAll('.accordion-header').forEach(header => {
-            header.addEventListener('click', () => {
-                header.classList.toggle('active');
-                header.nextElementSibling.classList.toggle('active');
+        document.querySelectorAll('.settings-nav-item, .settings-tab-item').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const panelId = btn.dataset.panel;
+                document.querySelectorAll('.settings-panel').forEach(p => p.classList.remove('active'));
+                document.querySelectorAll('.settings-nav-item, .settings-tab-item').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll(`[data-panel="${panelId}"]`).forEach(b => b.classList.add('active'));
+                document.getElementById(panelId)?.classList.add('active');
             });
         });
 
@@ -407,7 +423,6 @@ const app = {
             licenses: {},
             dashboardCards: selectedCards,
             backupRetentionDays: document.getElementById('backup-retention-select').value,
-            userRole: ui.determineUserRole()
         };
         if (!profileValidator.validateProfileForm()) {
             ui.showNotification("Corrige los errores en Datos Personales.", "error");
@@ -416,9 +431,10 @@ const app = {
         document.querySelectorAll('#pilot-data-form .personal-data-item input, #pilot-data-form .personal-data-item select').forEach(input => {
             profileToSave.personal[input.id] = input.value;
         });
-        document.querySelectorAll('#licenses-data-form .license-item input').forEach(input => {
-            profileToSave.licenses[input.id] = input.value;
-        });
+        
+        profileToSave.licenses = { dgac: licenseSystem.getData() };
+        profileToSave.userRole = licenseSystem.getUserRole();
+
         userProfile = profileToSave;
         await api.saveProfile(userProfile);
         ui.updateFormForRole();
@@ -435,7 +451,8 @@ const app = {
         }
         if (googleUrlInput) { googleUrlInput.value = userProfile.googleSheetsUrl || ''; }
         if (userProfile.personal) { Object.keys(userProfile.personal).forEach(id => { const i = document.getElementById(id); if (i) i.value = userProfile.personal[id]; }); }
-        if (userProfile.licenses) { Object.keys(userProfile.licenses).forEach(id => { const i = document.getElementById(id); if (i) i.value = userProfile.licenses[id]; }); }
+        const savedLicencias = userProfile.licenses?.dgac || [];
+        licenseSystem.init('licenses-container', savedLicencias);
         
         const cardsContainer = document.getElementById('dashboard-cards-config-container');
         if (cardsContainer) {
@@ -462,6 +479,32 @@ const app = {
         ui.showBackupFolderPath(); 
         ui.updateFormForRole();
         profileValidator.initProfileForm();
+                // Mostrar estado del plan
+        const planDisplay = document.getElementById('plan-status-display');
+        if (planDisplay) {
+            if (plan.isPro()) {
+                const expires = userProfile.planExpiresAt 
+                    ? `Vence: ${new Date(userProfile.planExpiresAt).toLocaleDateString('es-CL')}`
+                    : 'Sin vencimiento';
+                planDisplay.innerHTML = `
+                    <div style="display:flex; align-items:center; gap:12px; padding:12px 16px; background:#1c1a10; border:1px solid #c9a84c; border-radius:8px;">
+                        <span style="font-size:20px;">✈</span>
+                        <div>
+                            <div style="color:#c9a84c; font-weight:700; font-size:15px;">Plan Pro</div>
+                            <div style="color:#888; font-size:12px;">${expires}</div>
+                        </div>
+                    </div>`;
+            } else {
+                planDisplay.innerHTML = `
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 16px; background:#1a1a1a; border:1px solid #333; border-radius:8px;">
+                        <div>
+                            <div style="color:#aaa; font-weight:600; font-size:15px;">Plan Lite</div>
+                            <div style="color:#666; font-size:12px;">Funciones limitadas</div>
+                        </div>
+                        <button onclick="plan.showUpgradeScreen()" style="background:#c9a84c; color:#000; border:none; border-radius:6px; padding:8px 16px; font-weight:700; font-size:13px; cursor:pointer;">Actualizar a Pro</button>
+                    </div>`;
+            }
+        }
     },
 
     handleFlightReview: () => { const result = ui.validateAndGetData(); if (result.isValid) { render.flightPreview(result.data); ui.goToStep(3); } },
