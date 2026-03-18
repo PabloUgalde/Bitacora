@@ -1,5 +1,5 @@
-const CACHE_NAME = 'flight-log-cache-v1.6';
-// Lista de archivos que componen el "cascarón" de la aplicación.
+const CACHE_NAME = 'flight-log-cache-v2.0';
+
 const APP_SHELL_FILES = [
     './',
     './index.html',
@@ -9,6 +9,8 @@ const APP_SHELL_FILES = [
     './print.css',
     './app.js',
     './api.js',
+    './auth.js',
+    './profile-validator.js',
     './ui.js',
     './ui-render.js',
     './state.js',
@@ -23,18 +25,17 @@ const APP_SHELL_FILES = [
     './favicon.ico'
 ];
 
-// Evento de instalación: se guarda el app shell en la caché.
 self.addEventListener('install', (e) => {
-    console.log('[Service Worker] Instalando...');
+    console.log('[Service Worker] Instalando v2.0...');
     e.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
             console.log('[Service Worker] Guardando en caché el App Shell');
             return cache.addAll(APP_SHELL_FILES);
         })
     );
+    self.skipWaiting();
 });
 
-// Evento de activación: limpia cachés antiguas.
 self.addEventListener('activate', (e) => {
     console.log('[Service Worker] Activando...');
     e.waitUntil(
@@ -50,11 +51,11 @@ self.addEventListener('activate', (e) => {
     return self.clients.claim();
 });
 
-// Evento fetch: intercepta las peticiones de red.
-// Estrategia: "Cache first, falling back to network" (Primero caché, si no, red).
 self.addEventListener('fetch', (e) => {
-    // No interceptamos las peticiones a la API de Google Sheets
-    if (e.request.url.includes('google.com')) {
+    // No interceptar peticiones a Supabase ni CDNs externos
+    if (e.request.url.includes('supabase.co') ||
+        e.request.url.includes('cdn.jsdelivr.net') ||
+        e.request.url.includes('google.com')) {
         return;
     }
 
