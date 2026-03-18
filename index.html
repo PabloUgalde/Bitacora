@@ -42,7 +42,6 @@
                 </div>
             </div>
             <a href="#" data-view="view-settings" class="nav-link">Configuración</a>
-            <a href="#" class="nav-link" onclick="auth.logout(); return false;">Cerrar sesión</a>
         </nav>
         <!-- FIN DE LA MODIFICACIÓN -->
     </header>
@@ -335,45 +334,29 @@
                             <!-- COLUMNA IZQUIERDA: GESTIÓN DE DATOS -->
                             <div class="config-section">
                                 <div class="sub-section">
-                                    <h4>Fuente de Datos y Gestión</h4>
-                                    <p>Elige tu modo de almacenamiento y gestiona tus datos desde archivos Excel.</p>
-                                    <div class="settings-grid data-source-grid" style="grid-template-columns: 1fr;">
-                                        <div><label for="data-source-select">Modo de almacenamiento</label><select id="data-source-select"><option value="local">Local</option><option value="google_sheets">Google Sheets</option></select></div>
-                                        <div id="google-sheets-url-container" class="hidden">
-                                            <label for="google-sheets-url">URL de la API</label>
-                                            <div class="input-with-button">
-                                                <input type="url" id="google-sheets-url">
-                                                <button type="button" id="load-from-sheets-btn" class="next-btn">Cargar</button>
-                                            </div>
-                                        </div>                                    
-                                    </div>
+                                    <h4>Gestión de Datos</h4>
+                                    <p>Tus vuelos se guardan automáticamente en la nube. Descarga una copia local cuando quieras.</p>
+                                    <!-- Campos ocultos para compatibilidad con app.js -->
+                                    <select id="data-source-select" style="display:none"><option value="supabase" selected>Supabase</option></select>
+                                    <input type="url" id="google-sheets-url" style="display:none">
+                                    <div id="google-sheets-url-container" class="hidden"></div>
                                     <div class="navigation-buttons" style="border: none; padding-top: 1rem; flex-wrap: wrap; justify-content: flex-start; gap: 1rem;">
                                         <input type="file" id="excel-file-input" accept=".xlsx, .xls" style="display: none;">
-                                        <button id="upload-excel-btn" type="button" class="next-btn" style="width: auto; margin-left: 0;">Cargar (Excel)</button>
-                                        <button id="download-excel-btn" type="button" class="submit-btn" style="width: auto;">Descargar (Excel)</button>
-                                        <button id="sync-to-sheets-btn" type="button" class="submit-btn" style="width: auto; background-color: #4CAF50;">Subir a Google Sheets</button>
+                                        <button id="upload-excel-btn" type="button" class="next-btn" style="width: auto; margin-left: 0;">Importar Excel</button>
+                                        <button id="download-excel-btn" type="button" class="submit-btn" style="width: auto;">Exportar Excel</button>
+                                        <button id="download-csv-btn" type="button" class="submit-btn" style="width: auto; background-color: #4CAF50;">Exportar CSV</button>
                                         <p id="data-status" class="status" style="width: 100%; margin: 0.5rem 0 0 0;"></p>
                                     </div>
                                 </div>
 
                                 <div class="sub-section">
-                                    <h4>Respaldo Automático</h4>
-                                    <div id="backup-folder-display" class="backup-info"></div>
-                                    <div class="filter-group" style="margin-bottom: 1rem;">
-                                        <label for="backup-retention-select">Guardar respaldos por:</label>
-                                        <select id="backup-retention-select">
-                                            <option value="0">Siempre</option>
-                                            <option value="7">7 días</option>
-                                            <option value="30" selected>30 días</option>
-                                            <option value="90">90 días</option>
-                                        </select>
-                                    </div>
-                                    <div id="local-data-management">
-                                        <div class="navigation-buttons" style="border: none; padding-top: 0.5rem; flex-wrap: wrap; justify-content: flex-start; gap: 1rem;">
-                                            <button id="setup-backup-btn" type="button" class="next-btn" style="width: auto; margin-left: 0;">Configurar Carpeta</button>
-                                            <button id="restore-backup-btn" type="button" class="submit-btn" style="width: auto;">Restaurar</button>
-                                            <button id="clear-local-data-btn" type="button" class="prev-btn" style="background-color: var(--accent-color-red); width: auto; margin-left: auto;">Borrar Info Vuelos</button>
-                                        </div>
+                                    <h4>Respaldo en la Nube</h4>
+                                    <p>Todos tus vuelos están respaldados automáticamente en Supabase. No se requiere configuración adicional.</p>
+                                    <!-- Campos ocultos para compatibilidad con backup-manager.js -->
+                                    <select id="backup-retention-select" style="display:none"><option value="0">Siempre</option></select>
+                                    <div id="backup-folder-display" style="display:none"></div>
+                                    <div class="navigation-buttons" style="border: none; padding-top: 0.5rem; flex-wrap: wrap; justify-content: flex-start; gap: 1rem;">
+                                        <button id="clear-local-data-btn" type="button" class="prev-btn" style="background-color: var(--accent-color-red); width: auto; margin-left: 0;">Borrar caché local</button>
                                     </div>
                                 </div>
                             </div>
@@ -546,16 +529,14 @@
         </div>
     </div>
 </div>   
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="state.js"></script>
     <script src="summary-renderer.js"></script>
     <script src="ui-render.js"></script>
     <script src="ui.js"></script>
     <script src="data-importer.js"></script>
-    <script src="backup-manager.js"></script>
-    <script src="report-generator.js"></script>
+    <script src="backup-manager.js"></script> 
+    <script src="report-generator.js"></script> 
     <script src="api.js"></script>
-    <script src="auth.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

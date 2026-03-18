@@ -273,8 +273,9 @@ const app = {
         
         // CONFIGURACIÓN Y OTROS
         document.getElementById('save-settings-btn').addEventListener('click', app.saveSettings);
-        document.getElementById('setup-backup-btn').addEventListener('click', () => backupManager.setupBackupFolder());
-        document.getElementById('restore-backup-btn').addEventListener('click', () => backupManager.restoreFromBackup());
+        document.getElementById('download-excel-btn')?.addEventListener('click', () => api.exportToExcel());
+        document.getElementById('download-csv-btn')?.addEventListener('click', () => api.exportToCSV());
+        document.getElementById('clear-local-data-btn')?.addEventListener('click', () => backupManager.clearLocalCache());
         
         document.querySelectorAll('.accordion-header').forEach(header => {
             header.addEventListener('click', () => {
