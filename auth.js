@@ -3,8 +3,8 @@
 // Carga antes que app.js y bloquea la UI hasta verificar sesión
 // =================================================================
 
-const SUPABASE_URL = 'https://rdnniehpsdforkfngwrf.supabase.co';       // ← reemplaza
-const SUPABASE_ANON_KEY = 'sb_publishable_iavyVSmxuwncUjdCM9e9kw_5c4QC-b5';                          // ← reemplaza (publishable key)
+var SUPABASE_URL = 'https://rdnniehpsdforkfngwrf.supabase.co';       // ← reemplaza
+var SUPABASE_ANON_KEY = 'sb_publishable_iavyVSmxuwncUjdCM9e9kw_5c4QC-b5';                          // ← reemplaza (publishable key)
 
 // Cliente Supabase (se inicializa con la librería CDN)
 let supabaseClient = null;
