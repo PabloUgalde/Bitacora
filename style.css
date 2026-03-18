@@ -162,7 +162,7 @@ label.required::after { content: ' *'; color: var(--accent-color-red); }
 
 .summary-card.primary-card { background: #1c1a10; border: 1px solid #c9a84c; }
 .summary-card.primary-card h3 { color: #aaa; font-weight: 600; }
-.summary-card.primary-card .value { font-size: 24px; }
+.summary-card.primary-card .value { font-size: 30px; }
 .summary-card.primary-card:hover { transform: translateY(-2px); border-color: #c9a84c; background: #201e12; box-shadow: 0 4px 16px rgba(201,168,76,0.15); }
 
 /* --- DASHBOARD GRID --- */
