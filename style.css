@@ -162,7 +162,7 @@ label.required::after { content: ' *'; color: var(--accent-color-red); }
 
 .summary-card.primary-card { background: #1c1a10; border: 1px solid #c9a84c; }
 .summary-card.primary-card h3 { color: #aaa; font-weight: 600; }
-.summary-card.primary-card .value { font-size: 30px; }
+.summary-card.primary-card .value { font-size: 32px; }
 .summary-card.primary-card:hover { transform: translateY(-2px); border-color: #c9a84c; background: #201e12; box-shadow: 0 4px 16px rgba(201,168,76,0.15); }
 
 /* --- DASHBOARD GRID --- */
@@ -203,9 +203,39 @@ label.required::after { content: ' *'; color: var(--accent-color-red); }
 #logbook-display-dashboard td:nth-child(2),
 #logbook-display-dashboard td:nth-child(5) { text-align: left; }
 #recency-summary-container td:nth-child(1) { text-align: left; }
+
+/* --- CONTROL DE SCROLL POR DISPOSITIVO (DASHBOARD) --- */
+
+/* 1. Regla general para móviles (Activa el scroll) */
 #dashboard-totals-table-container,
-#logbook-display-dashboard {
-    overflow-x: hidden;
+#logbook-display-dashboard,
+#recency-summary-container {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* 2. Regla específica para Desktop (Desactiva el scroll y ajusta la tabla) */
+@media (min-width: 1025px) {
+    #logbook-display-dashboard,
+    #dashboard-totals-table-container,
+    #recency-summary-container {
+        overflow-x: hidden; /* Evita que aparezca la barra en PC */
+    }
+
+    #logbook-display-dashboard table,
+    #dashboard-totals-table-container table,
+    #recency-summary-container table {
+        table-layout: fixed; /* Fuerza a la tabla a no salirse del ancho del contenedor */
+        width: 100%;
+    }
+    
+    /* Opcional: Si el texto de "Ruta" es muy largo, permite que se corte con puntos suspensivos en vez de romper la tabla */
+    #logbook-display-dashboard td {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
 }
 
 /* --- FORMULARIOS Y BOTONES --- */
@@ -270,6 +300,12 @@ input.error, select.error { border-color: var(--accent-color-red); }
 
 /* --- TABLAS --- */
 .table-container { width: 100%; overflow-x: auto; background-color: var(--surface-color); border-radius: var(--border-radius); border: 1px solid var(--border-color); overflow-x: auto; max-width: 100%; }
+/* Asegura que las tablas no se estiren más allá del contenedor */
+.table-container table {
+    width: 100%;
+    margin: 0;
+    border-collapse: collapse;
+}
 table { width: 100%; border-spacing: 0; border-collapse: collapse; }
 th, td { padding: 0.8rem 1rem; border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color); vertical-align: middle; }
 th:first-child, td:first-child { border-left: 0; } 
