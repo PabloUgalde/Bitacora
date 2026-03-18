@@ -383,13 +383,37 @@
                                 <form id="pilot-data-form">
                                     <h4>Datos Personales</h4>
                                     <div class="personal-data-container">
-                                        <div class="personal-data-item"><label for="profile-nombre">Nombre</label><input type="text" id="profile-nombre"></div>
-                                        <div class="personal-data-item"><label for="profile-rut">R.U.T.</label><input type="text" id="profile-rut"></div>
-                                        <div class="personal-data-item"><label for="profile-nacimiento">Fecha de Nacimiento</label><input type="date" id="profile-nacimiento"></div>
-                                        <div class="personal-data-item"><label for="profile-ci">Carné de Identidad</label><input type="text" id="profile-ci"></div>
-                                        <div class="personal-data-item"><label for="profile-telefono">Teléfono</label><input type="tel" id="profile-telefono"></div>
-                                        <div class="personal-data-item"><label for="profile-email">E-mail</label><input type="email" id="profile-email"></div>
-                                        <div class="personal-data-item full-width"><label for="profile-domicilio">Domicilio</label><input type="text" id="profile-domicilio"></div>
+                                        <div class="personal-data-item">
+                                            <label for="profile-pais">País</label>
+                                            <select id="profile-pais"></select>
+                                        </div>
+                                        <div class="personal-data-item">
+                                            <label for="profile-nombre">Nombre</label>
+                                            <input type="text" id="profile-nombre">
+                                        </div>
+                                        <div class="personal-data-item">
+                                            <label for="profile-documento">RUT / Documento</label>
+                                            <input type="text" id="profile-documento" placeholder="12.345.678-9">
+                                        </div>
+                                        <div class="personal-data-item">
+                                            <label for="profile-nacimiento">Fecha de Nacimiento</label>
+                                            <input type="date" id="profile-nacimiento">
+                                        </div>
+                                        <div class="personal-data-item">
+                                            <label for="profile-telefono">Teléfono</label>
+                                            <div style="display:flex; gap:8px; align-items:center;">
+                                                <select id="profile-tel-prefix" style="width:160px; flex-shrink:0;"></select>
+                                                <input type="tel" id="profile-telefono" placeholder="9 1234 5678" style="flex:1; min-width:0;">
+                                            </div>
+                                        </div>
+                                        <div class="personal-data-item">
+                                            <label for="profile-email">E-mail</label>
+                                            <input type="email" id="profile-email">
+                                        </div>
+                                        <div class="personal-data-item full-width">
+                                            <label for="profile-domicilio">Domicilio</label>
+                                            <input type="text" id="profile-domicilio">
+                                        </div>
                                     </div>
                                 </form>
                             </div>
@@ -530,7 +554,7 @@
         </div>
     </div>
 </div>   
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <script src="state.js"></script>
     <script src="summary-renderer.js"></script>
     <script src="ui-render.js"></script>
@@ -540,6 +564,7 @@
     <script src="report-generator.js"></script>
     <script src="api.js"></script>
     <script src="auth.js"></script>
+    <script src="profile-validator.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

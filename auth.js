@@ -14,35 +14,24 @@ const auth = {
 
     // ── Inicialización ────────────────────────────────────────────
     init: async () => {
+        if (!window.supabase) {
+            console.error("Supabase SDK no cargó. Verifica la conexión a internet y el CDN.");
+            return false;
+        }
         supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // Escuchar cambios de sesión
-        supabaseClient.auth.onAuthStateChange((event, session) => {
-            if (event === 'SIGNED_IN' && session) {
+            // Verificar si ya hay sesión activa
+            const { data: { session } } = await supabaseClient.auth.getSession();
+
+            if (session) {
                 currentUser = session.user;
                 auth._hideAuthScreen();
-                // Si la app ya cargó, no hacer nada más
-                // Si no, app.js se encargará de cargar los datos
-            } else if (event === 'SIGNED_OUT') {
-                currentUser = null;
+                return true; // ya autenticado
+            } else {
                 auth._showAuthScreen('login');
-            } else if (event === 'PASSWORD_RECOVERY') {
-                auth._showAuthScreen('reset');
+                return false; // debe autenticarse
             }
-        });
-
-        // Verificar si ya hay sesión activa
-        const { data: { session } } = await supabaseClient.auth.getSession();
-
-        if (session) {
-            currentUser = session.user;
-            auth._hideAuthScreen();
-            return true; // ya autenticado
-        } else {
-            auth._showAuthScreen('login');
-            return false; // debe autenticarse
-        }
-    },
+        },
 
     // ── Login ─────────────────────────────────────────────────────
     login: async (email, password) => {
@@ -53,9 +42,10 @@ const auth = {
             auth._showError(auth._translateError(error.message));
             return false;
         }
-        currentUser = data.user;
-        auth._hideAuthScreen();
-        return true;
+    currentUser = data.user;
+    auth._hideAuthScreen();
+    await app.initialize();
+    return true;
     },
 
     // ── Registro ──────────────────────────────────────────────────
@@ -111,9 +101,17 @@ const auth = {
     logout: async () => {
         await supabaseClient.auth.signOut();
         currentUser = null;
-        // Limpiar estado de la app
         if (typeof flightData !== 'undefined') flightData = [];
-        auth._showAuthScreen('login');
+        // Pequeña pausa para que Supabase limpie la sesión
+        setTimeout(() => {
+            auth._showAuthScreen('login');
+            // Re-habilitar el botón de submit
+            const btn = document.querySelector('#auth-overlay .auth-submit-btn');
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = btn.dataset.label;
+            }
+        }, 100);
     },
 
     // ── Helpers UI ────────────────────────────────────────────────
@@ -223,7 +221,7 @@ const auth = {
             </div>
 
             <!-- REGISTRO -->
-            <div id="panel-register" style="display:none">
+            <form id="panel-register" style="display:none" onsubmit="return false;">
                 <h2 class="auth-title">Crear cuenta</h2>
                 <div class="auth-field">
                     <label>Nombre completo</label>
@@ -245,10 +243,10 @@ const auth = {
                 <div class="auth-links">
                     <a href="#" onclick="auth._switchPanel('login'); return false;">← Volver al inicio de sesión</a>
                 </div>
-            </div>
+            </form>
 
             <!-- OLVIDÉ CONTRASEÑA -->
-            <div id="panel-forgot" style="display:none">
+            <form id="panel-forgot" style="display:none">
                 <h2 class="auth-title">Recuperar contraseña</h2>
                 <p class="auth-hint">Ingresa tu email y te enviaremos un enlace para restablecer tu contraseña.</p>
                 <div class="auth-field">
@@ -261,10 +259,10 @@ const auth = {
                 <div class="auth-links">
                     <a href="#" onclick="auth._switchPanel('login'); return false;">← Volver al inicio de sesión</a>
                 </div>
-            </div>
+            </form>
 
             <!-- NUEVA CONTRASEÑA -->
-            <div id="panel-reset" style="display:none">
+            <form id="panel-reset" style="display:none">
                 <h2 class="auth-title">Nueva contraseña</h2>
                 <div class="auth-field">
                     <label>Nueva contraseña</label>
@@ -273,7 +271,7 @@ const auth = {
                 <button class="auth-submit-btn" data-label="Guardar contraseña" onclick="auth.updatePassword(
                     document.getElementById('auth-new-password').value
                 )">Guardar contraseña</button>
-            </div>
+            </form>
         </div>`;
 
         // Estilos del overlay
@@ -378,20 +376,3 @@ const auth = {
         return overlay;
     }
 };
-
-// =================================================================
-// INICIALIZACIÓN — se ejecuta antes que app.js
-// =================================================================
-(async () => {
-    const authenticated = await auth.init();
-    if (authenticated) {
-        // Hay sesión activa — cargar app normalmente
-        // app.js verificará currentUser para cargar datos del usuario
-        if (typeof app !== 'undefined' && typeof app.init === 'function') {
-            await app.init();
-        }
-    }
-    // Si no hay sesión, auth.init() ya mostró la pantalla de login
-    // Cuando el usuario se autentique, onAuthStateChange llama _hideAuthScreen
-    // y la app carga via el DOMContentLoaded normal de app.js
-})();

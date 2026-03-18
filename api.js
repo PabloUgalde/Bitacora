@@ -96,7 +96,7 @@ const api = {
             personal: {}, licenses: {}, dashboardCards: [],
             userRole: 'student', dataSource: 'supabase'
         };
-        const savedProfile = api.loadProfile() || defaultProfile;
+        const savedProfile = await api.loadProfile() || defaultProfile;
         userProfile = { ...defaultProfile, ...savedProfile };
         userProfile.dataSource = 'supabase'; // siempre Supabase
 
@@ -249,11 +249,69 @@ const api = {
     },
 
     // ── Perfil de usuario ─────────────────────────────────────────
+    // ── Perfil de usuario ─────────────────────────────────────────
     saveProfile: async (profileData) => {
+        // Guardar en localStorage como caché
         localStorage.setItem('flightLogUserProfile', JSON.stringify(profileData));
+ 
+        // Guardar en Supabase
+        const userId = api._getUserId();
+        if (!userId) return;
+        const row = {
+            id:               userId,
+            full_name:        profileData.personal?.['profile-nombre'] || null,
+            rut:              profileData.personal?.['profile-rut'] || null,
+            fecha_nacimiento: profileData.personal?.['profile-nacimiento'] || null,
+            carnet:           profileData.personal?.['profile-documento'],
+            telefono:         profileData.personal?.['profile-telefono'] || null,
+            email:            profileData.personal?.['profile-email'] || null,
+            domicilio:        profileData.personal?.['profile-domicilio'] || null,
+            licencias:        profileData.licenses || {},
+            dashboard_cards:  profileData.dashboardCards || [],
+            user_role:        profileData.userRole || 'student',
+            updated_at:       new Date().toISOString(),
+        };
+        const { error } = await supabaseClient
+            .from('profiles')
+            .upsert(row, { onConflict: 'id' });
+        if (error) console.error("Error al guardar perfil en Supabase:", error);
     },
-
-    loadProfile: () => {
+ 
+    loadProfile: async () => {
+        // Intentar cargar desde Supabase primero
+        const userId = api._getUserId();
+        if (userId) {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', userId)
+                    .single();
+                if (!error && data) {
+                    const profile = {
+                        dataSource: 'supabase',
+                        userRole:   data.user_role || 'student',
+                        dashboardCards: data.dashboard_cards || [],
+                        licenses:   data.licencias || {},
+                        personal: {
+                            'profile-nombre':     data.full_name || '',
+                            'profile-rut':        data.rut || '',
+                            'profile-nacimiento': data.fecha_nacimiento || '',
+                            'profile-documento':         data.carnet || '',
+                            'profile-telefono':   data.telefono || '',
+                            'profile-email':      data.email || '',
+                            'profile-domicilio':  data.domicilio || '',
+                        },
+                    };
+                    // Actualizar caché local
+                    localStorage.setItem('flightLogUserProfile', JSON.stringify(profile));
+                    return profile;
+                }
+            } catch (e) {
+                console.warn("Error al cargar perfil desde Supabase, usando caché local.", e);
+            }
+        }
+        // Fallback: localStorage
         const saved = localStorage.getItem('flightLogUserProfile');
         return saved ? JSON.parse(saved) : null;
     },

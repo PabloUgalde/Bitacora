@@ -409,14 +409,18 @@ const app = {
             backupRetentionDays: document.getElementById('backup-retention-select').value,
             userRole: ui.determineUserRole()
         };
-        document.querySelectorAll('#pilot-data-form .personal-data-item input').forEach(input => {
+        if (!profileValidator.validateProfileForm()) {
+            ui.showNotification("Corrige los errores en Datos Personales.", "error");
+            return;
+        }
+        document.querySelectorAll('#pilot-data-form .personal-data-item input, #pilot-data-form .personal-data-item select').forEach(input => {
             profileToSave.personal[input.id] = input.value;
         });
         document.querySelectorAll('#licenses-data-form .license-item input').forEach(input => {
             profileToSave.licenses[input.id] = input.value;
         });
         userProfile = profileToSave;
-        localStorage.setItem('flightLogUserProfile', JSON.stringify(userProfile));
+        await api.saveProfile(userProfile);
         ui.updateFormForRole();
         ui.showNotification("¡Configuración guardada!", "success");
     },
@@ -457,6 +461,7 @@ const app = {
         if (userProfile.backupRetentionDays) document.getElementById('backup-retention-select').value = userProfile.backupRetentionDays;
         ui.showBackupFolderPath(); 
         ui.updateFormForRole();
+        profileValidator.initProfileForm();
     },
 
     handleFlightReview: () => { const result = ui.validateAndGetData(); if (result.isValid) { render.flightPreview(result.data); ui.goToStep(3); } },
@@ -494,7 +499,7 @@ const app = {
     },
 };
 
-document.addEventListener('DOMContentLoaded', async () => {
+window.addEventListener('load', async () => {
     const ok = await auth.init();
     if (ok) await app.initialize();
 });

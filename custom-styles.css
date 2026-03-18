@@ -199,3 +199,21 @@
     color: var(--primary-color);
     background-color: rgba(212, 175, 55, 0.1); /* Un fondo sutil para la opción activa */
 }
+
+/* ====================================================================== */
+/* =           VALIDACIÓN DE FORMULARIO DE PERFIL                       = */
+/* ====================================================================== */
+
+.field-error {
+    display: block;
+    font-size: 11px;
+    color: #ef4444;
+    margin-top: 4px;
+    line-height: 1.4;
+}
+
+.personal-data-item input.error,
+.personal-data-item select.error {
+    border-color: #ef4444;
+    background-color: rgba(239, 68, 68, 0.05);
+}

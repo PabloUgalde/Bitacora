@@ -20,7 +20,7 @@ const backupManager = {
 
     // Limpiar caché local (localStorage)
     async clearLocalCache() {
-        if (!confirm("¿Borrar el caché local? Tus vuelos siguen en la nube y se recargarán al iniciar sesión.")) return;
+        if (!confirm("¿Borrar el caché local de vuelos? Tus datos siguen en la nube y se recargarán al iniciar sesión.")) return;
         localStorage.removeItem('flightLogData');
         flightData = [];
         ui.showNotification("Caché local borrado. Recargando...", "success");
