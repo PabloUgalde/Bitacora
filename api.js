@@ -1,189 +1,160 @@
 // =================================================================
-// API.JS - VERSIÓN FINAL Y DEFINITIVA
+// API.JS - VERSIÓN SUPABASE
+// Misma interfaz que la versión Google Sheets.
+// app.js, ui.js y el resto del código no necesitan cambios.
 // =================================================================
 
 const api = {
 
-    _getTwoRowHeaderArray() {
-        const headerRow1 = ['ID'];
-        const headerRow2 = ['']; 
+    // ── Helpers internos ─────────────────────────────────────────
 
-        HEADER_STRUCTURE.forEach(header => {
-            if (header.isGroup) {
-                // Fila 1: Nombre del grupo, seguido de celdas vacías
-                headerRow1.push(header.short || header.name);
-                for (let i = 1; i < header.colspan; i++) {
-                    headerRow1.push('');
-                }
-                // Fila 2: Hijos del grupo
-                header.children.forEach(child => {
-                    headerRow2.push(child.replace("Aterrizajes ", ""));
-                });
-            } else {
-                // Fila 1: Nombre de la columna
-                headerRow1.push(header.short || header.name);
-                // Fila 2: Celda vacía para que ocupe el rowspan visualmente
-                headerRow2.push('');
-            }
-        });
-
-        // La tercera fila contiene los identificadores reales que usa la app
-        const dataIdentifiersRow = HEADERS;
-
-        return [headerRow1, headerRow2];
+    // Convierte un objeto de vuelo (formato app) a fila de Supabase
+    _flightToRow(flight, userId) {
+        const fecha = flight.Fecha instanceof Date && !isNaN(flight.Fecha)
+            ? `${flight.Fecha.getUTCFullYear()}-${String(flight.Fecha.getUTCMonth()+1).padStart(2,'0')}-${String(flight.Fecha.getUTCDate()).padStart(2,'0')}`
+            : null;
+        return {
+            id:                    flight.id,
+            user_id:               userId,
+            fecha,
+            aeronave_marca_modelo: flight['Aeronave Marca y Modelo'] || null,
+            matricula_aeronave:    flight['Matricula Aeronave'] || null,
+            desde:                 flight['Desde'] || null,
+            hasta:                 flight['Hasta'] || null,
+            duracion_total:        parseFloat(flight['Duracion Total de Vuelo']) || 0,
+            lsa:                   parseFloat(flight['LSA']) || 0,
+            monomotor:             parseFloat(flight['Monomotor']) || 0,
+            multimotor:            parseFloat(flight['Multimotor']) || 0,
+            turbo_helice:          parseFloat(flight['Turbo Helice']) || 0,
+            turbo_jet:             parseFloat(flight['Turbo Jet']) || 0,
+            helicoptero:           parseFloat(flight['Helicoptero']) || 0,
+            planeador:             parseFloat(flight['Planeador']) || 0,
+            ultraliviano:          parseFloat(flight['Ultraliviano']) || 0,
+            aterrizajes_dia:       parseInt(flight['Aterrizajes Dia']) || 0,
+            aterrizajes_noche:     parseInt(flight['Aterrizajes Noche']) || 0,
+            diurno:                parseFloat(flight['Diurno']) || 0,
+            nocturno:              parseFloat(flight['Nocturno']) || 0,
+            ifr:                   parseFloat(flight['IFR']) || 0,
+            no_app:                parseInt(flight['NO']) || 0,
+            tipo_app:              flight['Tipo'] || null,
+            simulador:             parseFloat(flight['Simulador o Entrenador de Vuelo']) || 0,
+            travesia:              parseFloat(flight['Travesia']) || 0,
+            solo:                  parseFloat(flight['Solo']) || 0,
+            pic:                   parseFloat(flight['Piloto al Mando (PIC)']) || 0,
+            sic:                   parseFloat(flight['Copiloto (SIC)']) || 0,
+            instruccion_recibida:  parseFloat(flight['Instruccion Recibida']) || 0,
+            como_instructor:       parseFloat(flight['Como Instructor']) || 0,
+            observaciones:         flight['Observaciones'] || null,
+            pagina_bitacora:       parseInt(flight['Pagina Bitacora a Replicar']) || null,
+        };
     },
 
-    _flightObjectToValuesArray(flight) {
-        return HEADERS.map(header => {
-            const value = flight[header];
-            if (header === 'Fecha' && value instanceof Date && !isNaN(value.getTime())) {
-                // --- INICIO DE LA CORRECCIÓN ---
-                // Creamos una nueva fecha usando los componentes UTC para evitar problemas de zona horaria.
-                const year = value.getUTCFullYear();
-                const month = String(value.getUTCMonth() + 1).padStart(2, '0');
-                const day = String(value.getUTCDate()).padStart(2, '0');
-                
-                // Retornamos el formato deseado: YYYY-MM-DD
-                return `${year}-${month}-${day}`;
-                // --- FIN DE LA CORRECCIÓN ---
-            }
-            return (value === null || value === undefined) ? '' : value;
-        });
+    // Convierte una fila de Supabase al formato de objeto de vuelo que usa la app
+    _rowToFlight(row) {
+        return {
+            id:                              row.id,
+            'Fecha':                         row.fecha ? new Date(row.fecha + 'T12:00:00Z') : null,
+            'Aeronave Marca y Modelo':        row.aeronave_marca_modelo || '',
+            'Matricula Aeronave':             row.matricula_aeronave || '',
+            'Desde':                          row.desde || '',
+            'Hasta':                          row.hasta || '',
+            'Duracion Total de Vuelo':        row.duracion_total || 0,
+            'LSA':                            row.lsa || 0,
+            'Monomotor':                      row.monomotor || 0,
+            'Multimotor':                     row.multimotor || 0,
+            'Turbo Helice':                   row.turbo_helice || 0,
+            'Turbo Jet':                      row.turbo_jet || 0,
+            'Helicoptero':                    row.helicoptero || 0,
+            'Planeador':                      row.planeador || 0,
+            'Ultraliviano':                   row.ultraliviano || 0,
+            'Aterrizajes Dia':                row.aterrizajes_dia || 0,
+            'Aterrizajes Noche':              row.aterrizajes_noche || 0,
+            'Diurno':                         row.diurno || 0,
+            'Nocturno':                       row.nocturno || 0,
+            'IFR':                            row.ifr || 0,
+            'NO':                             row.no_app || 0,
+            'Tipo':                           row.tipo_app || '',
+            'Simulador o Entrenador de Vuelo': row.simulador || 0,
+            'Travesia':                       row.travesia || 0,
+            'Solo':                           row.solo || 0,
+            'Piloto al Mando (PIC)':          row.pic || 0,
+            'Copiloto (SIC)':                 row.sic || 0,
+            'Instruccion Recibida':           row.instruccion_recibida || 0,
+            'Como Instructor':                row.como_instructor || 0,
+            'Observaciones':                  row.observaciones || '',
+            'Pagina Bitacora a Replicar':     row.pagina_bitacora || '',
+        };
     },
-    
-    // --- FUNCIÓN DE COMUNICACIÓN CENTRALIZADA ---
-        async _postToSheets(payload) {
-            try {
-                await fetch(userProfile.googleSheetsUrl, {
-                    method: 'POST',
-                    body: JSON.stringify(payload),
-                    mode: 'no-cors'
-                    // SIN headers - no poner Content-Type
-                });
-                return { success: true, message: 'Solicitud enviada a Google Sheets.' };
-            } catch (error) {
-                console.error("Error de Red al enviar a Google Sheets:", error);
-                return { success: false, message: `Error de red: ${error.message}` };
-            }
-        },
 
-    // --- CARGA INICIAL ---
+    _getUserId() {
+        return currentUser?.id || null;
+    },
+
+    // ── Carga inicial ─────────────────────────────────────────────
     loadInitialFlights: async () => {
-        const defaultProfile = { personal: {}, licenses: {}, dashboardCards: [], userRole: 'student', dataSource: 'local' };
+        const defaultProfile = {
+            personal: {}, licenses: {}, dashboardCards: [],
+            userRole: 'student', dataSource: 'supabase'
+        };
         const savedProfile = api.loadProfile() || defaultProfile;
         userProfile = { ...defaultProfile, ...savedProfile };
-        const dataSource = userProfile.dataSource || 'local';
+        userProfile.dataSource = 'supabase'; // siempre Supabase
 
-        if (dataSource === 'google_sheets' && userProfile.googleSheetsUrl) {
-            console.log("Cargando desde Google Sheets...");
-            const result = await api.loadFlightsFromGoogleSheets(userProfile.googleSheetsUrl);
-            if (result.success) {
-                flightData = result.data;
-                api.saveFlightsToLocalStorage();
-                console.log(`Éxito: ${result.message}`);
-            } else {
-                console.warn(`Fallo al cargar desde Google Sheets: ${result.message}. Cargando desde respaldo local.`);
-                api.loadFlightsFromLocalStorage();
+        const userId = api._getUserId();
+        if (!userId) {
+            console.warn("No hay usuario autenticado. Cargando desde localStorage.");
+            api.loadFlightsFromLocalStorage();
+            return;
+        }
+
+        try {
+            console.log("Cargando vuelos desde Supabase...");
+            // Traer todos los vuelos paginando de a 1000
+            let allRows = [];
+            let offset = 0;
+            const limit = 1000;
+            while (true) {
+                const { data, error } = await supabaseClient
+                    .from('flights')
+                    .select('*')
+                    .eq('user_id', userId)
+                    .order('fecha', { ascending: false })
+                    .range(offset, offset + limit - 1);
+
+                if (error) throw error;
+                allRows = allRows.concat(data);
+                if (data.length < limit) break;
+                offset += limit;
             }
-        } else {
-            console.log("Cargando desde almacenamiento local...");
+
+            flightData = allRows.map(row => api._rowToFlight(row));
+            api.saveFlightsToLocalStorage(); // caché local
+            console.log(`${flightData.length} vuelos cargados desde Supabase.`);
+        } catch (err) {
+            console.error("Error al cargar desde Supabase:", err);
+            console.warn("Cargando desde caché local como fallback.");
             api.loadFlightsFromLocalStorage();
         }
     },
 
-    loadFlightsFromGoogleSheets: (url) => {
-        return new Promise((resolve, reject) => {
-            const callbackName = 'handleGSheetsResponse';
-            window[callbackName] = (response) => {
-                try {
-                    if (response.success) {
-                        const dataRows = response.flights;
-                        if (!dataRows || dataRows.length === 0) {
-                            resolve({ success: true, data: [], message: "La hoja de Google Sheets no contiene vuelos." });
-                            return;
-                        }
-
-                        const loadedFlights = dataRows.map((row) => {
-                            if (!Array.isArray(row) || row.length === 0) return null;
-
-                            // 1. CREACIÓN POSICIONAL DEL OBJETO
-                            // Crea el objeto de vuelo asignando cada valor de la fila a la propiedad
-                            // correspondiente de HEADERS, basándose en su posición.
-                            const newFlight = {};
-                            HEADERS.forEach((headerName, index) => {
-                                // Si la fila es más corta que los encabezados, asigna undefined
-                                newFlight[headerName] = row[index] !== undefined ? row[index] : undefined;
-                            });
-
-                            // 2. VALIDACIÓN Y NORMALIZACIÓN DEL ID
-                            // Si no hay ID o está vacío, el vuelo es inválido.
-                            if (newFlight.id === undefined || newFlight.id === null || newFlight.id === '') {
-                                return null;
-                            }
-                            newFlight.id = newFlight.id.toString();
-
-                            // 3. PARSEO Y CONVERSIÓN DE TIPOS
-                            const duration = parseFloat(String(newFlight['Duracion Total de Vuelo']).replace(",", ".")) || 0;
-                            const simTime = parseFloat(String(newFlight['Simulador o Entrenador de Vuelo']).replace(",", ".")) || 0;
-                            if (duration <= 0 && simTime <= 0) return null; // Vuelo sin horas no es válido
-
-                            // Convierte la fecha, manejando posibles formatos incorrectos
-                            const dateValue = newFlight.Fecha;
-                            newFlight.Fecha = (dateValue && !isNaN(new Date(dateValue).getTime())) ? new Date(dateValue) : null;
-
-                            // Convierte todos los campos numéricos, asegurando que sean números.
-                            const integerHeaders = ["Aterrizajes Dia", "Aterrizajes Noche", "NO"];
-                            HEADERS.forEach(header => {
-                                if (SUMMARIZABLE_HEADERS.includes(header) && !integerHeaders.includes(header)) {
-                                    newFlight[header] = parseFloat(String(newFlight[header]).replace(",", ".")) || 0;
-                                } else if (integerHeaders.includes(header)) {
-                                    newFlight[header] = Math.trunc(parseFloat(String(newFlight[header]).replace(",", ".")) || 0);
-                                }
-                            });
-
-                            return newFlight;
-
-                        }).filter(Boolean); // Elimina todos los vuelos 'null'
-
-                        resolve({ success: true, data: loadedFlights.reverse(), message: `Se cargaron ${loadedFlights.length} vuelos.` });
-
-                    } else {
-                        reject(new Error(response.message || 'Error desconocido desde Google Sheets.'));
-                    }
-                } finally {
-                    // 4. LIMPIEZA
-                    delete window[callbackName];
-                    const scriptTag = document.querySelector(`script[src*="callback=${callbackName}"]`);
-                    if (scriptTag) {
-                        document.body.removeChild(scriptTag);
-                    }
-                }
-            };
-
-            const script = document.createElement('script');
-            script.src = `${url}?callback=${callbackName}&t=${new Date().getTime()}`; // Añadimos timestamp para evitar caché
-            script.onerror = () => {
-                reject(new Error('Error de red al intentar cargar el script desde Google Sheets.'));
-                delete window[callbackName];
-                if (document.body.contains(script)) {
-                    document.body.removeChild(script);
-                }
-            };
-            document.body.appendChild(script);
-        });
-    },
-
-
-// ... (resto de api.js)
-    
-    // --- OPERACIONES DE MODIFICACIÓN ---
+    // ── Operaciones CRUD ──────────────────────────────────────────
     saveFlight: async (flightDataToSave) => {
         const newFlight = ui.createFlightObject(flightDataToSave);
-        flightData.unshift(newFlight);
-        if (userProfile.dataSource === 'google_sheets' && userProfile.googleSheetsUrl) {
-            const values = api._flightObjectToValuesArray(newFlight);
-            await api._postToSheets({ action: 'addFlight', headers: HEADERS, values: values });
+        const userId = api._getUserId();
+
+        // 1. Insertar en Supabase
+        if (userId) {
+            const row = api._flightToRow(newFlight, userId);
+            const { error } = await supabaseClient.from('flights').insert([row]);
+            if (error) {
+                console.error("Error al guardar en Supabase:", error);
+                ui.showNotification("Error al guardar el vuelo en la base de datos.", "error");
+                return false;
+            }
         }
+
+        // 2. Actualizar estado local
+        flightData.unshift(newFlight);
         api.saveFlightsToLocalStorage();
         await backupManager.createBackup();
         return true;
@@ -194,94 +165,101 @@ const api = {
         if (index === -1) return false;
 
         const updatedFlight = ui.createFlightObject(flightDataToUpdate);
-        updatedFlight.id = flightId; // Re-aseguramos el ID original
+        updatedFlight.id = flightId;
 
-        // Reemplazamos el objeto viejo por el nuevo en el array en memoria
-        flightData[index] = updatedFlight;
+        const userId = api._getUserId();
 
-        // Enviamos la actualización a la fuente de datos externa si es necesario
-        if (userProfile.dataSource === 'google_sheets' && userProfile.googleSheetsUrl) {
-            const values = api._flightObjectToValuesArray(updatedFlight);
-            await api._postToSheets({ action: 'updateFlight', flightId, values });
+        // 1. Actualizar en Supabase
+        if (userId) {
+            const row = api._flightToRow(updatedFlight, userId);
+            const { error } = await supabaseClient
+                .from('flights')
+                .update(row)
+                .eq('id', flightId)
+                .eq('user_id', userId);
+            if (error) {
+                console.error("Error al actualizar en Supabase:", error);
+                ui.showNotification("Error al actualizar el vuelo.", "error");
+                return false;
+            }
         }
 
-        // Guardamos el estado completo y correcto en la caché local
+        // 2. Actualizar estado local
+        flightData[index] = updatedFlight;
         api.saveFlightsToLocalStorage();
-
-        // Creamos un respaldo local de la operación
         await backupManager.createBackup();
-
         return true;
     },
 
     deleteFlight: async (flightId) => {
         const index = flightData.findIndex(f => f && f.id === flightId);
         if (index === -1) return false;
-        flightData.splice(index, 1);
-        if (userProfile.dataSource === 'google_sheets' && userProfile.googleSheetsUrl) {
-            await api._postToSheets({ action: 'deleteFlight', flightId });
+
+        const userId = api._getUserId();
+
+        // 1. Eliminar en Supabase
+        if (userId) {
+            const { error } = await supabaseClient
+                .from('flights')
+                .delete()
+                .eq('id', flightId)
+                .eq('user_id', userId);
+            if (error) {
+                console.error("Error al eliminar en Supabase:", error);
+                ui.showNotification("Error al eliminar el vuelo.", "error");
+                return false;
+            }
         }
+
+        // 2. Actualizar estado local
+        flightData.splice(index, 1);
         api.saveFlightsToLocalStorage();
         await backupManager.createBackup();
         return true;
     },
-    
-    syncAllFlightsToSheets: async () => {
-        if (userProfile.dataSource !== 'google_sheets' || !userProfile.googleSheetsUrl) {
-            return { success: false, message: "La sincronización solo está disponible si la fuente de datos es Google Sheets."};
-        }
-        if (!confirm(`Esto reemplazará TODO el contenido de tu Google Sheet con los ${flightData.length} vuelos que tienes cargados en la app. ¿Estás seguro?`)) {
-            return { success: false, message: "Sincronización cancelada."};
-        }
-        
-        // --- INICIO DE LA CORRECCIÓN ---
-        // Generamos la nueva estructura de 3 filas de encabezado
-        const headersForSheet = api._getTwoRowHeaderArray();
-        
-        const allFlightsAsArrays = [...flightData].filter(Boolean).reverse().map(flight => api._flightObjectToValuesArray(flight));
-        
-        // Enviamos la nueva estructura de encabezados en el payload
-        return await api._postToSheets({ action: 'syncAllFlights', headers: headersForSheet, flights: allFlightsAsArrays });
-        // --- FIN DE LA CORRECCIÓN ---
-    },
 
-    // --- FUNCIONES DE ALMACENAMIENTO LOCAL, PERFIL Y EXPORTACIÓN ---
+    // ── Almacenamiento local (caché / fallback offline) ───────────
     loadFlightsFromLocalStorage: () => {
         const localData = localStorage.getItem('flightLogData');
         if (localData) {
             try {
                 flightData = JSON.parse(localData).map(flight => {
                     if (!flight) return null;
-                if (flight.ID !== undefined && flight.ID !== null) {
-                    flight.id = flight.ID.toString();
-                    delete flight.ID;
-                } else if (flight.id !== undefined && flight.id !== null) {
-                    // Si ya tiene 'id', solo nos aseguramos de que sea string.
-                    flight.id = flight.id.toString();
-                }
+                    if (flight.ID !== undefined && flight.ID !== null) {
+                        flight.id = flight.ID.toString();
+                        delete flight.ID;
+                    } else if (flight.id !== undefined && flight.id !== null) {
+                        flight.id = flight.id.toString();
+                    }
                     flight.Fecha = new Date(flight.Fecha);
                     return flight;
                 }).filter(Boolean);
-                console.log(`${flightData.length} vuelos cargados desde localStorage.`);
+                console.log(`${flightData.length} vuelos cargados desde localStorage (caché).`);
             } catch (e) {
-                console.error("Error al parsear datos locales, iniciando con bitácora vacía.", e);
+                console.error("Error al parsear caché local:", e);
                 flightData = [];
             }
         } else {
             flightData = [];
         }
     },
+
     saveFlightsToLocalStorage: () => {
         localStorage.setItem('flightLogData', JSON.stringify(flightData));
     },
+
+    // ── Perfil de usuario ─────────────────────────────────────────
     saveProfile: async (profileData) => {
         localStorage.setItem('flightLogUserProfile', JSON.stringify(profileData));
-        console.log("Perfil de usuario guardado.");
     },
+
     loadProfile: () => {
-        const savedProfile = localStorage.getItem('flightLogUserProfile');
-        return savedProfile ? JSON.parse(savedProfile) : null;
+        const saved = localStorage.getItem('flightLogUserProfile');
+        return saved ? JSON.parse(saved) : null;
     },
+
+    // ── Exportación ───────────────────────────────────────────────
+    // Mantiene exportación a Excel (igual que antes)
     exportToExcel: () => {
         if (flightData.length === 0) { alert("No hay vuelos para exportar."); return; }
         const dataForSheet = [HEADERS];
@@ -291,7 +269,9 @@ const api = {
                 let value = flight[header];
                 if (header === 'Fecha') {
                     const date = new Date(value);
-                    value = !isNaN(date.getTime()) ? `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}` : '';
+                    value = !isNaN(date.getTime())
+                        ? `${date.getUTCFullYear()}-${String(date.getUTCMonth()+1).padStart(2,'0')}-${String(date.getUTCDate()).padStart(2,'0')}`
+                        : '';
                 }
                 row.push(value === null || value === undefined ? '' : value);
             });
@@ -302,4 +282,40 @@ const api = {
         XLSX.utils.book_append_sheet(workbook, worksheet, "Bitacora");
         XLSX.writeFile(workbook, `Bitacora_de_Vuelo_${new Date().toISOString().split('T')[0]}.xlsx`);
     },
+
+    // Exportación CSV (para backup)
+    exportToCSV: () => {
+        if (flightData.length === 0) { alert("No hay vuelos para exportar."); return; }
+        const rows = [HEADERS.join(',')];
+        [...flightData].filter(Boolean).reverse().forEach(flight => {
+            const row = HEADERS.map(header => {
+                let value = flight[header];
+                if (header === 'Fecha') {
+                    const date = new Date(value);
+                    value = !isNaN(date.getTime())
+                        ? `${date.getUTCFullYear()}-${String(date.getUTCMonth()+1).padStart(2,'0')}-${String(date.getUTCDate()).padStart(2,'0')}`
+                        : '';
+                }
+                if (value === null || value === undefined) return '';
+                const str = String(value);
+                return str.includes(',') || str.includes('"') || str.includes('\n')
+                    ? `"${str.replace(/"/g, '""')}"` : str;
+            });
+            rows.push(row.join(','));
+        });
+        const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Bitacora_Backup_${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    },
+
+    // ── Métodos legacy (no usados con Supabase, se mantienen por compatibilidad) ──
+    _getTwoRowHeaderArray() { return []; },
+    _flightObjectToValuesArray(flight) { return HEADERS.map(h => flight[h] ?? ''); },
+    _postToSheets: async () => ({ success: false, message: 'Google Sheets desactivado.' }),
+    loadFlightsFromGoogleSheets: async () => ({ success: false, data: [], message: 'Use Supabase.' }),
+    syncAllFlightsToSheets: async () => ({ success: false, message: 'Google Sheets desactivado.' }),
 };

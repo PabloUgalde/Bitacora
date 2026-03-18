@@ -493,4 +493,7 @@ const app = {
     },
 };
 
-document.addEventListener('DOMContentLoaded', app.initialize);
+document.addEventListener('DOMContentLoaded', async () => {
+    const ok = await auth.init();
+    if (ok) await app.initialize();
+});
