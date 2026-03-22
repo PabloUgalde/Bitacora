@@ -5,29 +5,30 @@ const ui = {
     showView: (viewId) => {
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+
         const activeView = document.getElementById(viewId);
-        const activeLink = document.querySelector(`.nav-link[data-view="${viewId}"]`);
-        if(activeView) activeView.classList.add('active');
-        if(activeLink) {
+        const activeLink = document.querySelector(`a.nav-link[data-view="${viewId}"]`);
+
+        if (activeView) activeView.classList.add('active');
+        if (activeLink) {
             activeLink.classList.add('active');
-            if(activeLink.closest('.nav-dropdown-menu')) {
-                document.getElementById('summaries-dropdown-toggle').classList.add('active');
+            // Activar el toggle padre correcto según en qué dropdown está el link
+            const parentMenu = activeLink.closest('.nav-dropdown-menu');
+            if (parentMenu) {
+                if (parentMenu.id === 'summaries-dropdown-menu') {
+                    document.getElementById('summaries-dropdown-toggle')?.classList.add('active');
+                } else if (parentMenu.id === 'bitacora-dropdown-menu') {
+                    document.getElementById('bitacora-dropdown-toggle')?.classList.add('active');
+                }
             }
         }
-        if (viewId === 'view-add-flight') { // Simplificamos la condición
-            if (!logbookState.editingFlightId) {
-                ui.resetFlightForm();
-            }
-            ui.populateAircraftTypes(); // <<< ¡AQUÍ ESTÁ LA LLAMADA CLAVE!
-            ui.updateFormForRole();
-        } else if (viewId !== 'view-add-flight') {
-             ui.resetFlightForm();
+
+        if (viewId !== 'view-add-flight') {
+            ui.resetFlightForm();
         }
-        
+
         const renderFunction = ui.renderMap[viewId];
-        if (renderFunction) {
-            renderFunction();
-        }
+        if (renderFunction) renderFunction();
     },
 
     populateAircraftTypes: () => {

@@ -2,9 +2,8 @@
 
 const app = {
     initialize: async () => {
-        await api.loadInitialFlights(); // CARGA PRIMERO EL PERFIL Y LOS DATOS
-        app.loadSettings(); // LUEGO, POBLA LA UI CON ESOS DATOS
-        // Redirigir a configuración si es usuario nuevo sin licencias
+        await api.loadInitialFlights();
+        app.loadSettings();
         const licencias = Array.isArray(userProfile.licenses?.dgac) 
             ? userProfile.licenses.dgac 
             : [];
@@ -18,7 +17,6 @@ const app = {
         }
         if (licencias.length === 0 && flightData.length === 0) {
             ui.showView('view-settings');
-            // Activar panel de licencias
             setTimeout(() => {
                 const licPanel = document.querySelector('[data-panel="panel-licencias"]');
                 if (licPanel) licPanel.click();
@@ -32,7 +30,6 @@ const app = {
         app.updateSortButtonText();
         anotaciones.injectStyles();
         await anotaciones.load();
-        // Detectar retorno desde Stripe — después de que todo cargó
         setTimeout(async () => {
             const urlParams = new URLSearchParams(window.location.search);
             const checkout = urlParams.get('checkout');
@@ -54,16 +51,13 @@ const app = {
             navigator.serviceWorker.register('./sw.js')
                 .then((reg) => console.log('Service Worker Registrado. Scope:', reg.scope))
                 .catch(error => console.error('Error al registrar Service Worker:', error));
-            }
+        }
     },
 
     setupLogbookActionsListener: () => {
         const container = document.getElementById('view-logbook');
         if (!container) return; 
-
-        if (container.dataset.listenerAttached) {
-            return;
-        }
+        if (container.dataset.listenerAttached) return;
         container.dataset.listenerAttached = 'true';
 
         container.addEventListener('click', async (e) => {
@@ -115,25 +109,22 @@ const app = {
     setupEventListeners: () => {
         if (document.body.dataset.listenersAttached) return;
         document.body.dataset.listenersAttached = 'true';
-        // Lógica de Fuente de Datos
+
+        // --- FUENTE DE DATOS ---
         const updateDataSourceView = () => {
             const dataSourceSelect = document.getElementById('data-source-select');
             if (!dataSourceSelect) return;
-            const dataSource = dataSourceSelect.value;
-            const isGoogle = dataSource === 'google_sheets';
-            document.getElementById('google-sheets-url-container').classList.toggle('hidden', !isGoogle);
+            document.getElementById('google-sheets-url-container').classList.toggle('hidden', dataSourceSelect.value !== 'google_sheets');
         };
-
         document.getElementById('data-source-select').addEventListener('change', (e) => {
-            const selectedValue = e.target.value;
             updateDataSourceView();
-            if (userProfile.dataSource === 'local' && selectedValue === 'google_sheets') {
+            if (userProfile.dataSource === 'local' && e.target.value === 'google_sheets') {
                 const localData = JSON.parse(localStorage.getItem('flightLogData') || '[]');
-                if (localData.length > 0) { ui.showSyncPrompt(localData.length); }
+                if (localData.length > 0) ui.showSyncPrompt(localData.length);
             }
         });
 
-        // NAVEGACIÓN Y DROPDOWNS
+        // --- NAVEGACIÓN Y DROPDOWNS ---
         const navDropdownToggle = document.getElementById('summaries-dropdown-toggle');
         const navDropdownMenu = document.getElementById('summaries-dropdown-menu');
         const sortDropdownToggle = document.getElementById('sort-order-toggle');
@@ -142,22 +133,50 @@ const app = {
         const bitacoraDropdownMenu = document.getElementById('bitacora-dropdown-menu');
         const hamburgerBtn = document.getElementById('hamburger-btn');
         const mainNav = document.getElementById('main-nav');
-        
-        if (navDropdownToggle && navDropdownMenu) {
+
+        const closeAllDropdowns = () => {
+            navDropdownMenu?.classList.remove('active');
+            bitacoraDropdownMenu?.classList.remove('active');
+            sortDropdownMenu?.classList.remove('active');
+        };
+
+        const closeMobileNav = () => {
+            hamburgerBtn?.classList.remove('open');
+            mainNav?.classList.remove('mobile-nav-open');
+            navDropdownMenu?.classList.remove('mobile-submenu-open');
+            bitacoraDropdownMenu?.classList.remove('mobile-submenu-open');
+        };
+
+        // Dropdown Resúmenes (solo desktop)
+        if (navDropdownToggle) {
             navDropdownToggle.addEventListener('click', (e) => {
+                if (window.innerWidth <= 800) return;
                 e.preventDefault();
-                navDropdownMenu.classList.toggle('active');
-                if (sortDropdownMenu) sortDropdownMenu.classList.remove('active');
-                if (bitacoraDropdownMenu) bitacoraDropdownMenu.classList.remove('active');
+                const isOpen = navDropdownMenu.classList.contains('active');
+                closeAllDropdowns();
+                if (!isOpen) navDropdownMenu.classList.add('active');
             });
         }
 
-        if (sortDropdownToggle && sortDropdownMenu) {
-            sortDropdownToggle.addEventListener('click', () => {
-                sortDropdownMenu.classList.toggle('active');
-                if (navDropdownMenu) navDropdownMenu.classList.remove('active');
+        // Dropdown Bitácora (solo desktop)
+        if (bitacoraDropdownToggle) {
+            bitacoraDropdownToggle.addEventListener('click', (e) => {
+                if (window.innerWidth <= 800) return;
+                e.preventDefault();
+                const isOpen = bitacoraDropdownMenu.classList.contains('active');
+                closeAllDropdowns();
+                if (!isOpen) bitacoraDropdownMenu.classList.add('active');
             });
+        }
 
+        // Dropdown Ordenar
+        if (sortDropdownToggle && sortDropdownMenu) {
+            sortDropdownToggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isOpen = sortDropdownMenu.classList.contains('active');
+                closeAllDropdowns();
+                if (!isOpen) sortDropdownMenu.classList.add('active');
+            });
             sortDropdownMenu.addEventListener('click', (e) => {
                 e.preventDefault();
                 const target = e.target.closest('.sort-option');
@@ -170,35 +189,60 @@ const app = {
             });
         }
 
+        // Clicks en links con data-view (desktop y mobile comparten este handler)
+        document.querySelector('header').addEventListener('click', (e) => {
+            const link = e.target.closest('a.nav-link[data-view]');
+            if (!link) return;
+            e.preventDefault();
+            const licenciasGuardadas = licenseSystem.getData()?.licencias || [];
+            const licenciasProfile = Array.isArray(userProfile.licenses?.dgac) ? userProfile.licenses.dgac : [];
+            const sinLicencias = licenciasGuardadas.length === 0 && licenciasProfile.length === 0;
+            if (sinLicencias && flightData.length === 0 && link.dataset.view !== 'view-settings') {
+                ui.showNotification('Agrega al menos una licencia antes de continuar.', 'error');
+                return;
+            }
+            if (logbookState.editingFlightId) ui.resetFlightForm();
+            closeAllDropdowns();
+            closeMobileNav();
+            ui.showView(link.dataset.view);
+        });
 
-        if (bitacoraDropdownToggle && bitacoraDropdownMenu) {
-            bitacoraDropdownToggle.addEventListener('click', (e) => {
-                e.preventDefault();
+        // --- MENÚ MÓVIL ---
+        if (hamburgerBtn && mainNav) {
+            // Clonar para limpiar cualquier listener acumulado
+            const freshNav = mainNav.cloneNode(true);
+            mainNav.parentNode.replaceChild(freshNav, mainNav);
+            const cleanNav = document.getElementById('main-nav');
+            const cleanBitacoraMenu = document.getElementById('bitacora-dropdown-menu');
+            const cleanSummariesMenu = document.getElementById('summaries-dropdown-menu');
+
+            hamburgerBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                bitacoraDropdownMenu.classList.toggle('active');
-                if (navDropdownMenu) navDropdownMenu.classList.remove('active');
-                if (sortDropdownMenu) sortDropdownMenu.classList.remove('active');
+                hamburgerBtn.classList.toggle('open');
+                cleanNav.classList.toggle('mobile-nav-open');
+            });
+
+            cleanNav.addEventListener('click', (e) => {
+                const link = e.target.closest('.nav-link');
+                if (!link) return;
+                if (link.id === 'bitacora-dropdown-toggle') {
+                    e.preventDefault();
+                    cleanBitacoraMenu.classList.toggle('mobile-submenu-open');
+                    cleanSummariesMenu?.classList.remove('mobile-submenu-open');
+                } else if (link.id === 'summaries-dropdown-toggle') {
+                    e.preventDefault();
+                    cleanSummariesMenu.classList.toggle('mobile-submenu-open');
+                    cleanBitacoraMenu?.classList.remove('mobile-submenu-open');
+                } else {
+                    hamburgerBtn.classList.remove('open');
+                    cleanNav.classList.remove('mobile-nav-open');
+                    cleanBitacoraMenu?.classList.remove('mobile-submenu-open');
+                    cleanSummariesMenu?.classList.remove('mobile-submenu-open');
+                }
             });
         }
-        
-        document.querySelector('header').addEventListener('click', (e) => {
-            const link = e.target.closest('.nav-link');
-            if (link && link.dataset.view) {
-                e.preventDefault();
-                const licenciasGuardadas = licenseSystem.getData()?.licencias || [];
-                const licenciasProfile = Array.isArray(userProfile.licenses?.dgac) ? userProfile.licenses.dgac : [];
-                const sinLicencias = licenciasGuardadas.length === 0 && licenciasProfile.length === 0;
-                if (sinLicencias && flightData.length === 0 && link.dataset.view !== 'view-settings') {
-                    ui.showNotification('Agrega al menos una licencia antes de continuar.', 'error');
-                    return;
-                }
-                if (logbookState.editingFlightId) ui.resetFlightForm();
-                ui.showView(link.dataset.view);
-                if (navDropdownMenu) navDropdownMenu.classList.remove('active');
-                if (bitacoraDropdownMenu) bitacoraDropdownMenu.classList.remove('active'); // ← agregar esta línea
-            }
-        });
-        // FORMULARIO DE VUELO
+
+        // --- FORMULARIO DE VUELO ---
         document.getElementById('flight-form').addEventListener('submit', app.handleFlightSubmit);
         document.getElementById('review-flight-btn').addEventListener('click', app.handleFlightReview);
         document.querySelectorAll('#flight-form .next-btn').forEach(btn => {
@@ -217,31 +261,28 @@ const app = {
             const val = parseFloat(e.target.value) || 0;
             document.getElementById('ifr-approaches-container').classList.toggle('hidden', val <= 0);
         });
-        
-        // MODALES
+
+        // --- MODALES ---
         const filterModal = document.getElementById('filter-modal');
         const restoreModal = document.getElementById('restore-modal');
         const printModal = document.getElementById('print-modal');
 
         document.getElementById('open-filter-modal-btn').addEventListener('click', app.openFilterModal);
-        
-        // --- RESTAURADO: Listeners de cierre (X) de los modales ---
         filterModal.querySelector('.close-button').addEventListener('click', app.closeFilterModal);
         printModal.querySelector('.close-button').addEventListener('click', () => printModal.classList.remove('open'));
         restoreModal.querySelector('.close-button').addEventListener('click', () => backupManager.closeRestoreModal());
-        
-        document.getElementById('advanced-filter-form').addEventListener('submit', (e) => { 
-            e.preventDefault(); 
-            logbookState.filters = {}; 
-            document.getElementById('advanced-filter-form').querySelectorAll('input[data-filter-key]').forEach(input => { 
-                if (input.value) logbookState.filters[input.dataset.filterKey] = input.value; 
-            }); 
-            logbookState.currentPage = 1; 
-            render.detailedLog(); 
-            app.closeFilterModal(); 
+
+        document.getElementById('advanced-filter-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            logbookState.filters = {};
+            document.getElementById('advanced-filter-form').querySelectorAll('input[data-filter-key]').forEach(input => {
+                if (input.value) logbookState.filters[input.dataset.filterKey] = input.value;
+            });
+            logbookState.currentPage = 1;
+            render.detailedLog();
+            app.closeFilterModal();
         });
 
-        // --- RESTAURADO: Botón reset dentro del modal de filtro ---
         document.getElementById('reset-filter-btn').addEventListener('click', () => {
             logbookState.filters = {};
             document.getElementById('advanced-filter-form').reset();
@@ -250,7 +291,6 @@ const app = {
             app.closeFilterModal();
         });
 
-        // REPORTE DE IMPRESIÓN
         document.getElementById('open-print-modal-btn').addEventListener('click', () => {
             const lastPageNumber = ui.getLastPageNumber();
             document.getElementById('print-page-to').placeholder = `Última (${lastPageNumber})`;
@@ -258,14 +298,13 @@ const app = {
             printModal.classList.add('open');
         });
 
-        // --- RESTAURADO: Listener del formulario de impresión (Este era el error) ---
         document.getElementById('print-report-form').addEventListener('submit', (e) => {
             e.preventDefault();
             reportGenerator.generate();
             printModal.classList.remove('open');
         });
 
-        // PAGINACIÓN Y LOGBOOK
+        // --- PAGINACIÓN Y LOGBOOK ---
         const paginationControls = document.getElementById('pagination-controls');
         if (paginationControls) {
             paginationControls.addEventListener('click', (e) => {
@@ -276,7 +315,6 @@ const app = {
                     logbookState.currentPage++; render.detailedLog();
                 }
             });
-            // Listener para selector de items por página
             const itemsPerPageSelect = document.getElementById('items-per-page-desktop');
             if (itemsPerPageSelect) {
                 itemsPerPageSelect.addEventListener('change', (e) => {
@@ -286,7 +324,7 @@ const app = {
                 });
             }
         }
-        
+
         document.getElementById('clear-logbook-filter-btn').addEventListener('click', () => {
             logbookState.filters = {};
             document.getElementById('advanced-filter-form').reset();
@@ -294,16 +332,15 @@ const app = {
             render.detailedLog();
         });
 
-        // === LISTENERS DE TODOS LOS RESÚMENES ===
+        // --- RESÚMENES ---
         document.getElementById('time-summary-year-select').addEventListener('change', summaryRenderer.byTime);
         document.getElementById('type-summary-year-select').addEventListener('change', summaryRenderer.byType);
         document.getElementById('type-summary-month-select').addEventListener('change', summaryRenderer.byType);
-        
         document.getElementById('airport-summary-year-select').addEventListener('change', summaryRenderer.byAirport);
         document.getElementById('airport-summary-month-select').addEventListener('change', summaryRenderer.byAirport);
-        
         document.getElementById('aircraft-summary-year-select').addEventListener('change', summaryRenderer.byAircraft);
         document.getElementById('aircraft-summary-month-select').addEventListener('change', summaryRenderer.byAircraft);
+
         document.getElementById('aircraft-group-by-buttons').addEventListener('click', (e) => {
             const target = e.target.closest('.toggle-btn');
             if (target && !target.classList.contains('active')) {
@@ -313,44 +350,42 @@ const app = {
             }
         });
 
-        // === LISTENERS RESUMEN IFR ===
+        document.getElementById('page-summary-filter-btn').addEventListener('click', summaryRenderer.byPage);
+        document.getElementById('page-summary-reset-btn').addEventListener('click', () => {
+            document.getElementById('page-summary-from').value = '';
+            document.getElementById('page-summary-to').value = '';
+            summaryRenderer.byPage();
+        });
+
+        // Resumen IFR
         const ifrFilterMode = document.getElementById('ifr-filter-mode');
         if (ifrFilterMode) {
             ifrFilterMode.addEventListener('change', (e) => {
                 const isRecency = e.target.value === 'recency';
                 document.getElementById('ifr-recency-group').style.display = isRecency ? 'flex' : 'none';
                 document.getElementById('ifr-calendar-group').style.display = isRecency ? 'none' : 'flex';
-                summaryRenderer.byIFR(); 
+                summaryRenderer.byIFR();
             });
         }
+        document.getElementById('ifr-period-select')?.addEventListener('change', summaryRenderer.byIFR);
+        document.getElementById('ifr-summary-year-select')?.addEventListener('change', summaryRenderer.byIFR);
+        document.getElementById('ifr-summary-month-select')?.addEventListener('change', summaryRenderer.byIFR);
+        document.getElementById('ifr-group-by-buttons')?.addEventListener('click', (e) => {
+            const target = e.target.closest('.toggle-btn');
+            if (target && !target.classList.contains('active')) {
+                document.querySelectorAll('#ifr-group-by-buttons .toggle-btn').forEach(btn => btn.classList.remove('active'));
+                target.classList.add('active');
+                summaryRenderer.byIFR();
+            }
+        });
 
-        const ifrPeriod = document.getElementById('ifr-period-select');
-        if (ifrPeriod) ifrPeriod.addEventListener('change', summaryRenderer.byIFR);
-
-        const ifrYear = document.getElementById('ifr-summary-year-select');
-        if (ifrYear) ifrYear.addEventListener('change', summaryRenderer.byIFR);
-
-        const ifrMonth = document.getElementById('ifr-summary-month-select');
-        if (ifrMonth) ifrMonth.addEventListener('change', summaryRenderer.byIFR);
-
-        const ifrGroup = document.getElementById('ifr-group-by-buttons');
-        if (ifrGroup) {
-            ifrGroup.addEventListener('click', (e) => {
-                const target = e.target.closest('.toggle-btn');
-                if (target && !target.classList.contains('active')) {
-                    document.querySelectorAll('#ifr-group-by-buttons .toggle-btn').forEach(btn => btn.classList.remove('active'));
-                    target.classList.add('active');
-                    summaryRenderer.byIFR();
-                }
-            });
-        }
-        
-        // CONFIGURACIÓN Y OTROS
+        // --- CONFIGURACIÓN ---
         document.getElementById('save-settings-btn').addEventListener('click', app.saveSettings);
         document.getElementById('download-excel-btn')?.addEventListener('click', () => api.exportToExcel());
         document.getElementById('download-csv-btn')?.addEventListener('click', () => api.exportToCSV());
         document.getElementById('clear-local-data-btn')?.addEventListener('click', () => backupManager.clearLocalCache());
         document.getElementById('open-saldo-inicial-btn')?.addEventListener('click', () => saldoInicial.open());
+
         document.querySelectorAll('.settings-nav-item, .settings-tab-item').forEach(btn => {
             btn.addEventListener('click', () => {
                 const panelId = btn.dataset.panel;
@@ -362,7 +397,7 @@ const app = {
             });
         });
 
-        // Listeners del Modal de Sincronización
+        // --- SINCRONIZACIÓN ---
         document.getElementById('sync-action-merge').addEventListener('click', async () => {
             const syncModal = document.getElementById('sync-prompt-modal');
             ui.showNotification("Iniciando sincronización...", "info");
@@ -391,80 +426,40 @@ const app = {
             alert("¡Sincronización completada!");
             location.reload();
         });
-        
+
         document.getElementById('sync-action-replace').addEventListener('click', async () => {
             userProfile.dataSource = 'google_sheets';
             await api.saveProfile(userProfile);
             location.reload();
         });
-        
+
         document.getElementById('sync-action-cancel').addEventListener('click', () => {
             const syncModal = document.getElementById('sync-prompt-modal');
             document.getElementById('data-source-select').value = 'local';
             document.getElementById('google-sheets-url-container').classList.add('hidden');
             syncModal.classList.remove('open');
         });
-        
-        // MENÚ MÓVIL
-        if (hamburgerBtn && mainNav) {
-            hamburgerBtn.addEventListener('click', () => {
-                hamburgerBtn.classList.toggle('open');
-                mainNav.classList.toggle('mobile-nav-open');
-            });
-        const dropdownMenuMobile = mainNav.querySelector('#summaries-dropdown-menu');
-        const bitacoraMenuMobile = mainNav.querySelector('#bitacora-dropdown-menu');
-        mainNav.addEventListener('click', (e) => {
-            const link = e.target.closest('.nav-link');
-            if (!link) return;
-            if (link.id === 'summaries-dropdown-toggle') {
-                e.preventDefault();
-                dropdownMenuMobile.classList.toggle('mobile-submenu-open');
-                if (bitacoraMenuMobile) bitacoraMenuMobile.classList.remove('mobile-submenu-open');
-            } else if (link.id === 'bitacora-dropdown-toggle') {
-                e.preventDefault();
-                if (bitacoraMenuMobile) bitacoraMenuMobile.classList.toggle('mobile-submenu-open');
-                dropdownMenuMobile.classList.remove('mobile-submenu-open');
-            } else if (link.dataset.view) {
-                hamburgerBtn.classList.remove('open');
-                mainNav.classList.remove('mobile-nav-open');
-                dropdownMenuMobile.classList.remove('mobile-submenu-open');
-                if (bitacoraMenuMobile) bitacoraMenuMobile.classList.remove('mobile-submenu-open');
-            }
-        });
-        }
 
-        // CIERRE GLOBAL DE ELEMENTOS AL HACER CLICK FUERA
+        // --- CIERRE GLOBAL AL HACER CLICK FUERA ---
         if (!window.globalClickListenerAttached) {
-            // Variable para rastrear dónde empezó el clic
             let mousedownTarget = null;
-
-            window.addEventListener('mousedown', (e) => {
-                mousedownTarget = e.target;
-            });
-
+            window.addEventListener('mousedown', (e) => { mousedownTarget = e.target; });
             window.addEventListener('click', (e) => {
-                // Solo cerramos si el clic EMPEZÓ y TERMINÓ en el mismo elemento de fondo
-                // Esto evita cierres accidentales al seleccionar texto o arrastrar el mouse
                 if (e.target === mousedownTarget) {
                     if (filterModal && e.target === filterModal) app.closeFilterModal();
                     if (restoreModal && e.target === restoreModal) backupManager.closeRestoreModal();
                     if (printModal && e.target === printModal) printModal.classList.remove('open');
                 }
-
-                // Lógica de menús desplegables (estos no se ven afectados por el arrastre)
+                // Cerrar dropdowns al hacer click fuera
                 if (navDropdownMenu && navDropdownToggle && !navDropdownToggle.contains(e.target) && !navDropdownMenu.contains(e.target)) {
                     navDropdownMenu.classList.remove('active');
                 }
+                if (bitacoraDropdownMenu && bitacoraDropdownToggle && !bitacoraDropdownToggle.contains(e.target) && !bitacoraDropdownMenu.contains(e.target)) {
+                    bitacoraDropdownMenu.classList.remove('active');
+                }
                 if (sortDropdownMenu && sortDropdownToggle && !sortDropdownToggle.contains(e.target) && !sortDropdownMenu.contains(e.target)) {
                     sortDropdownMenu.classList.remove('active');
-                if (bitacoraDropdownMenu && bitacoraDropdownToggle && !bitacoraDropdownToggle.contains(e.target) && !bitacoraDropdownMenu.contains(e.target)) { bitacoraDropdownMenu.classList.remove('active'); }
                 }
-            document.getElementById('page-summary-filter-btn').addEventListener('click', summaryRenderer.byPage);
-            document.getElementById('page-summary-reset-btn').addEventListener('click', () => {
-                document.getElementById('page-summary-from').value = '';
-                document.getElementById('page-summary-to').value = '';
-                summaryRenderer.byPage();
-                });
             });
             window.globalClickListenerAttached = true;
         }
@@ -479,7 +474,7 @@ const app = {
             opt.classList.toggle('active', opt.dataset.sort === logbookState.sortOrder);
         });
     },
-    
+
     saveSettings: async () => {
         const selectedCards = [];
         for (let i = 0; i < 7; i++) {
@@ -501,10 +496,8 @@ const app = {
         document.querySelectorAll('#pilot-data-form .personal-data-item input, #pilot-data-form .personal-data-item select').forEach(input => {
             profileToSave.personal[input.id] = input.value;
         });
-        
         profileToSave.licenses = { dgac: licenseSystem.getData() };
         profileToSave.userRole = licenseSystem.getUserRole();
-
         userProfile = profileToSave;
         await api.saveProfile(userProfile);
         ui.updateFormForRole();
@@ -516,17 +509,21 @@ const app = {
         const googleUrlInput = document.getElementById('google-sheets-url');
         if (dataSourceSelect) {
             dataSourceSelect.value = userProfile.dataSource || 'local';
-            const isGoogle = dataSourceSelect.value === 'google_sheets';
-            document.getElementById('google-sheets-url-container').classList.toggle('hidden', !isGoogle);
+            document.getElementById('google-sheets-url-container').classList.toggle('hidden', dataSourceSelect.value !== 'google_sheets');
         }
-        if (googleUrlInput) { googleUrlInput.value = userProfile.googleSheetsUrl || ''; }
-        if (userProfile.personal) { Object.keys(userProfile.personal).forEach(id => { const i = document.getElementById(id); if (i) i.value = userProfile.personal[id]; }); }
+        if (googleUrlInput) googleUrlInput.value = userProfile.googleSheetsUrl || '';
+        if (userProfile.personal) {
+            Object.keys(userProfile.personal).forEach(id => {
+                const i = document.getElementById(id);
+                if (i) i.value = userProfile.personal[id];
+            });
+        }
         const savedLicencias = userProfile.licenses?.dgac || [];
         licenseSystem.init('licenses-container', savedLicencias);
-        
+
         const cardsContainer = document.getElementById('dashboard-cards-config-container');
         if (cardsContainer) {
-            cardsContainer.innerHTML = ''; 
+            cardsContainer.innerHTML = '';
             DASHBOARD_CARDS.filter(c => c.isFixed).forEach((card, index) => {
                 cardsContainer.innerHTML += `<div class="card-slot fixed"><label>Tarjeta Fija ${index + 1}</label><p>${card.label}</p></div>`;
             });
@@ -546,15 +543,15 @@ const app = {
             }
         }
         if (userProfile.backupRetentionDays) document.getElementById('backup-retention-select').value = userProfile.backupRetentionDays;
-        ui.showBackupFolderPath(); 
+        ui.showBackupFolderPath();
         ui.updateFormForRole();
         profileValidator.initProfileForm();
-                // Mostrar estado del plan
+
         const planDisplay = document.getElementById('plan-status-display');
         miCuenta.init();
         if (planDisplay) {
             if (plan.isPro()) {
-                const expires = userProfile.planExpiresAt 
+                const expires = userProfile.planExpiresAt
                     ? `Vence: ${new Date(userProfile.planExpiresAt).toLocaleDateString('es-CL')}`
                     : 'Sin vencimiento';
                 planDisplay.innerHTML = `
@@ -578,8 +575,11 @@ const app = {
         }
     },
 
-    handleFlightReview: () => { const result = ui.validateAndGetData(); if (result.isValid) { render.flightPreview(result.data); ui.goToStep(3); } },
-    
+    handleFlightReview: () => {
+        const result = ui.validateAndGetData();
+        if (result.isValid) { render.flightPreview(result.data); ui.goToStep(3); }
+    },
+
     handleFlightSubmit: async (e) => {
         e.preventDefault();
         const submitBtn = e.target.querySelector('.submit-btn');
@@ -591,7 +591,9 @@ const app = {
         if (result.isValid) {
             const isEditing = !!logbookState.editingFlightId;
             try {
-                const success = isEditing ? await api.updateFlight(logbookState.editingFlightId, result.data) : await api.saveFlight(result.data);
+                const success = isEditing
+                    ? await api.updateFlight(logbookState.editingFlightId, result.data)
+                    : await api.saveFlight(result.data);
                 if (success) {
                     if (isEditing && userProfile.dataSource === 'google_sheets') {
                         alert("Vuelo actualizado. Recargando...");
