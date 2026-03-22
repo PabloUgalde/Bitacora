@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Bitácora de Vuelo — La bitácora digital para pilotos</title>
+    <meta name="description" content="Registra, gestiona y analiza tus vuelos con la bitácora digital diseñada para pilotos chilenos. Compatible con normativa DGAC.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gold: #c9a84c;
+            --gold-light: #f0c040;
+            --gold-dim: #c9a84c30;
+            --bg: #080808;
+            --bg2: #0f0f0f;
+            --bg3: #141414;
+            --surface: #1a1a1a;
+            --border: #222;
+            --text: #e2e8f0;
+            --muted: #666;
+            --dim: #333;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; overflow-x: hidden; }
+
+        /* NAV */
+        nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(8,8,8,0.92); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); padding: 0 40px; height: 64px; display: flex; align-items: center; justify-content: space-between; }
+        .nav-logo { display: flex; align-items: center; gap: 10px; }
+        .nav-epaulette { display: flex; flex-direction: column; gap: 3px; padding: 6px; background: var(--surface); border: 1px solid var(--gold); border-radius: 5px; }
+        .nav-epaulette span { display: block; height: 2px; background: var(--gold); border-radius: 2px; }
+        .nav-epaulette span:nth-child(1) { width: 18px; }
+        .nav-epaulette span:nth-child(2) { width: 14px; }
+        .nav-epaulette span:nth-child(3) { width: 18px; }
+        .nav-epaulette span:nth-child(4) { width: 10px; }
+        .nav-brand { font-size: 14px; font-weight: 600; color: #fff; }
+        .nav-links { display: flex; align-items: center; gap: 32px; }
+        .nav-links a { font-size: 13px; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+        .nav-links a:hover { color: var(--text); }
+        .nav-cta { background: var(--gold); color: #000; border: none; border-radius: 6px; padding: 8px 20px; font-size: 13px; font-weight: 600; cursor: pointer; text-decoration: none; transition: opacity 0.2s; }
+        .nav-cta:hover { opacity: 0.85; }
+
+        /* HERO */
+        .hero { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 100px 24px 80px; position: relative; overflow: hidden; }
+        .hero-grid { position: absolute; inset: 0; background-image: linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px); background-size: 60px 60px; opacity: 0.4; }
+        .hero-glow { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -60%); width: 600px; height: 600px; background: radial-gradient(circle, rgba(201,168,76,0.08) 0%, transparent 70%); pointer-events: none; }
+        .hero-badge { display: inline-flex; align-items: center; gap: 8px; background: var(--gold-dim); border: 1px solid var(--gold); border-radius: 20px; padding: 6px 16px; font-size: 12px; color: var(--gold); font-weight: 500; margin-bottom: 24px; position: relative; z-index: 1; }
+        .hero-badge::before { content: '✈'; font-size: 14px; }
+        .hero-title { font-family: 'Bebas Neue', sans-serif; font-size: clamp(56px, 10vw, 110px); line-height: 0.95; color: #fff; letter-spacing: 2px; margin-bottom: 24px; position: relative; z-index: 1; }
+        .hero-title span { color: var(--gold); }
+        .hero-sub { font-size: clamp(16px, 2.5vw, 20px); color: var(--muted); font-weight: 300; max-width: 560px; line-height: 1.6; margin-bottom: 40px; position: relative; z-index: 1; }
+        .hero-actions { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; position: relative; z-index: 1; }
+        .btn-primary { background: var(--gold); color: #000; border: none; border-radius: 8px; padding: 14px 32px; font-size: 15px; font-weight: 700; cursor: pointer; text-decoration: none; transition: all 0.2s; }
+        .btn-primary:hover { background: var(--gold-light); transform: translateY(-1px); }
+        .btn-secondary { background: transparent; color: var(--text); border: 1px solid var(--dim); border-radius: 8px; padding: 14px 32px; font-size: 15px; font-weight: 500; cursor: pointer; text-decoration: none; transition: border-color 0.2s; }
+        .btn-secondary:hover { border-color: var(--gold); color: var(--gold); }
+        .hero-stats { display: flex; gap: 48px; margin-top: 64px; position: relative; z-index: 1; flex-wrap: wrap; justify-content: center; }
+        .hero-stat { text-align: center; }
+        .hero-stat-val { font-family: 'Bebas Neue', sans-serif; font-size: 36px; color: var(--gold); letter-spacing: 1px; }
+        .hero-stat-label { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+        /* SECTION BASE */
+        section { padding: 100px 24px; }
+        .section-inner { max-width: 1100px; margin: 0 auto; }
+        .section-tag { font-size: 11px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--gold); margin-bottom: 12px; }
+        .section-title { font-family: 'Bebas Neue', sans-serif; font-size: clamp(36px, 5vw, 56px); color: #fff; letter-spacing: 1px; margin-bottom: 16px; }
+        .section-sub { font-size: 16px; color: var(--muted); max-width: 520px; line-height: 1.7; }
+
+        /* MOCKUP SLIDESHOW */
+        .demo-section { background: var(--bg2); }
+        .demo-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
+        .demo-mockup { background: var(--bg3); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+        .mockup-topbar { background: #111; padding: 12px 16px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--border); }
+        .mockup-dot { width: 10px; height: 10px; border-radius: 50%; }
+        .mockup-dot.r { background: #c05050; }
+        .mockup-dot.y { background: #c9a84c; }
+        .mockup-dot.g { background: #4a9a4a; }
+        .mockup-url { flex: 1; background: #1a1a1a; border-radius: 4px; padding: 4px 12px; font-size: 11px; color: var(--muted); text-align: center; }
+        .mockup-body { padding: 16px; position: relative; min-height: 280px; }
+        .mockup-slide { position: absolute; inset: 16px; opacity: 0; transition: opacity 0.6s ease; pointer-events: none; }
+        .mockup-slide.active { opacity: 1; pointer-events: auto; }
+        .mockup-label { font-size: 10px; color: #555; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
+        .mockup-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+        .mockup-tile { background: #181818; border: 1px solid #252525; border-radius: 6px; padding: 10px 12px; display: flex; justify-content: space-between; align-items: center; }
+        .mockup-tile.gold { border-color: var(--gold); }
+        .tile-label { font-size: 10px; color: var(--muted); }
+        .tile-val { font-size: 17px; font-weight: 700; color: var(--gold); }
+        .mockup-chart { background: #111; border-radius: 8px; height: 110px; display: flex; align-items: flex-end; gap: 5px; padding: 10px; overflow: hidden; }
+        .chart-bar { flex: 1; background: var(--gold-dim); border-radius: 3px 3px 0 0; border: 1px solid var(--gold); transition: height 1s ease; }
+        /* Slide 2 — formulario */
+        .mockup-form-field { margin-bottom: 8px; }
+        .mockup-form-label { font-size: 10px; color: #555; margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.8px; }
+        .mockup-form-input { background: #111; border: 1px solid #252525; border-radius: 5px; padding: 7px 10px; font-size: 12px; color: #aaa; width: 100%; }
+        .mockup-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .mockup-form-btn { background: var(--gold); color: #000; border: none; border-radius: 6px; padding: 8px; font-size: 11px; font-weight: 700; width: 100%; margin-top: 10px; }
+        /* Slide 3 — tabla */
+        .mockup-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        .mockup-table th { color: #555; font-weight: 600; padding: 6px 8px; text-align: left; border-bottom: 1px solid #1e1e1e; letter-spacing: 0.5px; }
+        .mockup-table td { color: #aaa; padding: 7px 8px; border-bottom: 1px solid #141414; }
+        .mockup-table tr:last-child td { border-bottom: none; }
+        .mockup-table .gold { color: var(--gold); font-weight: 600; }
+        /* Slide 4 — licencias */
+        .mockup-lic { background: #181818; border: 1px solid #252525; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .mockup-lic-name { font-size: 12px; color: #ccc; font-weight: 600; }
+        .mockup-lic-num { font-size: 11px; color: var(--muted); margin-top: 2px; }
+        .mockup-lic-badge { font-size: 10px; background: rgba(74,154,74,0.15); color: #4a9a4a; border: 1px solid #4a9a4a; border-radius: 4px; padding: 2px 8px; font-weight: 600; }
+        .mockup-lic-badge.vence { background: rgba(74,154,74,0.15); color: #4a9a4a; border-color: #4a9a4a; }
+        .mockup-lic-badge.warning { background: rgba(201,120,30,0.15); color: #e07820; border-color: #e07820; }
+        /* Indicadores */
+        .mockup-indicators { display: flex; justify-content: space-between; align-items: center; padding: 12px 8px 8px; border-top: 1px solid #1a1a1a; }
+        .mockup-dot-ind { width: 6px; height: 6px; border-radius: 50%; background: #333; cursor: pointer; transition: all 0.2s; }
+        .mockup-dot-ind.active { background: var(--gold); width: 18px; border-radius: 3px; }
+        .demo-points { display: flex; flex-direction: column; gap: 20px; }
+        .demo-point { display: flex; gap: 16px; align-items: flex-start; }
+        .demo-icon { width: 40px; height: 40px; background: var(--gold-dim); border: 1px solid var(--gold); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 18px; }
+        .demo-point h4 { font-size: 15px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+        .demo-point p { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+        /* FEATURES */
+        .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-top: 48px; }
+        .feature-card { background: var(--bg2); padding: 28px; transition: background 0.2s; }
+        .feature-card:hover { background: var(--surface); }
+        .feature-icon { font-size: 24px; margin-bottom: 14px; }
+        .feature-card h3 { font-size: 15px; font-weight: 600; color: #fff; margin-bottom: 8px; }
+        .feature-card p { font-size: 13px; color: var(--muted); line-height: 1.6; }
+        .feature-badge { display: inline-block; font-size: 10px; background: var(--gold-dim); color: var(--gold); border: 1px solid var(--gold); border-radius: 4px; padding: 2px 8px; margin-top: 10px; font-weight: 600; }
+
+        /* PRECIOS */
+        .pricing-section { background: var(--bg2); }
+        .pricing-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 48px; max-width: 720px; margin-left: auto; margin-right: auto; }
+        .pricing-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 32px; position: relative; }
+        .pricing-card.featured { border-color: var(--gold); background: #1c1a10; }
+        .pricing-badge { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--gold); color: #000; font-size: 11px; font-weight: 700; padding: 4px 16px; border-radius: 20px; white-space: nowrap; }
+        .pricing-name { font-size: 14px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+        .pricing-price { font-family: 'Bebas Neue', sans-serif; font-size: 48px; color: #fff; letter-spacing: 1px; margin-bottom: 4px; }
+        .pricing-card.featured .pricing-price { color: var(--gold); }
+        .pricing-period { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+        .pricing-features { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-bottom: 28px; }
+        .pricing-features li { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 10px; }
+        .pricing-features li::before { content: '✓'; color: var(--gold); font-weight: 700; }
+        .pricing-features li.off { color: var(--dim); }
+        .pricing-features li.off::before { content: '—'; color: var(--dim); }
+        .pricing-btn { width: 100%; padding: 12px; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; text-align: center; text-decoration: none; display: block; transition: all 0.2s; }
+        .pricing-btn.free { background: transparent; border: 1px solid var(--dim); color: var(--muted); }
+        .pricing-btn.free:hover { border-color: var(--gold); color: var(--gold); }
+        .pricing-btn.pro { background: var(--gold); border: none; color: #000; }
+        .pricing-btn.pro:hover { background: var(--gold-light); }
+        .pricing-note { text-align: center; font-size: 12px; color: var(--muted); margin-top: 20px; }
+
+        /* TESTIMONIOS */
+        .testimonials-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 48px; }
+        .testimonial { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 24px; }
+        .testimonial-text { font-size: 14px; color: #aaa; line-height: 1.7; margin-bottom: 20px; font-style: italic; }
+        .testimonial-text::before { content: '"'; color: var(--gold); font-size: 24px; line-height: 1; display: block; margin-bottom: 8px; }
+        .testimonial-author { display: flex; align-items: center; gap: 12px; }
+        .author-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--gold-dim); border: 1px solid var(--gold); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: var(--gold); }
+        .author-name { font-size: 13px; font-weight: 600; color: #fff; }
+        .author-role { font-size: 11px; color: var(--muted); }
+
+        /* FAQ */
+        .faq-list { margin-top: 48px; display: flex; flex-direction: column; gap: 8px; max-width: 720px; }
+        .faq-item { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+        .faq-q { padding: 18px 20px; font-size: 14px; font-weight: 500; color: #fff; cursor: pointer; display: flex; justify-content: space-between; align-items: center; user-select: none; }
+        .faq-q:hover { background: #1e1e1e; }
+        .faq-icon { color: var(--gold); font-size: 18px; transition: transform 0.2s; }
+        .faq-item.open .faq-icon { transform: rotate(45deg); }
+        .faq-a { display: none; padding: 0 20px 18px; font-size: 13px; color: var(--muted); line-height: 1.7; border-top: 1px solid var(--border); padding-top: 14px; }
+        .faq-item.open .faq-a { display: block; }
+
+        /* CTA FINAL */
+        .cta-section { text-align: center; background: var(--bg2); border-top: 1px solid var(--border); }
+        .cta-title { font-family: 'Bebas Neue', sans-serif; font-size: clamp(40px, 6vw, 72px); color: #fff; letter-spacing: 2px; margin-bottom: 16px; }
+        .cta-title span { color: var(--gold); }
+        .cta-sub { font-size: 16px; color: var(--muted); margin-bottom: 40px; }
+
+        /* FOOTER */
+        footer { background: #050505; border-top: 1px solid var(--border); padding: 32px 40px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+        .footer-left { font-size: 12px; color: var(--dim); }
+        .footer-links { display: flex; gap: 24px; }
+        .footer-links a { font-size: 12px; color: var(--dim); text-decoration: none; transition: color 0.2s; }
+        .footer-links a:hover { color: var(--gold); }
+
+        /* RESPONSIVE */
+        @media (max-width: 768px) {
+            nav { padding: 0 20px; }
+            .nav-links { display: none; }
+            .demo-wrap { grid-template-columns: 1fr; }
+            .features-grid { grid-template-columns: 1fr; }
+            .pricing-grid { grid-template-columns: 1fr; }
+            .testimonials-grid { grid-template-columns: 1fr; }
+            footer { flex-direction: column; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+    <div class="nav-logo">
+        <div class="nav-epaulette"><span></span><span></span><span></span><span></span></div>
+        <span class="nav-brand">Mi Bitácora de Vuelo</span>
+    </div>
+    <div class="nav-links">
+        <a href="#demo">Demo</a>
+        <a href="#features">Funciones</a>
+        <a href="#precios">Precios</a>
+        <a href="#faq">FAQ</a>
+    </div>
+    <a href="/?auth=1" class="nav-cta" id="nav-cta">Comenzar gratis</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+    <div class="hero-grid"></div>
+    <div class="hero-glow"></div>
+    <div class="hero-badge">Compatible con normativa DGAC Chile</div>
+    <h1 class="hero-title">Tu bitácora<br><span>en la nube</span></h1>
+    <p class="hero-sub">Registra, gestiona y analiza tus vuelos desde cualquier dispositivo. Diseñada para pilotos civiles y militares.</p>
+    <div class="hero-actions">
+        <a href="/?auth=1" class="btn-primary">Comenzar gratis →</a>
+        <a href="#demo" class="btn-secondary">Ver demo</a>
+    </div>
+    <div class="hero-stats">
+        <div class="hero-stat"><div class="hero-stat-val">100%</div><div class="hero-stat-label">Formato electrónico DGAC</div></div>
+        <div class="hero-stat"><div class="hero-stat-val">14</div><div class="hero-stat-label">Días Pro gratis</div></div>
+        <div class="hero-stat"><div class="hero-stat-val">∞</div><div class="hero-stat-label">Vuelos registrables</div></div>
+    </div>
+</section>
+
+<!-- DEMO -->
+<section class="demo-section" id="demo">
+    <div class="section-inner">
+        <div class="demo-wrap">
+            <div class="demo-mockup">
+                <div class="mockup-topbar">
+                    <div class="mockup-dot r"></div>
+                    <div class="mockup-dot y"></div>
+                    <div class="mockup-dot g"></div>
+                    <div class="mockup-url" id="mockup-url-bar">bitacora-de-vuelo.pages.dev</div>
+                </div>
+                <div class="mockup-body">
+
+                    <!-- SLIDE 1: Dashboard -->
+                    <div class="mockup-slide active" id="slide-0">
+                        <div class="mockup-label">Dashboard — Resumen General</div>
+                        <div class="mockup-tiles">
+                            <div class="mockup-tile gold"><span class="tile-label">Horas Totales</span><span class="tile-val">529.0</span></div>
+                            <div class="mockup-tile"><span class="tile-label">Horas PIC</span><span class="tile-val">463.2</span></div>
+                            <div class="mockup-tile"><span class="tile-label">Horas IFR</span><span class="tile-val">47.7</span></div>
+                            <div class="mockup-tile"><span class="tile-label">Aterrizajes</span><span class="tile-val">1221</span></div>
+                        </div>
+                        <div class="mockup-label">Distribución de tiempos</div>
+                        <div class="mockup-chart">
+                            <div class="chart-bar" style="height:40%"></div>
+                            <div class="chart-bar" style="height:70%"></div>
+                            <div class="chart-bar" style="height:55%"></div>
+                            <div class="chart-bar" style="height:90%"></div>
+                            <div class="chart-bar" style="height:65%"></div>
+                            <div class="chart-bar" style="height:45%"></div>
+                            <div class="chart-bar" style="height:80%"></div>
+                            <div class="chart-bar" style="height:60%"></div>
+                        </div>
+                    </div>
+
+                    <!-- SLIDE 2: Añadir vuelo -->
+                    <div class="mockup-slide" id="slide-1">
+                        <div class="mockup-label">Añadir Vuelo — Datos del vuelo</div>
+                        <div class="mockup-form-row">
+                            <div class="mockup-form-field">
+                                <div class="mockup-form-label">Aeronave</div>
+                                <div class="mockup-form-input">CESSNA 172</div>
+                            </div>
+                            <div class="mockup-form-field">
+                                <div class="mockup-form-label">Matrícula</div>
+                                <div class="mockup-form-input">CC-KYA</div>
+                            </div>
+                        </div>
+                        <div class="mockup-form-row">
+                            <div class="mockup-form-field">
+                                <div class="mockup-form-label">Desde</div>
+                                <div class="mockup-form-input">SCEL</div>
+                            </div>
+                            <div class="mockup-form-field">
+                                <div class="mockup-form-label">Hasta</div>
+                                <div class="mockup-form-input">SCFA</div>
+                            </div>
+                        </div>
+                        <div class="mockup-form-row">
+                            <div class="mockup-form-field">
+                                <div class="mockup-form-label">Duración total</div>
+                                <div class="mockup-form-input">2.5 hrs</div>
+                            </div>
+                            <div class="mockup-form-field">
+                                <div class="mockup-form-label">Fecha</div>
+                                <div class="mockup-form-input">19/03/2026</div>
+                            </div>
+                        </div>
+                        <div class="mockup-form-btn">Siguiente paso →</div>
+                    </div>
+
+                    <!-- SLIDE 3: Resumen por aeronave -->
+                    <div class="mockup-slide" id="slide-2">
+                        <div class="mockup-label">Resumen por Aeronave</div>
+                        <table class="mockup-table">
+                            <thead>
+                                <tr><th>Aeronave</th><th>Horas</th><th>Vuelos</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>Cessna 172</td><td class="gold">312.5</td><td>187</td></tr>
+                                <tr><td>Piper PA-28</td><td class="gold">98.3</td><td>54</td></tr>
+                                <tr><td>Diamond DA40</td><td class="gold">74.2</td><td>41</td></tr>
+                                <tr><td>Beechcraft B36</td><td class="gold">44.0</td><td>28</td></tr>
+                            </tbody>
+                        </table>
+                        <div style="margin-top:10px; display:flex; gap:8px;">
+                            <div style="flex:1; background:#111; border-radius:5px; padding:8px; text-align:center;">
+                                <div style="font-size:10px; color:#555; margin-bottom:2px;">Total aeronaves</div>
+                                <div style="font-size:16px; font-weight:700; color:var(--gold);">4</div>
+                            </div>
+                            <div style="flex:1; background:#111; border-radius:5px; padding:8px; text-align:center;">
+                                <div style="font-size:10px; color:#555; margin-bottom:2px;">Horas totales</div>
+                                <div style="font-size:16px; font-weight:700; color:var(--gold);">529.0</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SLIDE 4: Licencias -->
+                    <div class="mockup-slide" id="slide-3">
+                        <div class="mockup-label">Licencias y Habilitaciones DGAC</div>
+                        <div class="mockup-lic">
+                            <div>
+                                <div class="mockup-lic-name">Piloto Comercial</div>
+                                <div class="mockup-lic-num">N° 5587</div>
+                            </div>
+                            <span class="mockup-lic-badge vence">Vigente</span>
+                        </div>
+                        <div class="mockup-lic">
+                            <div>
+                                <div class="mockup-lic-name">Instructor de Vuelo</div>
+                                <div class="mockup-lic-num">Hab. Función</div>
+                            </div>
+                            <span class="mockup-lic-badge vence">Vigente</span>
+                        </div>
+                        <div class="mockup-lic">
+                            <div>
+                                <div class="mockup-lic-name">Habilitación IFR</div>
+                                <div class="mockup-lic-num">Hab. Función · Vence sep 2026</div>
+                            </div>
+                            <span class="mockup-lic-badge">Vigente</span>
+                        </div>
+                        <div class="mockup-lic">
+                            <div>
+                                <div class="mockup-lic-name">Cert. Médico Clase 1</div>
+                                <div class="mockup-lic-num">Vence 31/05/2026</div>
+                            </div>
+                            <span class="mockup-lic-badge warning">Por Vencer</span>
+                        </div>
+                    </div>
+
+                </div>
+                <div class="mockup-indicators">
+                    <button onclick="goToSlide((currentSlide+3)%4)" style="background:transparent; border:none; color:#555; font-size:22px; cursor:pointer; padding:4px 12px; line-height:1;">‹</button>
+                    <div style="display:flex; gap:6px; align-items:center;">
+                        <div class="mockup-dot-ind active" onclick="goToSlide(0)"></div>
+                        <div class="mockup-dot-ind" onclick="goToSlide(1)"></div>
+                        <div class="mockup-dot-ind" onclick="goToSlide(2)"></div>
+                        <div class="mockup-dot-ind" onclick="goToSlide(3)"></div>
+                    </div>
+                    <button onclick="goToSlide((currentSlide+1)%4)" style="background:transparent; border:none; color:#555; font-size:22px; cursor:pointer; padding:4px 12px; line-height:1;">›</button>
+                </div>
+            </div>
+            <div>
+                <div class="section-tag">Dashboard en tiempo real</div>
+                <h2 class="section-title">Tu historial de vuelo,<br>siempre disponible</h2>
+                <p class="section-sub" style="margin-bottom:32px;">Accede a tus horas, resúmenes y estadísticas desde cualquier dispositivo. Tu bitácora viaja contigo.</p>
+                <div class="demo-points">
+                    <div class="demo-point">
+                        <div class="demo-icon">📊</div>
+                        <div><h4>Dashboard inteligente</h4><p>Tiles personalizables con tus métricas más importantes — horas PIC, IFR, nocturnas, aterrizajes y más.</p></div>
+                    </div>
+                    <div class="demo-point">
+                        <div class="demo-icon">✈</div>
+                        <div><h4>Registro rápido de vuelos</h4><p>Formulario en 4 pasos con validación automática de tiempos, roles y condiciones de vuelo.</p></div>
+                    </div>
+                    <div class="demo-point">
+                        <div class="demo-icon">📋</div>
+                        <div><h4>Resúmenes detallados</h4><p>Por aeronave, aeródromo, tipo de avión, IFR y recencia. Todo calculado automáticamente.</p></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features">
+    <div class="section-inner">
+        <div class="section-tag">Funcionalidades</div>
+        <h2 class="section-title">Todo lo que necesitas<br>como piloto</h2>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">📒</div>
+                <h3>Bitácora digital completa</h3>
+                <p>Registra todos los campos requeridos por la DGAC: PIC, SIC, instrucción, IFR, travesía, solo, simulador y más.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🗂</div>
+                <h3>Licencias y habilitaciones</h3>
+                <p>Gestiona tus licencias DGAC, habilitaciones de categoría, clase, función y certificados médicos en un solo lugar.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📈</div>
+                <h3>Resúmenes avanzados</h3>
+                <p>Analiza tus horas por tipo de avión, aeródromo, aeronave, período IFR y recencia de vuelo.</p>
+                <span class="feature-badge">Pro</span>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📄</div>
+                <h3>Reportes imprimibles</h3>
+                <p>Genera reportes en formato bitácora para presentar a escuelas de vuelo, clubes o la DGAC.</p>
+                <span class="feature-badge">Pro</span>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">💾</div>
+                <h3>Exportar a Excel y CSV</h3>
+                <p>Descarga tus registros completos en cualquier momento para respaldo o análisis externo.</p>
+                <span class="feature-badge">Pro</span>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">☁</div>
+                <h3>Respaldo automático en la nube</h3>
+                <p>Tus vuelos se guardan automáticamente en Supabase. Nunca pierdas un registro.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- PRECIOS -->
+<section class="pricing-section" id="precios">
+    <div class="section-inner" style="text-align:center;">
+        <div class="section-tag">Planes</div>
+        <h2 class="section-title">Simple y transparente</h2>
+        <p class="section-sub" style="margin:0 auto;">Empieza gratis. Actualiza cuando necesites más.</p>
+        <div class="pricing-grid">
+            <div class="pricing-card">
+                <div class="pricing-name">Lite</div>
+                <div class="pricing-price">Gratis</div>
+                <div class="pricing-period">Para siempre</div>
+                <ul class="pricing-features">
+                    <li>Registro ilimitado de vuelos</li>
+                    <li>Dashboard básico</li>
+                    <li>Resumen anual y mensual</li>
+                    <li>Gestión de licencias DGAC</li>
+                    <li class="off">Resúmenes avanzados</li>
+                    <li class="off">Exportar Excel/CSV</li>
+                    <li class="off">Reportes imprimibles</li>
+                </ul>
+                <a href="/?auth=1" class="pricing-btn free">Comenzar gratis</a>
+            </div>
+            <div class="pricing-card featured">
+                <div class="pricing-badge">14 días gratis</div>
+                <div class="pricing-name">Pro</div>
+                <div class="pricing-price">$6.000</div>
+                <div class="pricing-period">CLP / mes · IVA incluido</div>
+                <ul class="pricing-features">
+                    <li>Todo lo de Lite</li>
+                    <li>Resúmenes por aeronave y aeródromo</li>
+                    <li>Resumen IFR y recencia</li>
+                    <li>Filtro avanzado de vuelos</li>
+                    <li>Exportar Excel y CSV</li>
+                    <li>Reportes imprimibles</li>
+                    <li>Soporte directo</li>
+                </ul>
+                <a href="/?auth=1" class="pricing-btn pro">Probar 14 días gratis →</a>
+            </div>
+        </div>
+        <p class="pricing-note">Plan anual disponible: $60.000 CLP/año (2 meses gratis)</p>
+    </div>
+</section>
+
+<!-- TESTIMONIOS -->
+<section id="testimonios">
+    <div class="section-inner">
+        <div class="section-tag">Testimonios</div>
+        <h2 class="section-title">Lo que dicen los pilotos</h2>
+        <div class="testimonials-grid">
+            <div class="testimonial">
+                <div class="testimonial-text">Finalmente una bitácora digital que entiende la normativa DGAC. Los resúmenes de recencia IFR me ahorran horas de cálculo manual.</div>
+                <div class="testimonial-author">
+                    <div class="author-avatar">MR</div>
+                    <div><div class="author-name">M. Rodríguez</div><div class="author-role">Piloto Comercial — Avión</div></div>
+                </div>
+            </div>
+            <div class="testimonial">
+                <div class="testimonial-text">Como instructor, poder ver el historial detallado de mis alumnos por aeronave y tipo de vuelo hace toda la diferencia en la planificación.</div>
+                <div class="testimonial-author">
+                    <div class="author-avatar">CP</div>
+                    <div><div class="author-name">C. Palma</div><div class="author-role">Instructor de Vuelo — PTLA</div></div>
+                </div>
+            </div>
+            <div class="testimonial">
+                <div class="testimonial-text">La migración desde mi bitácora en papel fue muy simple. Importé mis vuelos anteriores y quedó todo organizado en minutos.</div>
+                <div class="testimonial-author">
+                    <div class="author-avatar">AV</div>
+                    <div><div class="author-name">A. Vásquez</div><div class="author-role">Piloto Privado — Ala fija</div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- FAQ -->
+<section style="background: var(--bg2);" id="faq">
+    <div class="section-inner">
+        <div class="section-tag">Preguntas frecuentes</div>
+        <h2 class="section-title">¿Tienes dudas?</h2>
+        <div class="faq-list">
+            <div class="faq-item">
+                <div class="faq-q" onclick="toggleFaq(this)">¿La bitácora digital es válida ante la DGAC? <span class="faq-icon">+</span></div>
+                <div class="faq-a">Sí. Conforme al DAR 01 y DAN 61 de la DGAC, la bitácora personal de vuelo puede presentarse en formato electrónico ante la autoridad aeronáutica. Las anotaciones tienen carácter de declaración jurada y deben ser visadas por la organización certificadora correspondiente (escuela, club aéreo, instructor).</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-q" onclick="toggleFaq(this)">¿Puedo usar la app si soy piloto de otro país? <span class="faq-icon">+</span></div>
+                <div class="faq-a">Sí, el registro de vuelos funciona para cualquier piloto. Sin embargo, la validación normativa está basada en la regulación chilena (DGAC). Si eres de otro país, debes verificar que el uso del formato electrónico se adecúe a tu normativa local, la cual puede cambiar periódicamente.</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-q" onclick="toggleFaq(this)">¿Puedo migrar mi bitácora en papel? <span class="faq-icon">+</span></div>
+                <div class="faq-a">Sí. Puedes importar tus vuelos desde un archivo Excel o CSV. La app también permite ingresar manualmente el historial de vuelos anteriores.</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-q" onclick="toggleFaq(this)">¿Qué pasa con mis datos si cancelo? <span class="faq-icon">+</span></div>
+                <div class="faq-a">Al cancelar, tu cuenta pasa al plan Lite y todos tus datos se conservan. Puedes exportarlos en cualquier momento en formato Excel o CSV. Solo si eliminas tu cuenta se borran los datos, en un plazo máximo de 30 días.</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-q" onclick="toggleFaq(this)">¿Hay política de reembolso? <span class="faq-icon">+</span></div>
+                <div class="faq-a">Sí. Si no estás satisfecho dentro de los primeros 7 días de tu suscripción y no has utilizado las funciones Pro, te devolvemos el cobro completo. Sin preguntas.</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-q" onclick="toggleFaq(this)">¿Mis datos están seguros? <span class="faq-icon">+</span></div>
+                <div class="faq-a">Tus datos se almacenan en servidores de Supabase con cifrado en tránsito y en reposo. El acceso está protegido con Row Level Security, lo que garantiza que solo tú puedes ver tus vuelos.</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA FINAL -->
+<section class="cta-section">
+    <div class="section-inner">
+        <h2 class="cta-title">Listo para<br><span>despegar?</span></h2>
+        <p class="cta-sub">Crea tu cuenta gratis y prueba el plan Pro por 14 días sin tarjeta.</p>
+        <a href="/?auth=1" class="btn-primary" style="font-size:16px; padding:16px 40px;">Comenzar ahora — es gratis →</a>
+    </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+    <div class="footer-left">© 2026 Pablo Ugalde — Mi Bitácora de Vuelo</div>
+    <div class="footer-links">
+        <a href="/">App</a>
+        <a href="/terminos.html">Términos</a>
+        <a href="/privacidad.html">Privacidad</a>
+    </div>
+</footer>
+
+<script>
+function toggleFaq(el) {
+    const item = el.parentElement;
+    item.classList.toggle('open');
+}
+
+// SLIDESHOW MOCKUP
+const slideLabels = ['Dashboard — Resumen General', 'Añadir Vuelo', 'Resumen por Aeronave', 'Licencias DGAC'];
+let currentSlide = 0;
+let slideshowInterval = null;
+
+function goToSlide(n) {
+    document.querySelectorAll('.mockup-slide').forEach((s, i) => s.classList.toggle('active', i === n));
+    document.querySelectorAll('.mockup-dot-ind').forEach((d, i) => d.classList.toggle('active', i === n));
+    currentSlide = n;
+}
+
+function nextSlide() {
+    goToSlide((currentSlide + 1) % 4);
+}
+
+function startSlideshow() {
+    slideshowInterval = setInterval(nextSlide, 3500);
+}
+
+// Pausar al pasar el mouse
+document.addEventListener('DOMContentLoaded', () => {
+    startSlideshow();
+    const mockup = document.querySelector('.demo-mockup');
+    if (mockup) {
+        mockup.addEventListener('mouseenter', () => clearInterval(slideshowInterval));
+        mockup.addEventListener('mouseleave', () => { clearInterval(slideshowInterval); startSlideshow(); });
+    }
+});
+
+// Detectar si hay sesión activa de Supabase y cambiar CTA
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        const stored = localStorage.getItem('sb-rdnniehpsdforkfngwrf-auth-token');
+        if (stored) {
+            const session = JSON.parse(stored);
+            if (session?.access_token) {
+                const cta = document.getElementById('nav-cta');
+                if (cta) { cta.textContent = 'Ir a mi bitácora →'; cta.href = '/'; }
+            }
+        }
+    } catch(e) {}
+});
+window.addEventListener('beforeunload', () => {
+    window.scrollTo(0, 0);
+});
+
+if (history.scrollRestoration) {
+    history.scrollRestoration = 'manual';
+}
+</script>
+</body>
+</html>

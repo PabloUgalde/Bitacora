@@ -141,7 +141,7 @@ label.required::after { content: ' *'; color: var(--accent-color-red); }
     margin-bottom: 2rem;
 }
 @media (max-width: 1024px) { .card-container { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 600px)  { .card-container { grid-template-columns: 1fr; } }
+@media (max-width: 600px)  { .card-container { grid-template-columns: repeat(2, 1fr); gap: 8px;} }
 
 .summary-card {
     background: #181818;
@@ -912,10 +912,4 @@ tbody td:nth-child(3), tbody td:nth-child(4), tbody td:nth-child(30) { text-alig
     display: inline; /* Permite que el selector se ponga a su lado */
     margin-bottom: 0; /* Quitamos el margen inferior que ya no es necesario */
     white-space: nowrap; /* Evita que el texto "Vuelos por página" se parta en dos líneas */
-}
-
-/* --- LÍNEA SEPARADORA PARA CAMBIOS DE PÁGINA EN LA BITÁCORA --- */
-tr.page-break td {
-    /* Dibuja un borde superior grueso y dorado en todas las celdas de la fila */
-    border-top: 3px solid var(--primary-color) !important;
 }

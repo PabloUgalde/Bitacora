@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Política de Privacidad — Bitácora de Vuelo Digital</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: #0d0d0d; color: #c8c8c8; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.7; }
+        header { background: #111; border-bottom: 1px solid #1e1e1e; padding: 16px 24px; display: flex; align-items: center; gap: 12px; }
+        .logo-mark { display: flex; flex-direction: column; gap: 3px; padding: 8px; background: #1a1a1a; border: 1px solid #c9a84c; border-radius: 6px; }
+        .logo-mark span { display: block; height: 3px; background: #c9a84c; border-radius: 2px; }
+        .logo-mark span:nth-child(1) { width: 20px; }
+        .logo-mark span:nth-child(2) { width: 16px; }
+        .logo-mark span:nth-child(3) { width: 20px; }
+        .logo-mark span:nth-child(4) { width: 12px; }
+        .logo-text { font-size: 15px; font-weight: 700; color: #fff; }
+        .logo-sub { font-size: 11px; color: #555; }
+        main { max-width: 760px; margin: 0 auto; padding: 48px 24px 80px; }
+        .doc-header { margin-bottom: 48px; padding-bottom: 24px; border-bottom: 1px solid #1e1e1e; }
+        .doc-title { font-size: 28px; font-weight: 700; color: #c9a84c; margin-bottom: 6px; }
+        .doc-subtitle { font-size: 16px; color: #888; margin-bottom: 8px; }
+        .doc-date { font-size: 13px; color: #444; }
+        h2 { font-size: 17px; font-weight: 700; color: #c9a84c; margin: 40px 0 12px; padding-bottom: 8px; border-bottom: 1px solid #1a1a1a; }
+        p { font-size: 14px; color: #aaa; margin-bottom: 14px; }
+        ul { margin: 0 0 14px 0; padding-left: 0; list-style: none; }
+        ul li { font-size: 14px; color: #aaa; padding: 4px 0 4px 20px; position: relative; }
+        ul li::before { content: '•'; position: absolute; left: 6px; color: #c9a84c; }
+        footer { background: #0a0a0a; border-top: 1px solid #1a1a1a; padding: 24px; text-align: center; }
+        footer p { font-size: 12px; color: #333; margin: 0; }
+        footer a { color: #555; text-decoration: none; margin: 0 8px; }
+        footer a:hover { color: #c9a84c; }
+        @media (max-width: 600px) { main { padding: 32px 16px 60px; } .doc-title { font-size: 22px; } }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo-mark"><span></span><span></span><span></span><span></span></div>
+        <div>
+            <div class="logo-text">Mi Bitácora de Vuelo</div>
+            <div class="logo-sub">Documentos legales</div>
+        </div>
+    </header>
+
+    <main>
+        <div class="doc-header">
+            <div class="doc-title">Política de Privacidad</div>
+            <div class="doc-subtitle">Bitácora de Vuelo Digital</div>
+            <div class="doc-date">Última actualización: marzo de 2026</div>
+        </div>
+
+        <h2>1. Responsable del Tratamiento</h2>
+        <p>El responsable del tratamiento de los datos personales recabados a través de Bitácora de Vuelo Digital es Pablo Ugalde, en adelante "el Proveedor". Para ejercer sus derechos o realizar consultas, puede contactarse a través de los canales de soporte disponibles en la aplicación.</p>
+
+        <h2>2. Datos que Recopilamos</h2>
+        <p>El Proveedor recopila los siguientes datos personales:</p>
+        <ul>
+            <li>Datos de cuenta: nombre completo, correo electrónico y contraseña (almacenada de forma cifrada).</li>
+            <li>Datos de perfil: RUT u otro documento de identidad, fecha de nacimiento, domicilio, teléfono, país de residencia.</li>
+            <li>Datos aeronáuticos: registros de vuelo, licencias, habilitaciones y certificados médicos ingresados voluntariamente.</li>
+            <li>Datos de pago: procesados directamente por Stripe. El Proveedor no almacena números de tarjeta ni datos bancarios.</li>
+            <li>Datos técnicos: dirección IP, tipo de navegador y datos de uso del servicio, recopilados de forma anónima para mejorar la aplicación.</li>
+        </ul>
+
+        <h2>3. Finalidad del Tratamiento</h2>
+        <p>Los datos personales se utilizan exclusivamente para:</p>
+        <ul>
+            <li>Proveer y mantener el Servicio de bitácora de vuelo digital.</li>
+            <li>Gestionar la cuenta y suscripción del usuario.</li>
+            <li>Procesar pagos a través de Stripe.</li>
+            <li>Enviar comunicaciones relacionadas con el Servicio (actualizaciones, vencimientos, soporte).</li>
+            <li>Mejorar la experiencia del usuario y la funcionalidad de la aplicación.</li>
+        </ul>
+        <p>Los datos no se utilizarán con fines publicitarios ni se cederán a terceros para uso comercial.</p>
+
+        <h2>4. Base Legal del Tratamiento</h2>
+        <p>El tratamiento de datos se realiza conforme a la Ley N° 19.628 sobre Protección de la Vida Privada de Chile, sobre la base de:</p>
+        <ul>
+            <li>El consentimiento del usuario al registrarse y aceptar estos términos.</li>
+            <li>La necesidad contractual de proveer el Servicio contratado.</li>
+            <li>El cumplimiento de obligaciones legales aplicables.</li>
+        </ul>
+
+        <h2>5. Almacenamiento y Seguridad</h2>
+        <p>Los datos se almacenan en servidores de Supabase (PostgreSQL), con cifrado en tránsito (TLS) y en reposo. El acceso a los datos está protegido mediante Row Level Security (RLS), lo que garantiza que cada usuario solo puede acceder a sus propios datos.</p>
+        <p>El Proveedor aplica medidas técnicas y organizativas razonables para proteger los datos contra acceso no autorizado, pérdida o destrucción. Sin perjuicio de lo anterior, ningún sistema de seguridad es infalible.</p>
+
+        <h2>6. Compartición de Datos con Terceros</h2>
+        <p>El Proveedor comparte datos con los siguientes terceros únicamente en la medida necesaria para proveer el Servicio:</p>
+        <ul>
+            <li>Supabase Inc.: proveedor de base de datos e infraestructura.</li>
+            <li>Stripe Inc.: procesador de pagos.</li>
+            <li>Cloudflare Inc.: proveedor de hosting y CDN.</li>
+        </ul>
+        <p>No se comparten datos con terceros para fines de marketing, publicidad o análisis comercial.</p>
+
+        <h2>7. Derechos del Usuario</h2>
+        <p>Conforme a la legislación chilena vigente, el usuario tiene derecho a:</p>
+        <ul>
+            <li>Acceso: solicitar información sobre los datos personales que el Proveedor mantiene sobre usted.</li>
+            <li>Rectificación: corregir datos inexactos o incompletos.</li>
+            <li>Cancelación/Eliminación: solicitar la eliminación de sus datos personales y cuenta.</li>
+            <li>Oposición: oponerse al tratamiento de sus datos en determinadas circunstancias.</li>
+            <li>Portabilidad: solicitar una copia de sus datos en formato exportable (Excel o CSV).</li>
+        </ul>
+
+        <h2>8. Retención de Datos</h2>
+        <p>Los datos se conservan mientras el usuario mantenga una cuenta activa. Al eliminar la cuenta, los datos personales y registros de vuelo se eliminarán de los servidores en un plazo máximo de 30 días. Los datos de transacciones pueden conservarse por el período exigido por la legislación tributaria chilena (mínimo 6 años).</p>
+
+        <h2>9. Transferencia Internacional de Datos</h2>
+        <p>Los datos pueden almacenarse en servidores ubicados fuera de Chile, en instalaciones de Supabase y Cloudflare que cumplen con estándares internacionales de seguridad. Al utilizar el Servicio, el usuario consiente esta transferencia.</p>
+
+        <h2>10. Cookies y Tecnologías de Seguimiento</h2>
+        <p>El Servicio utiliza el almacenamiento local del navegador (localStorage) para mantener la sesión activa y guardar preferencias del usuario. No se utilizan cookies de seguimiento ni tecnologías de publicidad de terceros.</p>
+
+        <h2>11. Menores de Edad</h2>
+        <p>El Servicio no está dirigido a menores de 18 años. Si el Proveedor toma conocimiento de que se han recopilado datos de un menor sin consentimiento parental, procederá a eliminarlos a la brevedad.</p>
+
+        <h2>12. Cambios a esta Política</h2>
+        <p>El Proveedor puede actualizar esta Política de Privacidad periódicamente. Se notificará a los usuarios registrados de cambios significativos con al menos 15 días de anticipación.</p>
+
+        <h2>13. Contacto</h2>
+        <p>Para consultas o solicitudes relacionadas con el tratamiento de sus datos personales, puede contactarse a través de los canales de soporte disponibles en la aplicación o sitio web del Servicio.</p>
+    </main>
+
+    <footer>
+        <p>© 2026 Pablo Ugalde — Bitácora de Vuelo Digital &nbsp;|&nbsp; <a href="/terminos.html">Términos</a> <a href="/privacidad.html">Privacidad</a> <a href="/">Volver a la app</a></p>
+    </footer>
+</body>
+</html>

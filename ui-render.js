@@ -320,11 +320,12 @@ const render = {
                 if (absoluteIndex > 0) {
                     const previousFlight = logbookState.filteredData[absoluteIndex - 1];
                     if (previousFlight && previousFlight["Pagina Bitacora a Replicar"] !== currentPageNumber) {
-                        rowClass = ' class="page-break"';
+                        const colspan = HEADER_STRUCTURE.flatMap(h => h.isGroup ? h.children : [h.name]).length + 1;
+                        bodyHtml += `<tr class="page-break-separator"><td colspan="${colspan}" style="padding:0; height:3px; background: var(--primary-color); border:none;"></td></tr>`;
                     }
                 }
                 
-                bodyHtml += `<tr${rowClass}>`;
+                bodyHtml += `<tr id="flight-${flight.id}"${rowClass}>`;
                 
                 HEADER_STRUCTURE.flatMap(h => h.isGroup ? h.children : [h.name]).forEach(headerName => {
                     let value = flight[headerName];

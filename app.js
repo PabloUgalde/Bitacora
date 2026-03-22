@@ -4,10 +4,50 @@ const app = {
     initialize: async () => {
         await api.loadInitialFlights(); // CARGA PRIMERO EL PERFIL Y LOS DATOS
         app.loadSettings(); // LUEGO, POBLA LA UI CON ESOS DATOS
+        // Redirigir a configuración si es usuario nuevo sin licencias
+        const licencias = Array.isArray(userProfile.licenses?.dgac) 
+            ? userProfile.licenses.dgac 
+            : [];
+        const esUsuarioNuevo = licencias.length === 0 && flightData.length === 0;
+
+        if (esUsuarioNuevo && !onboarding.isDone()) {
+            ui.showView('view-dashboard');
+            onboarding.show();
+        } else {
+            ui.showView('view-dashboard');
+        }
+        if (licencias.length === 0 && flightData.length === 0) {
+            ui.showView('view-settings');
+            // Activar panel de licencias
+            setTimeout(() => {
+                const licPanel = document.querySelector('[data-panel="panel-licencias"]');
+                if (licPanel) licPanel.click();
+                ui.showNotification('👋 Bienvenido. Agrega tu primera licencia para comenzar.', 'info');
+            }, 300);
+        } else {
+            ui.showView('view-dashboard');
+        }
         plan.apply(); 
         await backupManager.initialize();
         app.updateSortButtonText();
-        ui.showView('view-dashboard');
+        anotaciones.injectStyles();
+        await anotaciones.load();
+        // Detectar retorno desde Stripe — después de que todo cargó
+        setTimeout(async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const checkout = urlParams.get('checkout');
+            if (checkout === 'success') {
+                const updatedProfile = await api.loadProfile();
+                if (updatedProfile) userProfile = { ...userProfile, ...updatedProfile };
+                plan.apply();
+                app.loadSettings();
+                ui.showCheckoutResult('success');
+                window.history.replaceState({}, '', window.location.pathname);
+            } else if (checkout === 'cancelled') {
+                ui.showCheckoutResult('cancelled');
+                window.history.replaceState({}, '', window.location.pathname);
+            }
+        }, 500);
         app.setupEventListeners();
         app.setupLogbookActionsListener();
         if ('serviceWorker' in navigator) {
@@ -33,7 +73,7 @@ const app = {
                 const flightToEdit = flightData.find(f => f && f.id == flightId);
                 if (flightToEdit) {
                     logbookState.editingFlightId = flightId;
-                    ui.showView('view-add-flight');
+                    addFlightModal.open(flightId);
                     ui.populateFlightForm(flightToEdit);
                     ui.setFlightFormMode('edit');
                 }
@@ -98,6 +138,8 @@ const app = {
         const navDropdownMenu = document.getElementById('summaries-dropdown-menu');
         const sortDropdownToggle = document.getElementById('sort-order-toggle');
         const sortDropdownMenu = document.getElementById('sort-order-menu');
+        const bitacoraDropdownToggle = document.getElementById('bitacora-dropdown-toggle');
+        const bitacoraDropdownMenu = document.getElementById('bitacora-dropdown-menu');
         const hamburgerBtn = document.getElementById('hamburger-btn');
         const mainNav = document.getElementById('main-nav');
         
@@ -106,6 +148,7 @@ const app = {
                 e.preventDefault();
                 navDropdownMenu.classList.toggle('active');
                 if (sortDropdownMenu) sortDropdownMenu.classList.remove('active');
+                if (bitacoraDropdownMenu) bitacoraDropdownMenu.classList.remove('active');
             });
         }
 
@@ -126,17 +169,35 @@ const app = {
                 }
             });
         }
+
+
+        if (bitacoraDropdownToggle && bitacoraDropdownMenu) {
+            bitacoraDropdownToggle.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                bitacoraDropdownMenu.classList.toggle('active');
+                if (navDropdownMenu) navDropdownMenu.classList.remove('active');
+                if (sortDropdownMenu) sortDropdownMenu.classList.remove('active');
+            });
+        }
         
         document.querySelector('header').addEventListener('click', (e) => {
             const link = e.target.closest('.nav-link');
             if (link && link.dataset.view) {
                 e.preventDefault();
+                const licenciasGuardadas = licenseSystem.getData()?.licencias || [];
+                const licenciasProfile = Array.isArray(userProfile.licenses?.dgac) ? userProfile.licenses.dgac : [];
+                const sinLicencias = licenciasGuardadas.length === 0 && licenciasProfile.length === 0;
+                if (sinLicencias && flightData.length === 0 && link.dataset.view !== 'view-settings') {
+                    ui.showNotification('Agrega al menos una licencia antes de continuar.', 'error');
+                    return;
+                }
                 if (logbookState.editingFlightId) ui.resetFlightForm();
                 ui.showView(link.dataset.view);
                 if (navDropdownMenu) navDropdownMenu.classList.remove('active');
+                if (bitacoraDropdownMenu) bitacoraDropdownMenu.classList.remove('active'); // ← agregar esta línea
             }
         });
-
         // FORMULARIO DE VUELO
         document.getElementById('flight-form').addEventListener('submit', app.handleFlightSubmit);
         document.getElementById('review-flight-btn').addEventListener('click', app.handleFlightReview);
@@ -289,7 +350,7 @@ const app = {
         document.getElementById('download-excel-btn')?.addEventListener('click', () => api.exportToExcel());
         document.getElementById('download-csv-btn')?.addEventListener('click', () => api.exportToCSV());
         document.getElementById('clear-local-data-btn')?.addEventListener('click', () => backupManager.clearLocalCache());
-        
+        document.getElementById('open-saldo-inicial-btn')?.addEventListener('click', () => saldoInicial.open());
         document.querySelectorAll('.settings-nav-item, .settings-tab-item').forEach(btn => {
             btn.addEventListener('click', () => {
                 const panelId = btn.dataset.panel;
@@ -297,6 +358,7 @@ const app = {
                 document.querySelectorAll('.settings-nav-item, .settings-tab-item').forEach(b => b.classList.remove('active'));
                 document.querySelectorAll(`[data-panel="${panelId}"]`).forEach(b => b.classList.add('active'));
                 document.getElementById(panelId)?.classList.add('active');
+                if (panelId === 'panel-cuenta') miCuenta.init();
             });
         });
 
@@ -349,19 +411,26 @@ const app = {
                 hamburgerBtn.classList.toggle('open');
                 mainNav.classList.toggle('mobile-nav-open');
             });
-            const dropdownMenuMobile = mainNav.querySelector('#summaries-dropdown-menu');
-            mainNav.addEventListener('click', (e) => {
-                const link = e.target.closest('.nav-link');
-                if (!link) return;
-                if (link.id === 'summaries-dropdown-toggle') {
-                    e.preventDefault();
-                    dropdownMenuMobile.classList.toggle('mobile-submenu-open');
-                } else if (link.dataset.view) {
-                    hamburgerBtn.classList.remove('open');
-                    mainNav.classList.remove('mobile-nav-open');
-                    dropdownMenuMobile.classList.remove('mobile-submenu-open');
-                }
-            });
+        const dropdownMenuMobile = mainNav.querySelector('#summaries-dropdown-menu');
+        const bitacoraMenuMobile = mainNav.querySelector('#bitacora-dropdown-menu');
+        mainNav.addEventListener('click', (e) => {
+            const link = e.target.closest('.nav-link');
+            if (!link) return;
+            if (link.id === 'summaries-dropdown-toggle') {
+                e.preventDefault();
+                dropdownMenuMobile.classList.toggle('mobile-submenu-open');
+                if (bitacoraMenuMobile) bitacoraMenuMobile.classList.remove('mobile-submenu-open');
+            } else if (link.id === 'bitacora-dropdown-toggle') {
+                e.preventDefault();
+                if (bitacoraMenuMobile) bitacoraMenuMobile.classList.toggle('mobile-submenu-open');
+                dropdownMenuMobile.classList.remove('mobile-submenu-open');
+            } else if (link.dataset.view) {
+                hamburgerBtn.classList.remove('open');
+                mainNav.classList.remove('mobile-nav-open');
+                dropdownMenuMobile.classList.remove('mobile-submenu-open');
+                if (bitacoraMenuMobile) bitacoraMenuMobile.classList.remove('mobile-submenu-open');
+            }
+        });
         }
 
         // CIERRE GLOBAL DE ELEMENTOS AL HACER CLICK FUERA
@@ -388,6 +457,7 @@ const app = {
                 }
                 if (sortDropdownMenu && sortDropdownToggle && !sortDropdownToggle.contains(e.target) && !sortDropdownMenu.contains(e.target)) {
                     sortDropdownMenu.classList.remove('active');
+                if (bitacoraDropdownMenu && bitacoraDropdownToggle && !bitacoraDropdownToggle.contains(e.target) && !bitacoraDropdownMenu.contains(e.target)) { bitacoraDropdownMenu.classList.remove('active'); }
                 }
             document.getElementById('page-summary-filter-btn').addEventListener('click', summaryRenderer.byPage);
             document.getElementById('page-summary-reset-btn').addEventListener('click', () => {
@@ -481,6 +551,7 @@ const app = {
         profileValidator.initProfileForm();
                 // Mostrar estado del plan
         const planDisplay = document.getElementById('plan-status-display');
+        miCuenta.init();
         if (planDisplay) {
             if (plan.isPro()) {
                 const expires = userProfile.planExpiresAt 
@@ -527,8 +598,14 @@ const app = {
                         location.reload();
                     } else {
                         ui.showNotification(`¡Vuelo ${isEditing ? 'actualizado' : 'guardado'}!`, "success");
+                        const savedId = isEditing ? logbookState.editingFlightId : flightData[0]?.id;
                         ui.resetFlightForm();
-                        setTimeout(() => ui.showView('view-dashboard'), 1000);
+                        addFlightModal.close();
+                        setTimeout(() => {
+                            ui.showView('view-logbook');
+                            render.detailedLog();
+                            if (savedId) addFlightModal.highlightRow(savedId);
+                        }, 300);
                     }
                 }
             } catch (error) {

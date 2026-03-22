@@ -40,6 +40,11 @@ const auth = {
         const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
         if (error) {
             auth._setLoading(false);
+            auth._showSuccess('¡Cuenta creada exitosamente! Iniciando sesión...');
+            setTimeout(() => {
+                auth.login(email, password);
+            }, 1500);
+            return true;
             auth._showError(auth._translateError(error.message));
             return false;
         }
@@ -52,8 +57,7 @@ const auth = {
     register: async (email, password, name) => {
         auth._setLoading(true, 'Creando cuenta...');
         const { data, error } = await supabaseClient.auth.signUp({
-            email,
-            password,
+            email, password,
             options: { data: { full_name: name } }
         });
         if (error) {
@@ -62,9 +66,10 @@ const auth = {
             return false;
         }
         auth._setLoading(false);
-        // Supabase envía email de confirmación
-        auth._showSuccess('¡Cuenta creada! Revisa tu email para confirmar tu cuenta antes de iniciar sesión.');
-        auth._showAuthScreen('login');
+        auth._showSuccess('¡Cuenta creada! Iniciando sesión...');
+        setTimeout(() => {
+            window.location.reload();
+        }, 1500);
         return true;
     },
 
@@ -187,7 +192,8 @@ const auth = {
         const overlay = document.createElement('div');
         overlay.id = 'auth-overlay';
         overlay.innerHTML = `
-        <div class="auth-card">
+        <div class="auth-card" style="position:relative;">
+            <button onclick="window.location.href='/landing.html'" style="position:absolute; top:12px; right:16px; background:transparent; border:none; color:#555; font-size:24px; cursor:pointer; line-height:1; padding:4px; z-index:10;" title="Volver al inicio">×</button>
             <div class="auth-logo">
                 <div class="pilot-epaulette">
                     <div class="stripe"></div><div class="stripe"></div>
@@ -242,6 +248,11 @@ const auth = {
                 <div class="auth-links">
                     <a href="#" onclick="auth._switchPanel('login'); return false;">← Volver al inicio de sesión</a>
                 </div>
+                <p style="font-size:11px; color:#444; text-align:center; margin-top:12px;">
+                    Al registrarte aceptas nuestros 
+                    <a href="/terminos.html" target="_blank" style="color:#c9a84c;">Términos</a> y 
+                    <a href="/privacidad.html" target="_blank" style="color:#c9a84c;">Política de Privacidad</a>.
+                </p>
             </form>
 
             <!-- OLVIDÉ CONTRASEÑA -->
@@ -271,7 +282,8 @@ const auth = {
                     document.getElementById('auth-new-password').value
                 )">Guardar contraseña</button>
             </>
-        </div>`;
+        </div>
+        `;
 
         // Estilos del overlay
         const style = document.createElement('style');
@@ -283,12 +295,14 @@ const auth = {
             backdrop-filter: blur(4px);
         }
         .auth-card {
-            background: var(--card-bg, #1a1a2e);
-            border: 1px solid var(--border-color, #333);
-            border-radius: 16px;
-            padding: 40px 36px;
-            width: 100%; max-width: 420px;
-            box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+        background: var(--card-bg, #1a1a2e);
+        border: 1px solid var(--border-color, #333);
+        border-radius: 16px;
+        padding: 40px 36px;
+        width: 100%; max-width: 420px;
+        box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+        position: relative;
+        overflow: visible;
         }
         .auth-logo {
             display: flex; align-items: center; gap: 12px;

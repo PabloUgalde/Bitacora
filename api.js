@@ -83,6 +83,7 @@ const api = {
             'Como Instructor':                row.como_instructor || 0,
             'Observaciones':                  row.observaciones || '',
             'Pagina Bitacora a Replicar':     row.pagina_bitacora || '',
+            'es_saldo_inicial':               row.es_saldo_inicial || false,
         };
     },
 
@@ -92,6 +93,17 @@ const api = {
 
     // ── Carga inicial ─────────────────────────────────────────────
     loadInitialFlights: async () => {
+        // Limpiar caché si el usuario cambió
+        const cachedProfile = localStorage.getItem('flightLogUserProfile');
+        if (cachedProfile) {
+            const cached = JSON.parse(cachedProfile);
+            const cachedEmail = cached?.personal?.['profile-email'];
+            if (cachedEmail && currentUser?.email && cachedEmail !== currentUser.email) {
+                console.log('Usuario diferente detectado — limpiando caché local');
+                localStorage.removeItem('flightLogUserProfile');
+                localStorage.removeItem('flightLogData');
+            }
+        }
         const defaultProfile = {
             personal: {}, licenses: {}, dashboardCards: [],
             userRole: 'student', dataSource: 'supabase'

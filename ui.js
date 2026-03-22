@@ -49,6 +49,7 @@ const ui = {
     renderMap: { 
         'view-dashboard': render.dashboard, 
         'view-logbook': render.detailedLog, // Llama a la función de escritorio original (intacta)
+        'view-anotaciones': () => anotaciones.load(),
         'view-summaries-by-page': summaryRenderer.byPage, 
         'view-summary-by-time': summaryRenderer.byTime, 
         'view-summary-by-type': summaryRenderer.byType,
@@ -303,5 +304,64 @@ createFlightObject: (data) => {
         
         document.getElementById('local-flight-count').textContent = count;
         modal.classList.add('open');
-    }
+    },
+        showCheckoutResult: (type) => {
+        const overlay = document.createElement('div');
+        overlay.id = 'checkout-result-overlay';
+
+        const isSuccess = type === 'success';
+        overlay.innerHTML = `
+            <div class="checkout-result-card">
+                <div class="checkout-result-icon">${isSuccess ? '✈' : '✕'}</div>
+                <h2>${isSuccess ? '¡Bienvenido a Pro!' : 'Pago cancelado'}</h2>
+                <p>${isSuccess 
+                    ? 'Tu suscripción está activa. Ahora tienes acceso completo a todas las funciones de la bitácora.' 
+                    : 'No se realizó ningún cobro. Puedes intentarlo nuevamente cuando quieras.'}</p>
+                <button onclick="document.getElementById('checkout-result-overlay').remove()">
+                    ${isSuccess ? 'Comenzar →' : 'Volver al dashboard'}
+                </button>
+            </div>`;
+
+        const style = document.createElement('style');
+        style.textContent = `
+            #checkout-result-overlay {
+                position: fixed; inset: 0; z-index: 9997;
+                background: rgba(0,0,0,0.85);
+                display: flex; align-items: center; justify-content: center;
+                backdrop-filter: blur(4px);
+            }
+            .checkout-result-card {
+                background: #1a1a1a;
+                border: 1px solid ${isSuccess ? '#c9a84c' : '#444'};
+                border-radius: 16px;
+                padding: 40px 36px;
+                width: 100%; max-width: 420px;
+                text-align: center;
+                box-shadow: 0 0 40px ${isSuccess ? 'rgba(201,168,76,0.2)' : 'rgba(0,0,0,0.5)'};
+            }
+            .checkout-result-icon {
+                font-size: 48px; margin-bottom: 16px;
+            }
+            .checkout-result-card h2 {
+                font-size: 22px; font-weight: 700;
+                color: ${isSuccess ? '#c9a84c' : '#888'};
+                margin-bottom: 12px;
+            }
+            .checkout-result-card p {
+                color: #888; font-size: 14px;
+                line-height: 1.6; margin-bottom: 24px;
+            }
+            .checkout-result-card button {
+                background: ${isSuccess ? '#c9a84c' : 'transparent'};
+                color: ${isSuccess ? '#000' : '#888'};
+                border: ${isSuccess ? 'none' : '1px solid #444'};
+                border-radius: 8px; padding: 12px 32px;
+                font-size: 15px; font-weight: 700;
+                cursor: pointer; transition: opacity 0.2s;
+            }
+            .checkout-result-card button:hover { opacity: 0.85; }
+        `;
+        document.head.appendChild(style);
+        document.body.appendChild(overlay);
+    },
 };
