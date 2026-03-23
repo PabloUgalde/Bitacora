@@ -1,4 +1,4 @@
-const CACHE_NAME = 'flight-log-cache-v2.24';
+const CACHE_NAME = 'flight-log-cache-v2.25';
 
 const APP_SHELL_FILES = [
     './index.html',
@@ -51,26 +51,10 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
+    // No interceptar peticiones a Supabase ni CDNs externos
     if (e.request.url.includes('supabase.co') ||
         e.request.url.includes('cdn.jsdelivr.net') ||
         e.request.url.includes('google.com')) {
-        return;
-    }
-
-    // Dejar pasar landing, terminos, privacidad sin interceptar
-    const url = new URL(e.request.url);
-    const passThrough = ['/landing.html', '/terminos.html', '/privacidad.html'];
-    if (passThrough.some(p => url.pathname === p)) {
-        return;
-    }
-
-    // Para navegación a la app, servir index.html
-    if (e.request.mode === 'navigate') {
-        e.respondWith(
-            caches.match('./index.html').then((response) => {
-                return response || fetch(e.request);
-            })
-        );
         return;
     }
 
