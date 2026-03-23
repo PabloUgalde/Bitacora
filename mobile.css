@@ -289,25 +289,44 @@
     .input-with-button { flex-direction: column; gap: 0.75rem; }
     .accordion-content.active { overflow-y: auto; -webkit-overflow-scrolling: touch; }
 }
+/* Desktop: usa opacity/visibility para animación */
+@media (min-width: 801px) {
+    #main-nav .nav-dropdown-menu {
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(5px);
+        pointer-events: none;
+        transition: all 0.2s ease-out;
+    }
+    #main-nav .nav-dropdown-menu.active {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+        pointer-events: auto;
+    }
+}
+
+/* Mobile: usa display para mostrar/ocultar */
 @media (max-width: 800px) {
-    #main-nav .nav-dropdown-menu.mobile-submenu-open {
-        display: flex !important;
-        flex-direction: column;
+    #main-nav .nav-dropdown-menu {
         opacity: 1 !important;
         visibility: visible !important;
-        pointer-events: auto !important;
         transform: none !important;
+        pointer-events: none;
+        display: none;
         position: static !important;
         background: none !important;
         border: none !important;
         box-shadow: none !important;
+    }
+    #main-nav .nav-dropdown-menu.mobile-submenu-open {
+        display: flex !important;
+        flex-direction: column;
+        pointer-events: auto !important;
         padding-left: 1rem;
         padding-bottom: 0.5rem;
     }
-
     #main-nav .nav-dropdown-menu.mobile-submenu-open a.nav-link {
-        opacity: 1 !important;
-        visibility: visible !important;
         pointer-events: auto !important;
     }
 }

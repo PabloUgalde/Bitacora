@@ -209,35 +209,37 @@ const app = {
 
         // --- MENÚ MÓVIL ---
         if (hamburgerBtn && mainNav) {
-            // Clonar para limpiar cualquier listener acumulado
-            const freshNav = mainNav.cloneNode(true);
-            mainNav.parentNode.replaceChild(freshNav, mainNav);
-            const cleanNav = document.getElementById('main-nav');
-            const cleanBitacoraMenu = document.getElementById('bitacora-dropdown-menu');
-            const cleanSummariesMenu = document.getElementById('summaries-dropdown-menu');
-
             hamburgerBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 hamburgerBtn.classList.toggle('open');
-                cleanNav.classList.toggle('mobile-nav-open');
+                mainNav.classList.toggle('mobile-nav-open');
             });
 
-            cleanNav.addEventListener('click', (e) => {
+            mainNav.addEventListener('click', (e) => {
                 const link = e.target.closest('.nav-link');
                 if (!link) return;
+
+                const isMobile = window.innerWidth <= 800;
+
                 if (link.id === 'bitacora-dropdown-toggle') {
                     e.preventDefault();
-                    cleanBitacoraMenu.classList.toggle('mobile-submenu-open');
-                    cleanSummariesMenu?.classList.remove('mobile-submenu-open');
+                    if (isMobile) {
+                        bitacoraDropdownMenu.classList.toggle('mobile-submenu-open');
+                        navDropdownMenu?.classList.remove('mobile-submenu-open');
+                    }
                 } else if (link.id === 'summaries-dropdown-toggle') {
                     e.preventDefault();
-                    cleanSummariesMenu.classList.toggle('mobile-submenu-open');
-                    cleanBitacoraMenu?.classList.remove('mobile-submenu-open');
+                    if (isMobile) {
+                        navDropdownMenu.classList.toggle('mobile-submenu-open');
+                        bitacoraDropdownMenu?.classList.remove('mobile-submenu-open');
+                    }
                 } else {
-                    hamburgerBtn.classList.remove('open');
-                    cleanNav.classList.remove('mobile-nav-open');
-                    cleanBitacoraMenu?.classList.remove('mobile-submenu-open');
-                    cleanSummariesMenu?.classList.remove('mobile-submenu-open');
+                    if (isMobile) {
+                        hamburgerBtn.classList.remove('open');
+                        mainNav.classList.remove('mobile-nav-open');
+                        bitacoraDropdownMenu?.classList.remove('mobile-submenu-open');
+                        navDropdownMenu?.classList.remove('mobile-submenu-open');
+                    }
                 }
             });
         }
