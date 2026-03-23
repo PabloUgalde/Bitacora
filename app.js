@@ -398,6 +398,24 @@ const app = {
                 if (panelId === 'panel-cuenta') miCuenta.init();
             });
         });
+        document.getElementById('upload-excel-btn')?.addEventListener('click', () => {
+        document.getElementById('excel-file-input').click();
+        });
+
+        document.getElementById('excel-file-input')?.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const result = await dataImporter.processExcelFile(file);
+            if (result.success) {
+                for (const flight of result.data) {
+                    await api.saveFlight(flight);
+                }
+                await api.loadInitialFlights();
+                render.dashboard();
+                ui.showNotification(`${result.data.length} vuelos importados correctamente.`, 'success');
+            }
+            e.target.value = '';
+        });
 
         // --- SINCRONIZACIÓN ---
         document.getElementById('sync-action-merge').addEventListener('click', async () => {

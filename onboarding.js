@@ -42,7 +42,7 @@ const onboarding = {
         {
             icon: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#c9a84c" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>`,
             title: 'Tu dashboard',
-            body: 'El dashboard muestra un resumen de tus horas totales, PIC, IFR, aterrizajes y más. Puedes personalizar qué tiles mostrar en Configuración → Dashboard.',
+            body: 'El dashboard muestra un resumen de tus horas totales, PIC, IFR, aterrizajes y más. Tambien tendras un resumen de tus totales, actividad reciente y ultimos vuelos',
             action: 'Siguiente →',
             skip: false,
             visual: `
