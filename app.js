@@ -489,7 +489,7 @@ const app = {
             personal: {},
             licenses: {},
             dashboardCards: selectedCards,
-            backupRetentionDays: document.getElementById('backup-retention-select').value,
+            backupRetentionDays: document.getElementById('backup-retention-select')?.value,
         };
         if (!profileValidator.validateProfileForm()) {
             ui.showNotification("Corrige los errores en Datos Personales.", "error");
@@ -504,6 +504,7 @@ const app = {
         await api.saveProfile(userProfile);
         ui.updateFormForRole();
         ui.showNotification("¡Configuración guardada!", "success");
+        window.dispatchEvent(new CustomEvent('settings-saved'));
     },
 
     loadSettings: () => {

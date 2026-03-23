@@ -67,27 +67,35 @@
     </header>
 
     <main>
-        <div id="view-dashboard" class="view active">
-            <div class="dashboard-hero-bg"><img src="logo-avion.png" alt="Logo Avión"></div>
-            <div class="dashboard-content">
-                <h2>Resumen General</h2>
-                <div id="totals-display" class="card-container"></div>
-                <div class="dashboard-grid-main">
-                    <div class="dashboard-column">
-                        <h3>Totales Detallados</h3>
-                        <div id="dashboard-totals-table-container" class="table-container compact"></div>
-                        <h3>Últimos Vuelos</h3>
-                        <div id="logbook-display-dashboard" class="table-container"></div>
-                    </div>
-                    <div class="dashboard-column">
-                        <h3>Distribución de Tiempos de Vuelo</h3>
-                        <div class="chart-container-half"><canvas id="flight-time-pie-chart"></canvas></div>
-                        <h3>Actividad Reciente (Períodos Móviles)</h3>
-                        <div id="recency-summary-container" class="table-container"></div>
+            <div id="view-dashboard" class="view active">
+                <div class="dashboard-hero-bg"><img src="logo-avion.png" alt="Logo Avión"></div>
+                <div class="dashboard-content">
+                    <h2>Resumen General</h2>
+                    <div id="totals-display" class="card-container"></div>
+                    <div class="dashboard-grid-main">
+                        <div class="dashboard-column">
+                            <div class="dashboard-block" id="block-totales">
+                                <h3>Totales Detallados</h3>
+                                <div id="dashboard-totals-table-container" class="table-container compact"></div>
+                            </div>
+                            <div class="dashboard-block" id="block-ultimos">
+                                <h3>Últimos Vuelos</h3>
+                                <div id="logbook-display-dashboard" class="table-container"></div>
+                            </div>
+                        </div>
+                        <div class="dashboard-column">
+                            <div class="dashboard-block" id="block-grafico">
+                                <h3>Distribución de Tiempos de Vuelo</h3>
+                                <div class="chart-container-half"><canvas id="flight-time-pie-chart"></canvas></div>
+                            </div>
+                            <div class="dashboard-block" id="block-recencia">
+                                <h3>Actividad Reciente (Períodos Móviles)</h3>
+                                <div id="recency-summary-container" class="table-container"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
             <div id="add-flight-overlay" style="display:none; position:fixed; inset:0; z-index:9990; background:rgba(0,0,0,0.88); align-items:center; justify-content:center; padding:20px; overflow-y:auto;">
                 <div style="background:#1a1a1a; border:1px solid #2a2a2a; border-radius:14px; padding:28px; width:100%; max-width:680px; margin:auto; position:relative;">
                     <button onclick="addFlightModal.close()" style="position:absolute; top:16px; right:18px; background:none; border:none; color:#555; font-size:22px; cursor:pointer; line-height:1;">×</button>

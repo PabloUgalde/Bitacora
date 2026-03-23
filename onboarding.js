@@ -10,25 +10,17 @@ const onboarding = {
 
     STEPS: [
         {
-            icon: `...`,
-            title: 'Tus licencias DGAC',
-            body: 'Agrega tu licencia de piloto...',
-            action: 'Ir a Licencias →',
+            icon: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#c9a84c" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>`,
+            title: '¡Bienvenido a Mi Bitácora de Vuelo!',
+            body: 'Tu bitácora digital profesional. En los próximos pasos te ayudaremos a configurar tu perfil para que todo funcione correctamente.',
+            action: 'Comenzar →',
             skip: true,
-            onAction: () => {
-                onboarding.hide();
-                ui.showView('view-settings');
-                setTimeout(() => {
-                    document.querySelector('[data-panel="panel-licencias"]')?.click();
-                }, 300);
-                // Esperar a que guarde y volver al wizard
-                onboarding._waitForLicencias();
-            }
+            skipLabel: 'Saltar introducción',
         },
         {
             icon: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#c9a84c" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/><path d="M8 14h4M8 17h8"/></svg>`,
             title: 'Tus licencias DGAC',
-            body: 'Agrega tu licencia de piloto (Alumno, Privado, Comercial, PTLA) y sus habilitaciones. Esto determina si eres alumno o piloto al mando en cada vuelo.',
+            body: 'Para poder ocupar la aplicacion primero agrega tu licencia de piloto (Alumno, Privado, Comercial, ATPL) y sus habilitaciones. Esto determina si eres alumno o piloto al mando en cada vuelo. Una vez lo hayas hecho haz click en "Guardar Configuración" para continuar.',
             action: 'Ir a Licencias →',
             skip: true,
             onAction: () => {
@@ -37,6 +29,7 @@ const onboarding = {
                 setTimeout(() => {
                     document.querySelector('[data-panel="panel-licencias"]')?.click();
                 }, 300);
+                onboarding._waitForLicencias();
             }
         },
         {
@@ -75,28 +68,56 @@ const onboarding = {
         {
             icon: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#c9a84c" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>`,
             title: 'Registra tu primer vuelo',
-            body: 'Haz click en "Añadir Vuelo" en el menú superior. Completa los 4 pasos: datos del vuelo, tiempos, roles y revisión. ¡Listo!',
+            body: 'Usa el menú Bitácora → Añadir Vuelo para registrar tu primer vuelo. Completa los 4 pasos: datos del vuelo, tiempos, roles y revisión.',
             action: 'Añadir mi primer vuelo →',
+            skip: true,
+            skipLabel: 'Saltar este paso',
+            skipAction: 'onboarding.currentStep = 5; onboarding.show();',
+            onAction: () => {
+                onboarding.hide();
+                addFlightModal.open();
+                const checkClosed = setInterval(() => {
+                    const modal = document.getElementById('add-flight-overlay');
+                    if (modal && modal.style.display === 'none') {
+                        clearInterval(checkClosed);
+                        onboarding.currentStep = 5;
+                        onboarding.show();
+                    }
+                }, 500);
+                setTimeout(() => clearInterval(checkClosed), 600000);
+            }
+        },
+        {
+            icon: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#c9a84c" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>`,
+            title: 'Personaliza tus tiles',
+            body: 'Elige qué métricas quieres ver en tu dashboard. Puedes cambiarlas cuando quieras desde Configuración → Dashboard. Con esto ya estás listo para comenzar a utilizar tu Bitácora Digital',
+            action: 'Ir a personalizar →',
             skip: false,
             onAction: () => {
                 onboarding.finish();
-                ui.showView('view-add-flight');
+                ui.showView('view-settings');
+                setTimeout(() => {
+                    document.querySelector('[data-panel="panel-dashboard"]')?.click();
+                }, 300);
             }
-        },
-    ],
+        },    ],
 
     _waitForLicencias() {
-        // Revisar cada 2 segundos si ya guardó licencias
-        const interval = setInterval(() => {
-            const lics = licenseSystem.getData()?.licencias || [];
+        const handler = () => {
+            const data = licenseSystem.getData();
+            const lics = data?.licencias || [];
             if (lics.length > 0) {
-                clearInterval(interval);
-                onboarding.currentStep = 2; // Saltar al paso 3
-                onboarding._render();  // ← _render en vez de show()
+                window.removeEventListener('settings-saved', handler);
+                onboarding.currentStep = 2;
+                onboarding.show();
+            } else {
+                ui.showNotification('Agrega al menos una licencia y guarda para continuar.', 'info');
             }
-        }, 2000);
-        // Dejar de revisar después de 5 minutos
-        setTimeout(() => clearInterval(interval), 300000);
+        };
+        window.removeEventListener('settings-saved', handler); // limpiar anterior si existe
+        window.addEventListener('settings-saved', handler);
+        // Limpiar después de 10 minutos por si el usuario abandona
+        setTimeout(() => window.removeEventListener('settings-saved', handler), 600000);
     },
 
     show() {
@@ -154,7 +175,9 @@ const onboarding = {
             <button class="ob-btn" onclick="onboarding._onAction()">
                 ${step.action}
             </button>
-            ${step.skip ? `<div class="ob-skip" onclick="onboarding.finish()">Omitir configuración</div>` : ''}
+            ${step.skip ? `<div class="ob-skip" onclick="${step.skipAction || 'onboarding.finish()'}">
+            ${step.skipLabel || 'Omitir configuración'}
+        </div>` : ''}
             ${current > 0 ? `<div class="ob-back" onclick="onboarding._back()">← Anterior</div>` : ''}
         </div>`;
 
@@ -202,10 +225,10 @@ const onboarding = {
                 transition: opacity 0.2s;
             }
             .ob-btn:hover { opacity: 0.9; }
-            .ob-skip { font-size: 12px; color: #444; cursor: pointer; margin-top: 4px; }
-            .ob-skip:hover { color: #666; }
-            .ob-back { font-size: 12px; color: #444; cursor: pointer; margin-top: 8px; }
-            .ob-back:hover { color: #888; }
+            .ob-skip { font-size: 12px; color: #888; cursor: pointer; margin-top: 4px; }
+            .ob-skip:hover { color: #bbb; }
+            .ob-back { font-size: 12px; color: #888; cursor: pointer; margin-top: 8px; }
+            .ob-back:hover { color: #bbb; }
             @media (max-width: 480px) {
                 .ob-card { padding: 28px 20px; }
             }`;
@@ -224,12 +247,12 @@ const onboarding = {
     },
 
     _onAction() {
-        const step = this.STEPS[this.currentStep];
-        if (step.onAction) {
-            step.onAction();
-        } else {
-            this.next();
-        }
+            const step = this.STEPS[this.currentStep];
+            if (step.onAction) {
+                step.onAction();
+            } else {
+                this.next();
+            }
     },
 
     _back() {

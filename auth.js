@@ -40,18 +40,12 @@ const auth = {
         const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
         if (error) {
             auth._setLoading(false);
-            auth._showSuccess('¡Cuenta creada exitosamente! Iniciando sesión...');
-            setTimeout(() => {
-                auth.login(email, password);
-            }, 1500);
-            return true;
             auth._showError(auth._translateError(error.message));
             return false;
         }
-        // Recargar página — evita listeners duplicados
         window.location.reload();
         return true;
-    },
+},
 
     // ── Registro ──────────────────────────────────────────────────
     register: async (email, password, name) => {
@@ -107,14 +101,12 @@ const auth = {
         await supabaseClient.auth.signOut();
         currentUser = null;
         if (typeof flightData !== 'undefined') flightData = [];
-        delete document.body.dataset.listenersAttached;  // ← fuera del setTimeout
+        delete document.body.dataset.listenersAttached;
         setTimeout(() => {
+            // Eliminar overlay existente para forzar reconstrucción limpia
+            const existing = document.getElementById('auth-overlay');
+            if (existing) existing.remove();
             auth._showAuthScreen('login');
-            const btn = document.querySelector('#auth-overlay .auth-submit-btn');
-            if (btn) {
-                btn.disabled = false;
-                btn.textContent = btn.dataset.label;
-            }
         }, 100);
     },
 
