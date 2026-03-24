@@ -20,7 +20,23 @@ const auth = {
         }
         delete document.body.dataset.listenersAttached;  // ← agregar aquí
         supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
+            
+            // Detectar retorno desde link de recovery
+            const hash = window.location.hash;
+            if (hash.includes('type=recovery')) {
+                const params = new URLSearchParams(hash.replace('#', ''));
+                const accessToken = params.get('access_token');
+                const refreshToken = params.get('refresh_token');
+                if (accessToken) {
+                    await supabaseClient.auth.setSession({
+                        access_token: accessToken,
+                        refresh_token: refreshToken || ''
+                    });
+                    auth._showAuthScreen('reset');
+                    window.history.replaceState({}, '', window.location.pathname);
+                    return false; // No continuar con el flujo normal
+                }
+            }
             // Verificar si ya hay sesión activa
             const { data: { session } } = await supabaseClient.auth.getSession();
 
