@@ -20,6 +20,7 @@ const auth = {
         }
         delete document.body.dataset.listenersAttached;  // ← agregar aquí
         supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        console.log('hash completo:', window.location.hash);
             
             // Detectar retorno desde link de recovery
             const hash = window.location.hash;
