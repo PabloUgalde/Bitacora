@@ -37,6 +37,21 @@ const auth = {
                     return false; // No continuar con el flujo normal
                 }
             }
+            // Detectar confirmación de email
+            if (hash.includes('type=signup') || hash.includes('type=email_confirmation')) {
+                const params = new URLSearchParams(hash.replace('#', ''));
+                const accessToken = params.get('access_token');
+                const refreshToken = params.get('refresh_token');
+                if (accessToken) {
+                    await supabaseClient.auth.setSession({
+                        access_token: accessToken,
+                        refresh_token: refreshToken || ''
+                    });
+                    // Sesión establecida — continuar con flujo normal
+                    window.history.replaceState({}, '', window.location.pathname);
+                    // Dejar que el init continúe verificando la sesión
+                }
+            }
             // Verificar si ya hay sesión activa
             const { data: { session } } = await supabaseClient.auth.getSession();
 
