@@ -24,33 +24,24 @@ const auth = {
             
             // Detectar retorno desde link de recovery
             const hash = window.location.hash;
-            if (hash.includes('type=recovery')) {
+            if (hash.includes('access_token')) {
                 const params = new URLSearchParams(hash.replace('#', ''));
                 const accessToken = params.get('access_token');
                 const refreshToken = params.get('refresh_token');
+                const type = params.get('type');
+                
                 if (accessToken) {
                     await supabaseClient.auth.setSession({
                         access_token: accessToken,
                         refresh_token: refreshToken || ''
                     });
-                    auth._showAuthScreen('reset');
                     window.history.replaceState({}, '', window.location.pathname);
-                    return false; // No continuar con el flujo normal
-                }
-            }
-            // Detectar confirmación de email
-            if (hash.includes('type=signup') || hash.includes('type=email_confirmation')) {
-                const params = new URLSearchParams(hash.replace('#', ''));
-                const accessToken = params.get('access_token');
-                const refreshToken = params.get('refresh_token');
-                if (accessToken) {
-                    await supabaseClient.auth.setSession({
-                        access_token: accessToken,
-                        refresh_token: refreshToken || ''
-                    });
-                    // Sesión establecida — continuar con flujo normal
-                    window.history.replaceState({}, '', window.location.pathname);
-                    // Dejar que el init continúe verificando la sesión
+                    
+                    if (type === 'recovery') {
+                        auth._showAuthScreen('reset');
+                        return false;
+                    }
+                    // Para signup y otros tipos, continuar con getSession normal
                 }
             }
             // Verificar si ya hay sesión activa
