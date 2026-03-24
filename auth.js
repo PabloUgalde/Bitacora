@@ -75,11 +75,14 @@ const auth = {
             auth._showError(auth._translateError(error.message));
             return false;
         }
+        // Supabase devuelve 200 con session null cuando el email ya existe
+        if (!data.session && !data.user?.identities?.length) {
+            auth._setLoading(false);
+            auth._showError('Ya existe una cuenta con ese email.');
+            return false;
+        }
         auth._setLoading(false);
-        auth._showSuccess('¡Cuenta creada! Iniciando sesión...');
-        setTimeout(() => {
-            window.location.reload();
-        }, 1500);
+        auth._showSuccess('¡Cuenta creada! Revisa tu email para confirmar tu cuenta.');
         return true;
     },
 
