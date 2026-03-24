@@ -140,6 +140,11 @@ const api = {
             }
 
             flightData = allRows.map(row => api._rowToFlight(row));
+            flightData.sort((a, b) => {
+                if (a.es_saldo_inicial) return 1;
+                if (b.es_saldo_inicial) return -1;
+                return 0;
+            });
             api.saveFlightsToLocalStorage(); // caché local
             console.log(`${flightData.length} vuelos cargados desde Supabase.`);
         } catch (err) {

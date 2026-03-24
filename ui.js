@@ -224,7 +224,7 @@ createFlightObject: (data) => {
         if (userProfile.userRole === 'pilot') { if (Math.abs((data.roles.pic + data.roles.sic) - data.duracion) > 0.01) return ui.handleValidationError('Como piloto, la suma de PIC y SIC debe ser igual a la Duración Total.', ['rol-pic', 'rol-sic'], 2); } else { if (Math.abs(data.roles.instruccion - data.duracion) > 0.01) return ui.handleValidationError('Como alumno, la Instrucción debe ser igual a la Duración Total.', ['rol-instruccion'], 2); }
         const otherRoles = { 'Instrucción Recibida': { v: data.roles.instruccion, id: 'rol-instruccion'}, 'Como Instructor': {v: data.roles.instructor, id: 'rol-instructor'}, Solo: { v: data.roles.solo, id: 'rol-solo'}, Travesia: {v: data.roles.travesia, id: 'rol-travesia'} };
         for (const [name, role] of Object.entries(otherRoles)) { if (role.v > data.duracion) return ui.handleValidationError(`El tiempo de "${name}" no puede ser mayor que la Duración Total.`, [role.id], 2); }
-        if (data.roles.solo > data.roles.pic) return ui.handleValidationError('El tiempo "Solo" no puede ser mayor que el tiempo "PIC".', ['rol-solo', 'rol-pic'], 2);
+        if (userProfile.userRole === 'pilot' && !logbookState.editingFlightId?.startsWith('saldo-') && data.roles.solo > data.roles.pic) return ui.handleValidationError(`El tiempo "Solo" no puede ser mayor que el tiempo "PIC".`, ['rol-solo', 'rol-pic'], 2);
         return { isValid: true, data };
     },
  
