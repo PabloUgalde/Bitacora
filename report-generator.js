@@ -218,9 +218,23 @@ const reportGenerator = {
         const p = userProfile.personal || {};
         const l = userProfile.licenses || {};
 
-        const licenseNames = { 'lic-ap-numero': 'Alumno Piloto', 'lic-pd-numero': 'Piloto Deportivo', 'lic-pp-numero': 'Piloto Privado', 'lic-pc-numero': 'Piloto Comercial', 'lic-ptla-numero': 'Piloto de TLA' };
-        const licensesHtml = Object.keys(licenseNames).filter(key => l[key]).map(key => `<tr><td style="padding:0 5px; font-size: 9pt"><strong>${licenseNames[key]}<strong>:</td><td style="padding:0 5px;font-size: 9pt">${l[key]}</td></tr>`).join('');
-        let nacimientoTexto = 'N/A';
+        const licenseLabels = { 'AP': 'Alumno Piloto', 'PD': 'Piloto Deportivo', 'PP': 'Piloto Privado', 'PC': 'Piloto Comercial', 'PTLA': 'Piloto TLA' };
+        const dgac = l.dgac || {};
+        const licencias = dgac.licencias || [];
+        const habFuncion = dgac.habFuncion || [];
+        const habEspeciales = dgac.habEspeciales || [];
+
+        let licensesHtml = licencias.map(lic => {
+            const label = licenseLabels[lic.licenciaId] || lic.licenciaId;
+            const venc = lic.vencimiento ? ` (vence: ${new Date(lic.vencimiento+'T00:00:00Z').toLocaleDateString('es-CL', {timeZone:'UTC'})})` : '';
+            return `<tr><td style="padding:0 5px; font-size: 9pt"><strong>${label}:</strong></td><td style="padding:0 5px;font-size: 9pt">${lic.numero}${venc}</td></tr>`;
+        }).join('');
+        licensesHtml += habFuncion.map(h => 
+            `<tr><td style="padding:0 5px; font-size: 9pt"><strong>Habilitación:</strong></td><td style="padding:0 5px;font-size: 9pt">${h.funcion}</td></tr>`
+        ).join('');
+        licensesHtml += habEspeciales.map(h => 
+            `<tr><td style="padding:0 5px; font-size: 9pt"><strong>Hab. Especial:</strong></td><td style="padding:0 5px;font-size: 9pt">${h.tipo}</td></tr>`
+        ).join('');
 
         const periods = [{ label: 'Últimos 30 días', days: 30 }, { label: 'Últimos 60 días', days: 60 }, { label: 'Últimos 90 días', days: 90 }, { label: 'Últimos 180 días', days: 180 }, { label: 'Último Año', days: 365 }];
         const recencyHeaders = ["Duracion Total de Vuelo", "Diurno", "Nocturno", "Aterrizajes Dia", "Aterrizajes Noche", "IFR", "NO"];
@@ -249,7 +263,7 @@ const reportGenerator = {
                     <tbody><tr>
                         <td style="width: 35%; vertical-align: top;">
                             <p style="margin: 2px 0;"><strong>Piloto:</strong> ${p['profile-nombre'] || 'N/A'}</p>
-                            <p style="margin: 2px 0;"><strong>RUT:</strong> ${p['profile-rut'] || 'N/A'}</p>
+                            <p style="margin: 2px 0;"><strong>RUT:</strong> ${p['profile-documento'] || 'N/A'}</p>
                             <p style="margin: 2px 0;"><strong>Nacimiento:</strong> ${p['profile-nacimiento'] ? new Date(p['profile-nacimiento']+'T00:00:00Z').toLocaleDateString('es-CL', { timeZone: 'UTC' }) : 'N/A'}</p>
                         </td>
                         <td style="width: 40%; vertical-align: top;">
