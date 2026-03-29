@@ -198,9 +198,18 @@
 
 /* Solo para la página de resumen */
 #print-report-body .page.summary-page {
-    display: block !important; /* Volvemos a bloque estándar para evitar errores de flujo */
-    height: 19cm; /* Altura fija para landscape A4 */
-    overflow: visible !important; /* CRÍTICO: Permitir que se vea todo */
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+    page-break-inside: avoid;
+    page-break-after: always;
+}
+
+@media print {
+    #print-report-body .page.summary-page {
+        height: auto !important;
+        page-break-after: always;
+    }
 }
 
 /* Estilo para las tablas internas para ganar espacio */

@@ -286,7 +286,7 @@ const reportGenerator = {
                     <tbody>${recencyData.map(row => `<tr><td>${row.label}</td><td style="text-align:center">${row.hours}</td><td style="text-align:center">${row.landings}</td><td style="text-align:center">${row.ifr}</td><td style="text-align:center">${row.approaches}</td></tr>`).join('')}</tbody>
                 </table>
 
-                <div style="position: absolute; bottom: 0.2cm; left: 1cm; right: 1cm;">
+                <div style="margin-top: 1cm;">
                     <div style="display: flex; justify-content: space-between; gap: 80px; align-items: flex-end; margin-bottom: 20px;">
                         <div style="flex: 1; text-align: center;">
                             <div style="border-top: 1.5px solid #000; margin-bottom: 8px;"></div>
