@@ -246,15 +246,22 @@ const app = {
 
         // --- FORMULARIO DE VUELO ---
         document.getElementById('flight-form').addEventListener('submit', app.handleFlightSubmit);
-        document.getElementById('review-flight-btn').addEventListener('click', app.handleFlightReview);
+
+        // Clonar ANTES de añadir listeners, para limpiar cualquier listener previo
         document.querySelectorAll('#flight-form .next-btn').forEach(btn => {
             btn.replaceWith(btn.cloneNode(true));
-        });
-        document.querySelectorAll('#flight-form .next-btn').forEach(btn => {
-            btn.addEventListener('click', () => ui.goToStep(ui.getCurrentStep() + 1));
         });
         document.querySelectorAll('#flight-form .prev-btn').forEach(btn => {
             btn.replaceWith(btn.cloneNode(true));
+        });
+
+        // Ahora añadir listeners sobre los nodos frescos
+        document.querySelectorAll('#flight-form .next-btn').forEach(btn => {
+            if (btn.id === 'review-flight-btn') {
+                btn.addEventListener('click', app.handleFlightReview);
+            } else {
+                btn.addEventListener('click', () => ui.goToStep(ui.getCurrentStep() + 1));
+            }
         });
         document.querySelectorAll('#flight-form .prev-btn').forEach(btn => {
             btn.addEventListener('click', () => ui.goToStep(ui.getCurrentStep() - 1));
