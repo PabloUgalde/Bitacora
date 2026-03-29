@@ -200,15 +200,20 @@
 #print-report-body .page.summary-page {
     display: flex !important;
     flex-direction: column !important;
-    height: 19.8cm !important;
+    height: 19cm !important;
     overflow: hidden !important;
     page-break-after: always;
 }
 
 @media print {
+    @page { margin: 0; }
     #print-report-body .page.summary-page {
-        height: auto !important;
-        page-break-after: always;
+        height: 100% !important;
+        overflow: hidden !important;
+    }
+    #print-report-body .page {
+        padding: 1cm !important;
+        box-sizing: border-box !important;
     }
 }
 

@@ -3,6 +3,8 @@ const LOGO_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAAggAAAEQCAYAAADVkYwIAAAAAXNSR0IArs4
 const reportGenerator = {
 
     generate: () => {
+        const paperSize = window.matchMedia('print') ? 
+        (screen.width > 1400 ? 'letter' : 'a4') : 'a4';
         const fromPage = parseInt(document.getElementById('print-page-from').value, 10) || 1;
         const toPageInput = document.getElementById('print-page-to');
         const toPage = parseInt(toPageInput.value, 10) || ui.getLastPageNumber();
@@ -281,12 +283,12 @@ const reportGenerator = {
                 </div>
 
                 <h3 style="margin: 5px 0; font-size: 11pt;">Actividad Reciente</h3>
-                <table class="recency-table" style="width: 100%; border-collapse: collapse; margin-bottom: 1.5cm;">
+                <table class="recency-table" style="width: 100%; border-collapse: collapse;">
                     <thead><tr><th>Período</th><th>Horas (D/N)</th><th>Aterrizajes (D/N)</th><th>Hrs IFR</th><th>Aprox. IFR</th></tr></thead>
                     <tbody>${recencyData.map(row => `<tr><td>${row.label}</td><td style="text-align:center">${row.hours}</td><td style="text-align:center">${row.landings}</td><td style="text-align:center">${row.ifr}</td><td style="text-align:center">${row.approaches}</td></tr>`).join('')}</tbody>
                 </table>
-
-                <div style="margin-top: auto; padding-top: 0.5cm;">
+                <div style="flex-grow: 1; min-height: 2.5cm;"></div>
+                <div class="summary-footer" style="padding-top: 0.3cm;">
                     <div style="display: flex; justify-content: space-between; gap: 80px; align-items: flex-end; margin-bottom: 20px;">
                         <div style="flex: 1; text-align: center;">
                             <div style="border-top: 1.5px solid #000; margin-bottom: 8px;"></div>
@@ -295,7 +297,7 @@ const reportGenerator = {
                         </div>
                         <div style="flex: 1; text-align: center;">
                             <div style="border-top: 1.5px solid #000; margin-bottom: 8px;"></div>
-                            <p style="margin: 0; font-size: 8.5pt; font-style: ">Certifico que los datos escritos en esta bitácora son fidedignos</p>
+                            <p style="margin: 0; font-size: 8.5pt;">Certifico que los datos escritos en esta bitácora son fidedignos</p>
                             <p style="margin: 3px 0 0 0; font-size: 8.5pt; font-weight: bold;">FIRMA DEL PILOTO</p>
                         </div>
                     </div>
@@ -305,7 +307,7 @@ const reportGenerator = {
                         </p>
                     </div>
                 </div>
-            </div>
+             </div>
         `;
     },
 
