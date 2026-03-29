@@ -198,10 +198,10 @@
 
 /* Solo para la página de resumen */
 #print-report-body .page.summary-page {
-    display: block !important;
-    height: auto !important;
-    overflow: visible !important;
-    page-break-inside: avoid;
+    display: flex !important;
+    flex-direction: column !important;
+    height: 19.8cm !important;
+    overflow: hidden !important;
     page-break-after: always;
 }
 
