@@ -10,10 +10,7 @@ const app = {
         const esUsuarioNuevo = licencias.length === 0 && flightData.length === 0;
 
         if (esUsuarioNuevo && !onboarding.isDone()) {
-            ui.showView('view-dashboard');
             onboarding.show();
-        } else {
-            ui.showView('view-dashboard');
         }
         if (licencias.length === 0 && flightData.length === 0) {
             ui.showView('view-settings');
@@ -109,20 +106,6 @@ const app = {
     setupEventListeners: () => {
         if (document.body.dataset.listenersAttached) return;
         document.body.dataset.listenersAttached = 'true';
-
-        // --- FUENTE DE DATOS ---
-        const updateDataSourceView = () => {
-            const dataSourceSelect = document.getElementById('data-source-select');
-            if (!dataSourceSelect) return;
-            document.getElementById('google-sheets-url-container').classList.toggle('hidden', dataSourceSelect.value !== 'google_sheets');
-        };
-        document.getElementById('data-source-select').addEventListener('change', (e) => {
-            updateDataSourceView();
-            if (userProfile.dataSource === 'local' && e.target.value === 'google_sheets') {
-                const localData = JSON.parse(localStorage.getItem('flightLogData') || '[]');
-                if (localData.length > 0) ui.showSyncPrompt(localData.length);
-            }
-        });
 
         // --- NAVEGACIÓN Y DROPDOWNS ---
         const navDropdownToggle = document.getElementById('summaries-dropdown-toggle');
@@ -424,49 +407,6 @@ const app = {
             e.target.value = '';
         });
 
-        // --- SINCRONIZACIÓN ---
-        document.getElementById('sync-action-merge').addEventListener('click', async () => {
-            const syncModal = document.getElementById('sync-prompt-modal');
-            ui.showNotification("Iniciando sincronización...", "info");
-            const sheetsResult = await api.loadFlightsFromGoogleSheets(userProfile.googleSheetsUrl || document.getElementById('google-sheets-url').value);
-            if (!sheetsResult.success) {
-                alert(`Error al cargar datos de Google Sheets: ${sheetsResult.message}`);
-                syncModal.classList.remove('open');
-                return;
-            }
-            const sheetsFlights = sheetsResult.data;
-            const localFlights = JSON.parse(localStorage.getItem('flightLogData') || '[]');
-            const sheetsFlightIds = new Set(sheetsFlights.map(f => f.id));
-            const flightsToUpload = localFlights.filter(f => !sheetsFlightIds.has(f.id));
-            if (flightsToUpload.length > 0) {
-                ui.showNotification(`Subiendo ${flightsToUpload.length} vuelos nuevos a Sheets...`, "info");
-                const flightsAsArrays = flightsToUpload.reverse().map(flight => api._flightObjectToValuesArray(flight));
-                const uploadResult = await api._postToSheets({ action: 'addMultipleFlights', flights: flightsAsArrays });
-                if (!uploadResult.success) {
-                    alert(`Error al subir vuelos a Google Sheets: ${uploadResult.message}`);
-                    syncModal.classList.remove('open');
-                    return;
-                }
-            }
-            userProfile.dataSource = 'google_sheets';
-            await api.saveProfile(userProfile);
-            alert("¡Sincronización completada!");
-            location.reload();
-        });
-
-        document.getElementById('sync-action-replace').addEventListener('click', async () => {
-            userProfile.dataSource = 'google_sheets';
-            await api.saveProfile(userProfile);
-            location.reload();
-        });
-
-        document.getElementById('sync-action-cancel').addEventListener('click', () => {
-            const syncModal = document.getElementById('sync-prompt-modal');
-            document.getElementById('data-source-select').value = 'local';
-            document.getElementById('google-sheets-url-container').classList.add('hidden');
-            syncModal.classList.remove('open');
-        });
-
         // --- CIERRE GLOBAL AL HACER CLICK FUERA ---
         if (!window.globalClickListenerAttached) {
             let mousedownTarget = null;
@@ -509,8 +449,7 @@ const app = {
             if (selectEl) selectedCards.push(selectEl.value);
         }
         const profileToSave = {
-            dataSource: document.getElementById('data-source-select').value,
-            googleSheetsUrl: document.getElementById('google-sheets-url').value,
+            dataSource: 'supabase',
             personal: {},
             licenses: {},
             dashboardCards: selectedCards,
@@ -533,13 +472,6 @@ const app = {
     },
 
     loadSettings: () => {
-        const dataSourceSelect = document.getElementById('data-source-select');
-        const googleUrlInput = document.getElementById('google-sheets-url');
-        if (dataSourceSelect) {
-            dataSourceSelect.value = userProfile.dataSource || 'local';
-            document.getElementById('google-sheets-url-container').classList.toggle('hidden', dataSourceSelect.value !== 'google_sheets');
-        }
-        if (googleUrlInput) googleUrlInput.value = userProfile.googleSheetsUrl || '';
         if (userProfile.personal) {
             Object.keys(userProfile.personal).forEach(id => {
                 const i = document.getElementById(id);
@@ -623,20 +555,15 @@ const app = {
                     ? await api.updateFlight(logbookState.editingFlightId, result.data)
                     : await api.saveFlight(result.data);
                 if (success) {
-                    if (isEditing && userProfile.dataSource === 'google_sheets') {
-                        alert("Vuelo actualizado. Recargando...");
-                        location.reload();
-                    } else {
-                        ui.showNotification(`¡Vuelo ${isEditing ? 'actualizado' : 'guardado'}!`, "success");
-                        const savedId = isEditing ? logbookState.editingFlightId : flightData[0]?.id;
-                        ui.resetFlightForm();
-                        addFlightModal.close();
-                        setTimeout(() => {
-                            ui.showView('view-logbook');
-                            render.detailedLog();
-                            if (savedId) addFlightModal.highlightRow(savedId);
-                        }, 300);
-                    }
+                    ui.showNotification(`¡Vuelo ${isEditing ? 'actualizado' : 'guardado'}!`, "success");
+                    const savedId = isEditing ? logbookState.editingFlightId : flightData[0]?.id;
+                    ui.resetFlightForm();
+                    addFlightModal.close();
+                    setTimeout(() => {
+                        ui.showView('view-logbook');
+                        render.detailedLog();
+                        if (savedId) addFlightModal.highlightRow(savedId);
+                    }, 300);
                 }
             } catch (error) {
                 console.error(error);

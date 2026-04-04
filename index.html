@@ -8,7 +8,6 @@
     <title>Bitácora de Vuelo Pro (v22 - Tema Premium)</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/idb-keyval@6/dist/umd.js"></script>
     <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="custom-styles.css">
@@ -539,10 +538,6 @@
                                 </div>
                             </div>
                         </div>
-                        <!-- Campos ocultos para compatibilidad -->
-                        <select id="data-source-select" style="display:none"><option value="supabase" selected>Supabase</option></select>
-                        <input type="url" id="google-sheets-url" style="display:none">
-                        <div id="google-sheets-url-container" class="hidden"></div>
                         <p id="settings-status" class="status"></p>
                     </div>
 
@@ -632,36 +627,6 @@
         </div>
     </div>
 
-<!-- ====================================================== -->
-<!-- =         MODAL DE SINCRONIZACIÓN DE DATOS (v2)      = -->
-<!-- ====================================================== -->
-<div id="sync-prompt-modal" class="modal">
-    <div class="modal-content" style="max-width: 650px;">
-        <div class="modal-header">
-            <h3>Cambio de Fuente a Google Sheets</h3>
-        </div>
-        <div>
-            <p>Has guardado <strong id="local-flight-count" style="font-size: 1.1rem;">X</strong> vuelos en este dispositivo mientras usabas el modo local.</p>
-            <p>Ahora que te conectarás a Google Sheets, ¿qué quieres hacer con esos vuelos locales?</p>
-            
-            <div class="sync-option" style="background-color: rgba(76, 175, 80, 0.1); padding: 1rem; border-radius: var(--border-radius); border: 1px solid var(--accent-color-green);">
-                <h4>Opción 1: Fusionar Datos (Recomendado)</h4>
-                <p>Se añadirán tus vuelos locales a tu hoja de Google Sheets, sin borrar nada de lo que ya tengas en la nube. <strong>Es la opción más segura para no perder información.</strong></p>
-                <button id="sync-action-merge" class="submit-btn" style="width: 100%; margin-top: 0.5rem;">Fusionar mis datos locales con Sheets</button>
-            </div>
-
-            <div class="sync-option" style="background-color: rgba(211, 47, 47, 0.1); padding: 1rem; border-radius: var(--border-radius); border: 1px solid var(--accent-color-red); margin-top: 1.5rem;">
-                <h4>Opción 2: Usar Solo Google Sheets</h4>
-                <p>Se ignorarán tus vuelos locales y la aplicación cargará <strong>únicamente</strong> lo que existe en tu hoja de Google Sheets. <strong>¡Atención! Perderás los vuelos guardados en este dispositivo.</strong></p>
-                <button id="sync-action-replace" class="prev-btn" style="width: 100%; margin-top: 0.5rem; background-color: var(--accent-color-red);">Ignorar datos locales</button>
-            </div>
-            
-            <div class="navigation-buttons" style="margin-top: 2rem; border-top: 1px solid var(--border-color); padding-top: 1.5rem;">
-                <button id="sync-action-cancel" class="prev-btn">No cambiar, seguir en modo Local</button>
-            </div>
-        </div>
-    </div>
-</div>   
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <script src="state.js"></script>
     <script src="summary-renderer.js"></script>

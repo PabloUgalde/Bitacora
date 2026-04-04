@@ -299,7 +299,7 @@ const auth = {
                 <button class="auth-submit-btn" data-label="Guardar contraseña" onclick="auth.updatePassword(
                     document.getElementById('auth-new-password').value
                 )">Guardar contraseña</button>
-            </>
+            </form>
         </div>
         `;
 

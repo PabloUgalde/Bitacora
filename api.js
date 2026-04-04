@@ -389,11 +389,4 @@ const api = {
         a.click();
         URL.revokeObjectURL(url);
     },
-
-    // ── Métodos legacy (no usados con Supabase, se mantienen por compatibilidad) ──
-    _getTwoRowHeaderArray() { return []; },
-    _flightObjectToValuesArray(flight) { return HEADERS.map(h => flight[h] ?? ''); },
-    _postToSheets: async () => ({ success: false, message: 'Google Sheets desactivado.' }),
-    loadFlightsFromGoogleSheets: async () => ({ success: false, data: [], message: 'Use Supabase.' }),
-    syncAllFlightsToSheets: async () => ({ success: false, message: 'Google Sheets desactivado.' }),
 };

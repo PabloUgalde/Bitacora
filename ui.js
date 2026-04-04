@@ -100,17 +100,6 @@ const ui = {
             instructorInput.value = ''; }
     },
 
-    updateSortButtonText: () => {
-        const sortButton = document.getElementById('sort-order-toggle');
-        const sortOptions = document.querySelectorAll('#sort-order-menu .sort-option');
-        const sortLabels = { natural: 'Carga ⇕', desc: 'Reciente ▼', asc: 'Antiguo ▲' };
-        if (sortButton) { sortButton.innerHTML = `Ordenar por: ${sortLabels[logbookState.sortOrder]}`; }
-        sortOptions.forEach(opt => {
-            if (opt.dataset.sort === logbookState.sortOrder) { opt.classList.add('active'); } 
-            else { opt.classList.remove('active'); }
-        });
-    },
-
     populateFlightForm: (flight) => {
         if (!flight) return;
         document.getElementById('fecha').value = flight.Fecha && !isNaN(flight.Fecha.getTime()) ? flight.Fecha.toISOString().split('T')[0] : '';
