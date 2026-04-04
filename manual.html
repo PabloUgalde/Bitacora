@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual de Usuario — Bitácora de Vuelo</title>
+    <style>
+        /* ── Variables (igual que la app) ── */
+        :root {
+            --primary:  #D4AF37;
+            --bg:       #121212;
+            --surface:  #1E1E1E;
+            --surface2: #2a2a2a;
+            --border:   #383838;
+            --text:     #E0E0E0;
+            --text-w:   #FFFFFF;
+            --muted:    #9E9E9E;
+            --green:    #4CAF50;
+            --red:      #D32F2F;
+            --radius:   8px;
+            --font: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        /* ── Reset & Base ── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body { font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.7; font-size: 15px; }
+
+        /* ── Layout ── */
+        .layout { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
+
+        /* ── Sidebar ── */
+        .sidebar {
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+            padding: 1.5rem 0;
+        }
+        .sidebar-logo {
+            padding: 0 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 1rem;
+        }
+        .sidebar-logo .title { font-size: 1rem; font-weight: 700; color: var(--primary); line-height: 1.3; }
+        .sidebar-logo .sub   { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+        .toc-section { margin-bottom: 0.5rem; }
+        .toc-section-title {
+            font-size: 0.65rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--muted);
+            padding: 0.5rem 1.25rem 0.25rem;
+        }
+        .toc-link {
+            display: block;
+            padding: 0.35rem 1.25rem;
+            color: var(--muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            border-left: 3px solid transparent;
+            transition: all 0.15s;
+        }
+        .toc-link:hover, .toc-link.active {
+            color: var(--primary);
+            border-left-color: var(--primary);
+            background: rgba(212,175,55,0.07);
+        }
+        .toc-link.sub { padding-left: 2rem; font-size: 0.8rem; }
+
+        /* ── Main Content ── */
+        .content {
+            max-width: 820px;
+            margin: 0 auto;
+            padding: 3rem 2.5rem 6rem;
+        }
+
+        /* ── Topbar ── */
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 3rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .topbar h1 { font-size: 2rem; font-weight: 700; color: var(--text-w); }
+        .topbar h1 span { color: var(--primary); }
+
+        /* ── Buttons ── */
+        .btn-pdf {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--primary);
+            color: #000;
+            font-weight: 700;
+            font-size: 0.85rem;
+            border: none;
+            border-radius: var(--radius);
+            padding: 0.6rem 1.2rem;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            text-decoration: none;
+        }
+        .btn-pdf:hover { opacity: 0.85; }
+        .btn-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            color: var(--muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: color 0.15s;
+        }
+        .btn-back:hover { color: var(--primary); }
+
+        /* ── Sections ── */
+        .section { margin-bottom: 3.5rem; scroll-margin-top: 2rem; }
+        .section h2 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--text-w);
+            padding-bottom: 0.6rem;
+            border-bottom: 2px solid var(--primary);
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+        .section h2 .icon { font-size: 1.2rem; }
+        .section h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--primary);
+            margin: 1.5rem 0 0.6rem;
+        }
+        .section h4 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-w);
+            margin: 1.2rem 0 0.4rem;
+        }
+        .section p { margin-bottom: 0.75rem; color: var(--text); }
+        .section ul, .section ol { padding-left: 1.5rem; margin-bottom: 0.75rem; }
+        .section li { margin-bottom: 0.35rem; }
+
+        /* ── Step badges ── */
+        .steps { display: flex; flex-direction: column; gap: 1rem; margin: 1rem 0; }
+        .step {
+            display: flex;
+            gap: 1rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1rem 1.25rem;
+        }
+        .step-num {
+            min-width: 32px;
+            height: 32px;
+            background: var(--primary);
+            color: #000;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.85rem;
+            flex-shrink: 0;
+        }
+        .step-body h4 { margin: 0 0 0.3rem; color: var(--text-w); }
+        .step-body p  { margin: 0; font-size: 0.9rem; color: var(--muted); }
+
+        /* ── Tables ── */
+        .table-wrap { overflow-x: auto; margin: 1rem 0; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        thead tr { background: var(--surface2); }
+        th {
+            text-align: left;
+            padding: 0.6rem 0.8rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--primary);
+            border-bottom: 1px solid var(--border);
+        }
+        td {
+            padding: 0.55rem 0.8rem;
+            border-bottom: 1px solid var(--border);
+            vertical-align: top;
+        }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: rgba(255,255,255,0.02); }
+        .req { color: var(--red); font-weight: 700; }
+        .opt { color: var(--muted); }
+        .cond { color: var(--primary); font-style: italic; }
+
+        /* ── Callouts ── */
+        .callout {
+            display: flex;
+            gap: 0.75rem;
+            border-radius: var(--radius);
+            padding: 0.85rem 1rem;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+        }
+        .callout-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
+        .callout.info  { background: rgba(212,175,55,0.1); border: 1px solid rgba(212,175,55,0.3); }
+        .callout.warn  { background: rgba(211,47,47,0.1);  border: 1px solid rgba(211,47,47,0.35); }
+        .callout.ok    { background: rgba(76,175,80,0.1);  border: 1px solid rgba(76,175,80,0.3);  }
+        .callout.info  .callout-icon { color: var(--primary); }
+        .callout.warn  .callout-icon { color: var(--red); }
+        .callout.ok    .callout-icon { color: var(--green); }
+
+        /* ── Plan badges ── */
+        .badge {
+            display: inline-block;
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            padding: 0.15rem 0.45rem;
+            border-radius: 4px;
+            vertical-align: middle;
+            margin-left: 0.35rem;
+        }
+        .badge.pro  { background: rgba(212,175,55,0.2); color: var(--primary); border: 1px solid var(--primary); }
+        .badge.free { background: rgba(76,175,80,0.15); color: var(--green);   border: 1px solid var(--green);   }
+
+        /* ── Plan comparison ── */
+        .plan-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem 0; }
+        .plan-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.25rem;
+        }
+        .plan-card.pro-card { border-color: var(--primary); }
+        .plan-card h3 { margin: 0 0 0.75rem; font-size: 1rem; }
+        .plan-card ul { list-style: none; padding: 0; }
+        .plan-card ul li { padding: 0.3rem 0; font-size: 0.875rem; border-bottom: 1px solid var(--border); }
+        .plan-card ul li:last-child { border-bottom: none; }
+        .plan-card ul li::before { margin-right: 0.5rem; }
+        .plan-card.lite-card ul li::before { content: "✓"; color: var(--green); }
+        .plan-card.pro-card  ul li::before { content: "★"; color: var(--primary); }
+        .plan-price { margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--border); }
+        .plan-price strong { color: var(--primary); font-size: 1.1rem; }
+
+        /* ── Divider ── */
+        .divider { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+
+        /* ── Print / PDF ── */
+        @media print {
+            .sidebar, .btn-pdf, .btn-back, .topbar { display: none !important; }
+            .layout { display: block; }
+            .content { max-width: 100%; padding: 0; }
+            body { background: #fff; color: #111; font-size: 11pt; }
+            .section h2 { color: #000; border-bottom-color: #c8a800; }
+            .section h3 { color: #c8a800; }
+            .callout { border-left: 3px solid #c8a800 !important; background: #f9f9f9 !important; }
+            .callout.warn { border-left-color: #c00 !important; }
+            .callout.ok   { border-left-color: #396 !important; }
+            .badge.pro  { background: #f5e9c8; color: #7a5c00; border-color: #c8a800; }
+            .badge.free { background: #e6f4ea; color: #1a5c2a; border-color: #396; }
+            th { color: #c8a800; background: #f9f9f9; }
+            td, th { border-color: #ddd; }
+            .plan-card { border: 1px solid #ccc; background: #fafafa; }
+            table, .callout, .step, .plan-grid { page-break-inside: avoid; }
+            .section { page-break-before: auto; }
+            a { color: inherit; text-decoration: none; }
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <!-- ══════════════════════════════ SIDEBAR ══════════════════════════════ -->
+    <aside class="sidebar">
+        <div class="sidebar-logo">
+            <div class="title">Bitácora de Vuelo</div>
+            <div class="sub">Manual de Usuario</div>
+        </div>
+
+        <nav>
+            <div class="toc-section">
+                <div class="toc-section-title">Inicio</div>
+                <a class="toc-link" href="#intro">¿Qué es Bitácora?</a>
+                <a class="toc-link" href="#primeros-pasos">Primeros pasos</a>
+            </div>
+            <div class="toc-section">
+                <div class="toc-section-title">Registro de Vuelos</div>
+                <a class="toc-link" href="#nuevo-vuelo">Añadir un vuelo</a>
+                <a class="toc-link sub" href="#paso1">Paso 1: Datos generales</a>
+                <a class="toc-link sub" href="#paso2">Paso 2: Tiempos y aterrizajes</a>
+                <a class="toc-link sub" href="#paso3">Paso 3: Roles y observaciones</a>
+                <a class="toc-link sub" href="#paso4">Paso 4: Revisar y guardar</a>
+                <a class="toc-link sub" href="#validaciones">Tabla de validaciones</a>
+                <a class="toc-link" href="#roles">Roles: Piloto vs. Alumno</a>
+            </div>
+            <div class="toc-section">
+                <div class="toc-section-title">Funciones Principales</div>
+                <a class="toc-link" href="#bitacora">Registro detallado</a>
+                <a class="toc-link" href="#dashboard">Dashboard</a>
+                <a class="toc-link" href="#resumenes">Resúmenes</a>
+                <a class="toc-link" href="#reportes">Reportes e informes</a>
+            </div>
+            <div class="toc-section">
+                <div class="toc-section-title">Configuración</div>
+                <a class="toc-link" href="#config-personal">Datos personales</a>
+                <a class="toc-link" href="#config-licencias">Licencias y habilitaciones</a>
+                <a class="toc-link" href="#config-dashboard">Personalizar dashboard</a>
+            </div>
+            <div class="toc-section">
+                <div class="toc-section-title">Planes</div>
+                <a class="toc-link" href="#planes">Lite vs. Pro</a>
+            </div>
+        </nav>
+    </aside>
+
+    <!-- ══════════════════════════════ CONTENT ══════════════════════════════ -->
+    <main class="content">
+
+        <!-- Topbar -->
+        <div class="topbar">
+            <div>
+                <a class="btn-back" href="/index.html">← Volver a la app</a>
+                <h1 style="margin-top:0.5rem">Manual de <span>Usuario</span></h1>
+            </div>
+            <button class="btn-pdf" onclick="window.print()">
+                ⬇ Descargar PDF
+            </button>
+        </div>
+
+        <!-- ─────────────────── 1. INTRODUCCIÓN ─────────────────── -->
+        <section class="section" id="intro">
+            <h2><span class="icon">✈</span> ¿Qué es Bitácora de Vuelo?</h2>
+            <p>Bitácora de Vuelo es una aplicación web profesional para que pilotos y alumnos-piloto en Chile registren y consulten sus horas de vuelo de forma ordenada, segura y accesible desde cualquier dispositivo.</p>
+            <p>Los datos se almacenan en la nube (Supabase) y están disponibles en todo momento. No se requiere instalar ningún programa.</p>
+
+            <h3>¿Qué puedo hacer con la aplicación?</h3>
+            <ul>
+                <li>Registrar vuelos con todos los campos exigidos por la DGAC de Chile.</li>
+                <li>Ver resúmenes por página, por año/mes, por tipo de aeronave, por aeródromo y de recencia IFR.</li>
+                <li>Filtrar y buscar vuelos por múltiples criterios.</li>
+                <li>Generar e imprimir reportes de bitácora listos para presentar.</li>
+                <li>Exportar datos en formato Excel o CSV.</li>
+                <li>Gestionar licencias, habilitaciones y certificado médico.</li>
+            </ul>
+        </section>
+
+        <!-- ─────────────────── 2. PRIMEROS PASOS ─────────────────── -->
+        <section class="section" id="primeros-pasos">
+            <h2><span class="icon">🚀</span> Primeros pasos</h2>
+            <p>Al ingresar por primera vez, la aplicación te guía con un asistente de configuración inicial. También puedes omitirlo y configurarlo después desde <strong>Configuración</strong>.</p>
+
+            <div class="steps">
+                <div class="step">
+                    <div class="step-num">1</div>
+                    <div class="step-body">
+                        <h4>Agrega tu licencia DGAC</h4>
+                        <p>Ve a <strong>Configuración → Licencias y Habilitaciones</strong> y agrega al menos una licencia. Esto determina cómo se comportará el formulario de vuelo (modo Piloto o modo Alumno).</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">2</div>
+                    <div class="step-body">
+                        <h4>Completa tus datos personales</h4>
+                        <p>En <strong>Configuración → Datos Personales</strong> ingresa tu nombre, RUT, fecha de nacimiento, teléfono y domicilio. Estos datos aparecerán en los reportes impresos.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">3</div>
+                    <div class="step-body">
+                        <h4>Registra tu primer vuelo</h4>
+                        <p>Haz clic en <strong>Bitácora → Añadir Vuelo</strong> en el menú principal. Completa los 4 pasos del formulario y guarda.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">4</div>
+                    <div class="step-body">
+                        <h4>Personaliza tu dashboard</h4>
+                        <p>En <strong>Configuración → Dashboard</strong> elige qué indicadores quieres ver en tu pantalla principal.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="callout info">
+                <span class="callout-icon">💡</span>
+                <span>Si vienes de otra bitácora, puedes importar tus vuelos anteriores desde <strong>Configuración → Importar Excel (.xlsx)</strong>. También puedes ingresar un saldo inicial de horas desde el panel de datos.</span>
+            </div>
+        </section>
+
+        <!-- ─────────────────── 3. AÑADIR VUELO ─────────────────── -->
+        <section class="section" id="nuevo-vuelo">
+            <h2><span class="icon">📝</span> Añadir un vuelo</h2>
+            <p>Para registrar un vuelo ve al menú <strong>Bitácora → Añadir Vuelo</strong>. El formulario se divide en 4 pasos. No puedes avanzar al siguiente paso si hay errores en el actual.</p>
+
+            <!-- Paso 1 -->
+            <h3 id="paso1">Paso 1 — Datos del vuelo</h3>
+            <p>Información básica del vuelo: aeronave, origen y destino.</p>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Campo</th>
+                            <th>Requerido</th>
+                            <th>Descripción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Fecha</strong></td>
+                            <td><span class="opt">Opcional</span></td>
+                            <td>Se autocompleta con el día de hoy. Puedes cambiarla.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Aeronave</strong></td>
+                            <td><span class="req">Obligatorio</span></td>
+                            <td>Marca y modelo. Ej: <em>CESSNA 172</em>. Se guarda en mayúsculas automáticamente.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Matrícula</strong></td>
+                            <td><span class="req">Obligatorio</span></td>
+                            <td>Matrícula de la aeronave. Ej: <em>CC-KAL</em>. Se guarda en mayúsculas.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Desde</strong></td>
+                            <td><span class="req">Obligatorio</span></td>
+                            <td>Código OACI o nombre del aeródromo de salida. Se guarda en mayúsculas.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Hasta</strong></td>
+                            <td><span class="req">Obligatorio</span></td>
+                            <td>Código OACI o nombre del aeródromo de llegada. Se guarda en mayúsculas.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Paso 2 -->
+            <h3 id="paso2">Paso 2 — Tiempos y aterrizajes</h3>
+            <p>Aquí se registran las horas de vuelo, condiciones y número de aterrizajes.</p>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Campo</th>
+                            <th>Requerido</th>
+                            <th>Descripción y reglas</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Duración Total</strong></td>
+                            <td><span class="req">Obligatorio</span></td>
+                            <td>Tiempo total del vuelo en horas decimales (ej: 1.5). Debe ser mayor a 0.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Tipo de Avión</strong></td>
+                            <td><span class="cond">Condicional</span></td>
+                            <td>Requerido si no es un vuelo de simulador. Selecciona la categoría de la aeronave.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Horas Diurnas</strong></td>
+                            <td><span class="req">Obligatorio</span></td>
+                            <td>Tiempo diurno en horas decimales. <strong>La suma de Diurno + Nocturno debe ser igual a la Duración Total.</strong></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Horas Nocturnas</strong></td>
+                            <td><span class="opt">Opcional</span></td>
+                            <td>Tiempo nocturno en horas decimales. Incluir solo si hubo tiempo nocturno.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Horas IFR</strong></td>
+                            <td><span class="opt">Opcional</span></td>
+                            <td>Tiempo en condiciones IFR. No puede superar la Duración Total.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Nº Aproximaciones</strong></td>
+                            <td><span class="cond">Condicional</span></td>
+                            <td>Solo visible si hay Horas IFR &gt; 0. Número entero (sin decimales).</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Tipo de Aproximación</strong></td>
+                            <td><span class="cond">Condicional</span></td>
+                            <td>Solo visible si hay Horas IFR &gt; 0. Ej: ILS, VOR, RNAV. Se guarda en mayúsculas.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Aterrizajes Día</strong></td>
+                            <td><span class="opt">Opcional</span></td>
+                            <td>Número entero (sin decimales). Mínimo 0.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Aterrizajes Noche</strong></td>
+                            <td><span class="opt">Opcional</span></td>
+                            <td>Número entero (sin decimales). Solo si se aterrizó de noche.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="callout warn">
+                <span class="callout-icon">⚠</span>
+                <span><strong>Vuelo de simulador:</strong> Si ingresas tiempo en el campo "Simulador" (Paso 3), la Duración Total debe ser igual al tiempo de simulador. En ese caso, el "Tipo de Avión" no es requerido.</span>
+            </div>
+
+            <!-- Paso 3 -->
+            <h3 id="paso3">Paso 3 — Roles y observaciones</h3>
+            <p>Los campos de esta sección dependen del tipo de usuario (Piloto o Alumno). Ver sección <a href="#roles" style="color:var(--primary)">Roles</a>.</p>
+
+            <h4>Campos para Pilotos</h4>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr><th>Campo</th><th>Requerido</th><th>Regla</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>PIC (Piloto al Mando)</strong></td>
+                            <td><span class="req">Obligatorio*</span></td>
+                            <td rowspan="2"><strong>PIC + SIC debe ser igual a la Duración Total.</strong></td>
+                        </tr>
+                        <tr>
+                            <td><strong>SIC (Copiloto)</strong></td>
+                            <td><span class="req">Obligatorio*</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Como Instructor</strong></td>
+                            <td><span class="opt">Opcional</span></td>
+                            <td>No puede superar la Duración Total.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p style="font-size:0.82rem;color:var(--muted)">* La suma de ambos campos debe cuadrar con la Duración Total.</p>
+
+            <h4>Campos para Alumnos</h4>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr><th>Campo</th><th>Requerido</th><th>Regla</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Instrucción Recibida</strong></td>
+                            <td><span class="req">Obligatorio</span></td>
+                            <td><strong>Debe ser igual a la Duración Total.</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h4>Campos comunes (Piloto y Alumno)</h4>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr><th>Campo</th><th>Requerido</th><th>Regla</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Solo</strong></td>
+                            <td><span class="opt">Opcional</span></td>
+                            <td>No puede superar la Duración Total ni el tiempo PIC (en modo Piloto).</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Travesía</strong></td>
+                            <td><span class="opt">Opcional</span></td>
+                            <td>No puede superar la Duración Total.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Simulador</strong></td>
+                            <td><span class="opt">Opcional</span></td>
+                            <td>Si se ingresa, debe ser igual a la Duración Total (vuelo completamente en simulador).</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Instrucción Recibida</strong></td>
+                            <td><span class="opt">Opcional</span></td>
+                            <td>Para pilotos: no puede superar la Duración Total.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Observaciones</strong></td>
+                            <td><span class="opt">Opcional</span></td>
+                            <td>Texto libre. Anotaciones adicionales del vuelo.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Paso 4 -->
+            <h3 id="paso4">Paso 4 — Revisar y guardar</h3>
+            <p>Se muestra un resumen con todos los datos ingresados antes de confirmar. Puedes volver a cualquier paso anterior usando el botón <strong>Anterior</strong> para corregir algo. Si todo es correcto, presiona <strong>Guardar Vuelo</strong>.</p>
+
+            <div class="callout ok">
+                <span class="callout-icon">✓</span>
+                <span>El vuelo se asigna automáticamente a una página de bitácora. Cada página contiene un máximo de 8 vuelos, replicando el formato de una bitácora física.</span>
+            </div>
+
+            <!-- Tabla de validaciones -->
+            <h3 id="validaciones">Tabla de validaciones</h3>
+            <p>La siguiente tabla detalla todos los errores que puede mostrar el formulario y qué los causa.</p>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Mensaje de error</th>
+                            <th>Causa</th>
+                            <th>Paso</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>El campo "Aeronave" es obligatorio.</td><td>Campo vacío.</td><td>1</td></tr>
+                        <tr><td>El campo "Matrícula" es obligatorio.</td><td>Campo vacío.</td><td>1</td></tr>
+                        <tr><td>El campo "Desde" es obligatorio.</td><td>Campo vacío.</td><td>1</td></tr>
+                        <tr><td>El campo "Hasta" es obligatorio.</td><td>Campo vacío.</td><td>1</td></tr>
+                        <tr><td>La "Duración Total" debe ser mayor a 0.</td><td>Valor en cero o vacío.</td><td>2</td></tr>
+                        <tr><td>El "Tipo de Avión" es obligatorio.</td><td>No seleccionado y no es vuelo de simulador.</td><td>2</td></tr>
+                        <tr><td>La suma de Diurno y Nocturno debe ser igual a la Duración Total.</td><td>Diurno + Nocturno ≠ Duración Total.</td><td>2</td></tr>
+                        <tr><td>Las Horas IFR no pueden ser mayores que la Duración Total.</td><td>IFR &gt; Duración Total.</td><td>2</td></tr>
+                        <tr><td>El campo "Nº Aprox." debe ser un número entero.</td><td>Se ingresó un decimal.</td><td>2</td></tr>
+                        <tr><td>El campo "Aterrizajes Día" debe ser un número entero.</td><td>Se ingresó un decimal.</td><td>2</td></tr>
+                        <tr><td>El campo "Aterrizajes Noche" debe ser un número entero.</td><td>Se ingresó un decimal.</td><td>2</td></tr>
+                        <tr><td>Si es un vuelo de simulador, la "Duración Total" debe ser igual al tiempo de "Simulador".</td><td>Simulador &gt; 0 pero ≠ Duración Total.</td><td>2</td></tr>
+                        <tr><td>Como piloto, la suma de PIC y SIC debe ser igual a la Duración Total.</td><td>PIC + SIC ≠ Duración Total (modo Piloto).</td><td>3</td></tr>
+                        <tr><td>Como alumno, la Instrucción debe ser igual a la Duración Total.</td><td>Instrucción Recibida ≠ Duración Total (modo Alumno).</td><td>3</td></tr>
+                        <tr><td>El tiempo de "Instrucción Recibida" no puede ser mayor que la Duración Total.</td><td>Instrucción &gt; Duración Total (modo Piloto).</td><td>3</td></tr>
+                        <tr><td>El tiempo de "Como Instructor" no puede ser mayor que la Duración Total.</td><td>Instructor &gt; Duración Total.</td><td>3</td></tr>
+                        <tr><td>El tiempo "Solo" no puede ser mayor que la Duración Total.</td><td>Solo &gt; Duración Total.</td><td>3</td></tr>
+                        <tr><td>El tiempo "Solo" no puede ser mayor que el tiempo "PIC".</td><td>Solo &gt; PIC (modo Piloto).</td><td>3</td></tr>
+                        <tr><td>El tiempo "Travesía" no puede ser mayor que la Duración Total.</td><td>Travesía &gt; Duración Total.</td><td>3</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ─────────────────── 4. ROLES ─────────────────── -->
+        <section class="section" id="roles">
+            <h2><span class="icon">👤</span> Roles: Piloto vs. Alumno</h2>
+            <p>La aplicación determina automáticamente tu rol según las licencias que hayas registrado en Configuración.</p>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr><th>Condición</th><th>Rol asignado</th><th>Efecto en el formulario</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Tiene al menos una licencia de piloto (PP, PD, PC, PTLA) con número de licencia.</td>
+                            <td><strong>Piloto</strong></td>
+                            <td>Se activan los campos PIC y SIC. La suma PIC + SIC debe igualar la Duración Total.</td>
+                        </tr>
+                        <tr>
+                            <td>Solo tiene licencia de Alumno Piloto (AP) o no tiene número de licencia registrado.</td>
+                            <td><strong>Alumno</strong></td>
+                            <td>PIC y SIC se deshabilitan. El campo "Instrucción Recibida" debe igualar la Duración Total.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="callout info">
+                <span class="callout-icon">💡</span>
+                <span>El rol se recalcula cada vez que guardas tu configuración. Si cambias de Alumno a Piloto, el formulario de vuelo se actualizará automáticamente.</span>
+            </div>
+        </section>
+
+        <!-- ─────────────────── 5. BITÁCORA ─────────────────── -->
+        <section class="section" id="bitacora">
+            <h2><span class="icon">📋</span> Registro detallado (Bitácora)</h2>
+            <p>El registro detallado muestra todos tus vuelos en una tabla paginada. Accede desde <strong>Bitácora → Registro Detallado</strong>.</p>
+
+            <h3>Ordenamiento</h3>
+            <p>Usa el botón <strong>Ordenar por</strong> para cambiar entre tres modos:</p>
+            <ul>
+                <li><strong>Orden de carga</strong> — orden en que fueron ingresados.</li>
+                <li><strong>Más reciente</strong> — el vuelo de fecha más nueva aparece primero.</li>
+                <li><strong>Más antiguo</strong> — el vuelo de fecha más antigua aparece primero.</li>
+            </ul>
+
+            <h3>Paginación</h3>
+            <p>Puedes elegir cuántos vuelos ver por página:</p>
+            <ul>
+                <li><strong>Escritorio:</strong> 50, 100, 150 o 200 vuelos por página.</li>
+                <li><strong>Móvil:</strong> 15, 30 o 50 vuelos por página.</li>
+            </ul>
+
+            <h3>Acciones por vuelo</h3>
+            <ul>
+                <li><strong>Editar</strong> — Abre el formulario pre-llenado con los datos del vuelo seleccionado.</li>
+                <li><strong>Eliminar</strong> — Solicita confirmación antes de borrar el vuelo.</li>
+                <li><strong>Ver detalle</strong> — Expande la fila para ver todos los campos del vuelo.</li>
+            </ul>
+
+            <h3>Filtro avanzado <span class="badge pro">Pro</span></h3>
+            <p>El botón <strong>Filtro</strong> abre un panel con más de 20 criterios para encontrar vuelos específicos:</p>
+            <ul>
+                <li>Por aeronave, matrícula, aeródromo de salida/llegada.</li>
+                <li>Por rango de fechas.</li>
+                <li>Por texto en observaciones.</li>
+                <li>Por número de página de bitácora.</li>
+                <li>Por mínimos de tiempo: duración, IFR, diurno, nocturno, aterrizajes.</li>
+                <li>Por mínimos de rol: PIC, SIC, instructor, instrucción, solo, travesía, simulador.</li>
+            </ul>
+        </section>
+
+        <!-- ─────────────────── 6. DASHBOARD ─────────────────── -->
+        <section class="section" id="dashboard">
+            <h2><span class="icon">📊</span> Dashboard</h2>
+            <p>El dashboard es la pantalla principal de la aplicación. Muestra un resumen de tus horas y actividad reciente.</p>
+
+            <h3>Indicadores disponibles</h3>
+            <p>Un indicador de <strong>Horas Totales</strong> siempre está visible. Puedes configurar hasta 7 indicadores adicionales:</p>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr><th>Indicador</th><th>Descripción</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Horas PIC</td><td>Total de horas como Piloto al Mando.</td></tr>
+                        <tr><td>Total Aterrizajes</td><td>Suma de aterrizajes diurnos y nocturnos.</td></tr>
+                        <tr><td>Horas IFR</td><td>Total de horas en condiciones instrumentales.</td></tr>
+                        <tr><td>Horas Solo</td><td>Total de horas en vuelo solo.</td></tr>
+                        <tr><td>Horas Travesía</td><td>Total de horas de travesía (XC).</td></tr>
+                        <tr><td>Horas Nocturnas</td><td>Total de horas en condición nocturna.</td></tr>
+                        <tr><td>Aterrizajes Nocturnos</td><td>Número de aterrizajes nocturnos.</td></tr>
+                        <tr><td>Instrucción Recibida</td><td>Total de horas de instrucción recibida.</td></tr>
+                        <tr><td>Como Instructor</td><td>Total de horas impartiendo instrucción.</td></tr>
+                        <tr><td>Horas Simulador</td><td>Total de horas en simulador o entrenador.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>Secciones del dashboard</h3>
+            <ul>
+                <li><strong>Resumen general</strong> — indicadores seleccionados.</li>
+                <li><strong>Totales detallados</strong> — tabla compacta con todos los totales.</li>
+                <li><strong>Últimos vuelos</strong> — los vuelos más recientes.</li>
+                <li><strong>Distribución de tiempos</strong> — gráfico circular con la composición de tus horas.</li>
+                <li><strong>Actividad reciente</strong> — períodos móviles (últimos 30, 60, 90 días).</li>
+            </ul>
+        </section>
+
+        <!-- ─────────────────── 7. RESÚMENES ─────────────────── -->
+        <section class="section" id="resumenes">
+            <h2><span class="icon">📈</span> Resúmenes</h2>
+            <p>Los resúmenes se encuentran en el menú desplegable <strong>Resúmenes</strong> de la barra de navegación.</p>
+
+            <h3>Por Página <span class="badge free">Lite</span></h3>
+            <p>Muestra el resumen de cada página de bitácora con totales parciales y acumulados, replicando el formato de una bitácora física. Puedes filtrar por rango de páginas.</p>
+
+            <h3>Anual / Mensual <span class="badge free">Lite</span></h3>
+            <p>Tabla con los totales de cada año y el desglose mensual de un año seleccionado. Incluye todas las columnas de tiempo: duración, condición, roles y tipos especiales.</p>
+
+            <h3>Por Tipo de Avión <span class="badge pro">Pro</span></h3>
+            <p>Horas voladas por categoría de aeronave, con filtro por año y mes.</p>
+
+            <h3>Por Aeronave <span class="badge pro">Pro</span></h3>
+            <p>Horas agrupadas por modelo o matrícula, con filtro por año y mes.</p>
+
+            <h3>Por Aeródromo <span class="badge pro">Pro</span></h3>
+            <p>Horas asociadas a cada aeródromo de salida o llegada, con filtro por año y mes.</p>
+
+            <h3>Resumen IFR y Recencia <span class="badge pro">Pro</span></h3>
+            <p>Muestra horas IFR y aproximaciones. Disponible en dos modos:</p>
+            <ul>
+                <li><strong>Recencia</strong> — ventana móvil de 30, 60, 90, 180 o 365 días hacia atrás.</li>
+                <li><strong>Calendario</strong> — mes y año fijo.</li>
+            </ul>
+            <p>Puedes agrupar los resultados por modelo o por matrícula.</p>
+        </section>
+
+        <!-- ─────────────────── 8. REPORTES ─────────────────── -->
+        <section class="section" id="reportes">
+            <h2><span class="icon">🖨</span> Reportes e informes</h2>
+
+            <h3>Generar reporte de bitácora <span class="badge pro">Pro</span></h3>
+            <p>Desde <strong>Bitácora → Registro Detallado</strong>, el botón <strong>Imprimir / PDF</strong> abre un modal donde puedes indicar el rango de páginas de bitácora a incluir. El reporte incluye opcionalmente una página de totales al final.</p>
+            <p>El resultado se puede imprimir directamente o guardar como PDF desde el diálogo de impresión del navegador.</p>
+
+            <h3>Exportar datos <span class="badge pro">Pro</span></h3>
+            <ul>
+                <li><strong>Excel (.xlsx)</strong> — Todos tus vuelos en una hoja de cálculo lista para abrir en Excel o Numbers.</li>
+                <li><strong>CSV</strong> — Formato de texto plano compatible con cualquier programa de hojas de cálculo.</li>
+            </ul>
+
+            <h3>Importar datos</h3>
+            <p>Puedes cargar vuelos desde un archivo Excel previamente exportado desde la aplicación o de una bitácora anterior compatible. Ve a <strong>Configuración → Importar Excel (.xlsx)</strong>.</p>
+
+            <div class="callout warn">
+                <span class="callout-icon">⚠</span>
+                <span>Verifica que el archivo Excel tenga el mismo formato de columnas que usa la aplicación. Si hay columnas faltantes o renombradas, algunos datos podrían no importarse correctamente.</span>
+            </div>
+        </section>
+
+        <hr class="divider">
+
+        <!-- ─────────────────── 9. CONFIG PERSONAL ─────────────────── -->
+        <section class="section" id="config-personal">
+            <h2><span class="icon">⚙</span> Configuración — Datos personales</h2>
+            <p>Accede desde el menú <strong>Configuración</strong>. Estos datos aparecen en los encabezados de los reportes impresos.</p>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr><th>Campo</th><th>Descripción</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><strong>País</strong></td><td>País de residencia (lista desplegable).</td></tr>
+                        <tr><td><strong>Nombre completo</strong></td><td>Tu nombre como aparecerá en los reportes.</td></tr>
+                        <tr><td><strong>RUT / Documento</strong></td><td>Formato sugerido: 12.345.678-9.</td></tr>
+                        <tr><td><strong>Fecha de nacimiento</strong></td><td>Fecha en formato día/mes/año.</td></tr>
+                        <tr><td><strong>Teléfono</strong></td><td>Prefijo de país + número.</td></tr>
+                        <tr><td><strong>Correo electrónico</strong></td><td>Email de contacto.</td></tr>
+                        <tr><td><strong>Domicilio</strong></td><td>Dirección completa.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ─────────────────── 10. LICENCIAS ─────────────────── -->
+        <section class="section" id="config-licencias">
+            <h2><span class="icon">🪪</span> Configuración — Licencias y habilitaciones</h2>
+            <p>Esta sección gestiona todas las acreditaciones DGAC. También determina el rol del usuario (Piloto o Alumno).</p>
+
+            <h3>Licencias disponibles</h3>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr><th>Código</th><th>Nombre</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>AP</td><td>Alumno Piloto</td></tr>
+                        <tr><td>PP</td><td>Piloto Privado</td></tr>
+                        <tr><td>PD</td><td>Piloto Deportivo</td></tr>
+                        <tr><td>PC</td><td>Piloto Comercial</td></tr>
+                        <tr><td>PTLA</td><td>Piloto de Transporte de Línea Aérea</td></tr>
+                        <tr><td>PPL</td><td>Piloto de Planeador</td></tr>
+                        <tr><td>PGL</td><td>Piloto de Globo Libre</td></tr>
+                        <tr><td>UL</td><td>Piloto Ultraliviano No Motorizado</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>Campos por licencia</h3>
+            <ul>
+                <li><strong>Tipo de licencia</strong> — obligatorio.</li>
+                <li><strong>Número de licencia</strong> — obligatorio para determinar el rol de Piloto.</li>
+                <li><strong>Vencimiento</strong> — fecha de vigencia de la licencia.</li>
+                <li><strong>Habilitación de Categoría</strong> — según la licencia: Avión, Helicóptero, Planeador, Globo Libre, etc.</li>
+                <li><strong>Habilitación de Clase</strong> — solo para aeronaves de categoría Avión: Monomotor / Multimotor, Terrestre / Anfibio / Hidroavión.</li>
+            </ul>
+
+            <h3>Habilitaciones de Función</h3>
+            <ul>
+                <li>Instructor de Vuelo</li>
+                <li>Ayudante de Instructor</li>
+                <li>Copiloto (SIC)</li>
+                <li>I.V.I.</li>
+                <li>English Proficient</li>
+            </ul>
+
+            <h3>Habilitaciones Especiales</h3>
+            <ul>
+                <li>IFR (Vuelo por Instrumentos)</li>
+                <li>Agrícola</li>
+                <li>Pesca (Prospección Pesquera)</li>
+            </ul>
+
+            <h3>Habilitaciones de Tipo</h3>
+            <p>Para cada tipo de aeronave certificado, ingresa el nombre del tipo (ej: B737, A320, C172) y su fecha de vencimiento.</p>
+
+            <h3>Certificado Médico</h3>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr><th>Clase</th><th>Aplicación</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>CM1</td><td>Pilotos comerciales.</td></tr>
+                        <tr><td>CM2</td><td>Pilotos privados.</td></tr>
+                        <tr><td>CM3</td><td>Controladores de tránsito aéreo.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <p>Puedes registrar también restricciones o dispensas médicas vigentes.</p>
+
+            <div class="callout info">
+                <span class="callout-icon">💡</span>
+                <span>Recuerda presionar <strong>Guardar configuración</strong> después de agregar o modificar cualquier licencia o habilitación.</span>
+            </div>
+        </section>
+
+        <!-- ─────────────────── 11. DASHBOARD CONFIG ─────────────────── -->
+        <section class="section" id="config-dashboard">
+            <h2><span class="icon">🎛</span> Configuración — Personalizar dashboard</h2>
+            <p>En <strong>Configuración → Dashboard</strong> puedes seleccionar cuáles de los 10 indicadores disponibles quieres mostrar en los 7 espacios configurables. El indicador de <strong>Horas Totales</strong> siempre está visible y no se puede reemplazar.</p>
+            <p>Los cambios se aplican al guardar la configuración.</p>
+        </section>
+
+        <!-- ─────────────────── 12. PLANES ─────────────────── -->
+        <section class="section" id="planes">
+            <h2><span class="icon">🏅</span> Plan Lite vs. Plan Pro</h2>
+            <p>La aplicación ofrece dos planes. Los nuevos usuarios tienen acceso a una prueba gratuita de 14 días del Plan Pro.</p>
+
+            <div class="plan-grid">
+                <div class="plan-card lite-card">
+                    <h3 style="color:var(--green)">Plan Lite — Gratis</h3>
+                    <ul>
+                        <li>Registro ilimitado de vuelos</li>
+                        <li>Dashboard con indicadores</li>
+                        <li>Resumen anual / mensual</li>
+                        <li>Resumen por página</li>
+                        <li>Gestión de licencias</li>
+                        <li>Importar datos desde Excel</li>
+                    </ul>
+                </div>
+                <div class="plan-card pro-card">
+                    <h3 style="color:var(--primary)">Plan Pro</h3>
+                    <ul>
+                        <li>Todo lo del Plan Lite</li>
+                        <li>Resumen por Tipo de Avión</li>
+                        <li>Resumen por Aeronave</li>
+                        <li>Resumen por Aeródromo</li>
+                        <li>Resumen IFR y Recencia</li>
+                        <li>Filtro avanzado</li>
+                        <li>Generar e imprimir reportes</li>
+                        <li>Exportar Excel y CSV</li>
+                    </ul>
+                    <div class="plan-price">
+                        <strong>$6.000 CLP/mes</strong> · $60.000 CLP/año
+                    </div>
+                </div>
+            </div>
+
+            <div class="callout info">
+                <span class="callout-icon">💡</span>
+                <span>La prueba gratuita de 14 días del Plan Pro está disponible para nuevas cuentas y no requiere tarjeta de crédito. Puedes activarla desde <strong>Configuración → Plan y Suscripción</strong>.</span>
+            </div>
+        </section>
+
+        <hr class="divider">
+        <p style="text-align:center; color:var(--muted); font-size:0.8rem;">
+            Bitácora de Vuelo · <a href="/index.html" style="color:var(--primary); text-decoration:none;">Volver a la aplicación</a>
+        </p>
+
+    </main>
+</div>
+
+<script>
+    // Highlight active TOC link on scroll
+    const sections = document.querySelectorAll('.section[id]');
+    const links    = document.querySelectorAll('.toc-link[href^="#"]');
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+            if (e.isIntersecting) {
+                links.forEach(l => l.classList.remove('active'));
+                const active = document.querySelector(`.toc-link[href="#${e.target.id}"]`);
+                if (active) active.classList.add('active');
+            }
+        });
+    }, { rootMargin: '-20% 0px -70% 0px' });
+    sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>

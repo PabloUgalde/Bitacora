@@ -170,7 +170,7 @@ showUpgradeScreen() {
                 <button class="upgrade-plan-btn featured" onclick="plan.checkout('annual')">
                     <span class="plan-badge">Mejor valor</span>
                     <span class="plan-name">Anual</span>
-                    <span class="plan-price">$40.000 CLP/año</span>
+                    <span class="plan-price">$60.000 CLP/año</span>
                     <span class="plan-saving">2 meses gratis</span>
                 </button>
             </div>
