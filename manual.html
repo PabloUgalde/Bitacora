@@ -319,11 +319,12 @@
                 <a class="toc-link" href="#planes">Lite vs. Pro</a>
             </div>
             <div class="toc-section">
-                <div class="toc-section-title">Instalación</div>
+                <div class="toc-section-title">Instalación y offline</div>
                 <a class="toc-link" href="#pwa">Instalar como app</a>
                 <a class="toc-link sub" href="#pwa-android">Android</a>
                 <a class="toc-link sub" href="#pwa-ios">iPhone / iPad</a>
                 <a class="toc-link sub" href="#pwa-desktop">Computador</a>
+                <a class="toc-link" href="#offline">Uso sin conexión</a>
             </div>
         </nav>
     </aside>
@@ -1098,8 +1099,75 @@
                 <span>También puedes instalar desde el menú del navegador: en Chrome, menú <strong>⋮ → Guardar e compartir → Instalar página como aplicación</strong>. En Edge, menú <strong>… → Aplicaciones → Instalar este sitio como aplicación</strong>.</span>
             </div>
 
-            <h3>¿Funciona sin internet?</h3>
-            <p>La aplicación requiere conexión a internet para sincronizar y guardar tus vuelos en la nube. Sin embargo, una vez instalada como PWA se cargará más rápido gracias al caché del navegador.</p>
+            <h3 id="pwa-offline">¿Funciona sin internet?</h3>
+            <p>Sí. La aplicación cuenta con soporte offline completo: puedes registrar, editar y eliminar vuelos aunque no tengas señal. Los cambios se guardan localmente y se suben a la nube en cuanto recuperes conexión.</p>
+        </section>
+
+        <!-- ─────────────────── OFFLINE ─────────────────── -->
+        <section class="section" id="offline">
+            <h2><span class="icon">⚡</span> Uso sin conexión (modo offline)</h2>
+            <p>Bitácora de Vuelo está diseñada para funcionar incluso en zonas sin señal, como aeródromos remotos o vuelos en áreas sin cobertura.</p>
+
+            <h3>¿Qué puedes hacer sin internet?</h3>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr><th>Acción</th><th>¿Disponible sin señal?</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Abrir la aplicación</td><td><span style="color:var(--green)">✓ Sí</span> — se carga desde el caché del dispositivo</td></tr>
+                        <tr><td>Ver vuelos registrados</td><td><span style="color:var(--green)">✓ Sí</span> — desde el caché local</td></tr>
+                        <tr><td>Registrar un nuevo vuelo</td><td><span style="color:var(--green)">✓ Sí</span> — se guarda localmente y se sube al recuperar señal</td></tr>
+                        <tr><td>Editar un vuelo</td><td><span style="color:var(--green)">✓ Sí</span> — mismo comportamiento que guardar</td></tr>
+                        <tr><td>Eliminar un vuelo</td><td><span style="color:var(--green)">✓ Sí</span> — la eliminación se sincroniza al recuperar señal</td></tr>
+                        <tr><td>Ver resúmenes y dashboard</td><td><span style="color:var(--green)">✓ Sí</span> — calculados desde los datos en caché</td></tr>
+                        <tr><td>Exportar Excel / CSV</td><td><span style="color:var(--green)">✓ Sí</span> — usa los datos locales</td></tr>
+                        <tr><td>Iniciar sesión por primera vez</td><td><span style="color:var(--red)">✗ No</span> — requiere conexión</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>¿Cómo sé que estoy en modo offline?</h3>
+            <p>Cuando no hay conexión, aparece una barra naranja en la parte superior de la app con el mensaje:</p>
+            <div style="background:#7a3a00; color:#ffd580; font-size:0.85rem; font-weight:600; padding:0.5rem 1rem; border-radius:var(--radius); margin:0.75rem 0; text-align:center;">
+                ⚡ Sin conexión — 1 vuelo(s) pendiente(s) de sincronizar
+            </div>
+            <p>Esta barra también indica cuántos vuelos están esperando subirse a la nube.</p>
+
+            <h3>¿Cómo se sincronizan los datos al recuperar señal?</h3>
+            <div class="steps">
+                <div class="step">
+                    <div class="step-num">1</div>
+                    <div class="step-body">
+                        <h4>La app detecta la conexión automáticamente</h4>
+                        <p>No necesitas hacer nada. En cuanto el dispositivo recupera internet, la sincronización comienza sola.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">2</div>
+                    <div class="step-body">
+                        <h4>Los cambios pendientes se suben a Supabase</h4>
+                        <p>Todos los vuelos guardados, editados o eliminados sin conexión se procesan en orden.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">3</div>
+                    <div class="step-body">
+                        <h4>Confirmación y actualización</h4>
+                        <p>Aparece una notificación verde confirmando la sincronización. La barra naranja desaparece y los datos quedan actualizados.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="callout ok">
+                <span class="callout-icon">✓</span>
+                <span>Los vuelos pendientes de sincronización se mantienen guardados aunque cierres la app o reinicies el dispositivo. Se subirán la próxima vez que abras la app con señal.</span>
+            </div>
+
+            <div class="callout warn">
+                <span class="callout-icon">⚠</span>
+                <span>Si desinstalas la app o limpias el caché del navegador mientras hay vuelos pendientes de sincronizar, esos vuelos se perderán. Sincroniza antes de hacerlo.</span>
+            </div>
         </section>
 
         <hr class="divider">

@@ -159,18 +159,26 @@ const api = {
         const newFlight = ui.createFlightObject(flightDataToSave);
         const userId = api._getUserId();
 
-        // 1. Insertar en Supabase
         if (userId) {
-            const row = api._flightToRow(newFlight, userId);
-            const { error } = await supabaseClient.from('flights').insert([row]);
-            if (error) {
-                console.error("Error al guardar en Supabase:", error);
-                ui.showNotification("Error al guardar el vuelo en la base de datos.", "error");
-                return false;
+            let savedToCloud = false;
+            if (navigator.onLine) {
+                try {
+                    const row = api._flightToRow(newFlight, userId);
+                    const { error } = await supabaseClient.from('flights').insert([row]);
+                    if (!error) savedToCloud = true;
+                    else console.error("Error Supabase al guardar:", error);
+                } catch (e) { console.warn("Red caída al guardar:", e); }
+            }
+            if (!savedToCloud) {
+                api._queuePending({ op: 'save', flight: newFlight });
+                flightData.unshift(newFlight);
+                api.saveFlightsToLocalStorage();
+                ui.showNotification('Sin conexión — el vuelo se guardó localmente y se subirá cuando recuperes señal.', 'info');
+                app.updateOfflineBar();
+                return true;
             }
         }
 
-        // 2. Actualizar estado local
         flightData.unshift(newFlight);
         api.saveFlightsToLocalStorage();
         await backupManager.createBackup();
@@ -186,22 +194,27 @@ const api = {
 
         const userId = api._getUserId();
 
-        // 1. Actualizar en Supabase
         if (userId) {
-            const row = api._flightToRow(updatedFlight, userId);
-            const { error } = await supabaseClient
-                .from('flights')
-                .update(row)
-                .eq('id', flightId)
-                .eq('user_id', userId);
-            if (error) {
-                console.error("Error al actualizar en Supabase:", error);
-                ui.showNotification("Error al actualizar el vuelo.", "error");
-                return false;
+            let savedToCloud = false;
+            if (navigator.onLine) {
+                try {
+                    const row = api._flightToRow(updatedFlight, userId);
+                    const { error } = await supabaseClient.from('flights').update(row)
+                        .eq('id', flightId).eq('user_id', userId);
+                    if (!error) savedToCloud = true;
+                    else console.error("Error Supabase al actualizar:", error);
+                } catch (e) { console.warn("Red caída al actualizar:", e); }
+            }
+            if (!savedToCloud) {
+                api._queuePending({ op: 'update', flight: updatedFlight });
+                flightData[index] = updatedFlight;
+                api.saveFlightsToLocalStorage();
+                ui.showNotification('Sin conexión — cambios guardados localmente. Se sincronizarán al recuperar señal.', 'info');
+                app.updateOfflineBar();
+                return true;
             }
         }
 
-        // 2. Actualizar estado local
         flightData[index] = updatedFlight;
         api.saveFlightsToLocalStorage();
         await backupManager.createBackup();
@@ -214,25 +227,85 @@ const api = {
 
         const userId = api._getUserId();
 
-        // 1. Eliminar en Supabase
         if (userId) {
-            const { error } = await supabaseClient
-                .from('flights')
-                .delete()
-                .eq('id', flightId)
-                .eq('user_id', userId);
-            if (error) {
-                console.error("Error al eliminar en Supabase:", error);
-                ui.showNotification("Error al eliminar el vuelo.", "error");
-                return false;
+            let deletedFromCloud = false;
+            if (navigator.onLine) {
+                try {
+                    const { error } = await supabaseClient.from('flights').delete()
+                        .eq('id', flightId).eq('user_id', userId);
+                    if (!error) deletedFromCloud = true;
+                    else console.error("Error Supabase al eliminar:", error);
+                } catch (e) { console.warn("Red caída al eliminar:", e); }
+            }
+            if (!deletedFromCloud) {
+                api._queuePending({ op: 'delete', flightId });
+                flightData.splice(index, 1);
+                api.saveFlightsToLocalStorage();
+                ui.showNotification('Sin conexión — eliminación guardada localmente. Se sincronizará al recuperar señal.', 'info');
+                app.updateOfflineBar();
+                return true;
             }
         }
 
-        // 2. Actualizar estado local
         flightData.splice(index, 1);
         api.saveFlightsToLocalStorage();
         await backupManager.createBackup();
         return true;
+    },
+
+    // ── Cola offline ──────────────────────────────────────────────
+    _getPendingQueue: () => {
+        try { return JSON.parse(localStorage.getItem('flightLogPendingSync') || '[]'); }
+        catch { return []; }
+    },
+
+    _savePendingQueue: (queue) => {
+        localStorage.setItem('flightLogPendingSync', JSON.stringify(queue));
+    },
+
+    _queuePending: (item) => {
+        const queue = api._getPendingQueue();
+        queue.push(item);
+        api._savePendingQueue(queue);
+    },
+
+    syncPendingFlights: async () => {
+        const queue = api._getPendingQueue();
+        if (queue.length === 0) return;
+
+        const userId = api._getUserId();
+        if (!userId || !navigator.onLine) return;
+
+        ui.showNotification(`Sincronizando ${queue.length} vuelo(s) pendiente(s)...`, 'info');
+
+        const failed = [];
+        for (const item of queue) {
+            try {
+                if (item.op === 'save') {
+                    const row = api._flightToRow(item.flight, userId);
+                    const { error } = await supabaseClient.from('flights').insert([row]);
+                    if (error) throw error;
+                } else if (item.op === 'update') {
+                    const row = api._flightToRow(item.flight, userId);
+                    const { error } = await supabaseClient.from('flights').update(row)
+                        .eq('id', item.flight.id).eq('user_id', userId);
+                    if (error) throw error;
+                } else if (item.op === 'delete') {
+                    const { error } = await supabaseClient.from('flights').delete()
+                        .eq('id', item.flightId).eq('user_id', userId);
+                    if (error) throw error;
+                }
+            } catch (e) {
+                failed.push(item);
+            }
+        }
+
+        api._savePendingQueue(failed);
+        if (failed.length === 0) {
+            ui.showNotification(`✓ ${queue.length} vuelo(s) sincronizado(s) correctamente.`, 'success');
+        } else {
+            ui.showNotification(`${queue.length - failed.length} sincronizados, ${failed.length} con error. Se reintentará.`, 'error');
+        }
     },
 
     // ── Almacenamiento local (caché / fallback offline) ───────────

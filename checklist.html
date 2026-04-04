@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checklist de Pruebas — Bitácora de Vuelo</title>
+    <style>
+        :root {
+            --gold:   #D4AF37;
+            --bg:     #121212;
+            --card:   #1E1E1E;
+            --card2:  #2a2a2a;
+            --border: #383838;
+            --text:   #E0E0E0;
+            --white:  #FFFFFF;
+            --muted:  #9E9E9E;
+            --green:  #4CAF50;
+            --red:    #D32F2F;
+            --radius: 8px;
+            --font: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.6; font-size: 14px; }
+
+        .page { max-width: 780px; margin: 0 auto; padding: 2.5rem 1.5rem 5rem; }
+
+        .header { text-align: center; margin-bottom: 2.5rem; }
+        .header .logo { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.5rem; }
+        .header h1 { font-size: 1.8rem; font-weight: 700; color: var(--white); }
+        .header p  { color: var(--muted); margin-top: 0.4rem; font-size: 0.875rem; }
+
+        .tester-box {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 2rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        .field label { display: block; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 0.3rem; }
+        .field input {
+            border: none;
+            border-bottom: 1px solid var(--border);
+            width: 100%;
+            height: 28px;
+            background: transparent;
+            color: var(--text);
+            font-family: var(--font);
+            font-size: 0.9rem;
+            outline: none;
+        }
+        .field input:focus { border-bottom-color: var(--gold); }
+
+        .section { margin-bottom: 2rem; }
+        .section-title {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--gold);
+            padding: 0.4rem 0;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 0.75rem;
+        }
+
+        .check-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            padding: 0.55rem 0.75rem;
+            border-radius: 6px;
+            transition: background 0.1s;
+            cursor: pointer;
+        }
+        .check-item:hover { background: var(--card2); }
+        .check-item input[type="checkbox"] {
+            width: 16px; height: 16px;
+            margin-top: 2px;
+            flex-shrink: 0;
+            accent-color: var(--gold);
+            cursor: pointer;
+        }
+        .check-item label { cursor: pointer; font-size: 0.875rem; line-height: 1.5; flex: 1; }
+        .check-item label .sub { display: block; font-size: 0.78rem; color: var(--muted); margin-top: 1px; }
+        .check-item.completed label { text-decoration: line-through; color: var(--muted); }
+
+        .bug-box {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--red);
+            border-radius: var(--radius);
+            padding: 1rem 1.25rem;
+            margin-top: 0.5rem;
+        }
+        .bug-box label { display: block; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 0.4rem; }
+        .bug-box textarea {
+            width: 100%;
+            min-height: 70px;
+            background: transparent;
+            border: none;
+            color: var(--text);
+            font-family: var(--font);
+            font-size: 0.85rem;
+            resize: vertical;
+            outline: none;
+            line-height: 1.5;
+        }
+        .bug-box textarea::placeholder { color: var(--border); }
+
+        .summary-bar {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            background: var(--card);
+            border-top: 1px solid var(--border);
+            padding: 0.75rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            z-index: 100;
+        }
+        .progress-wrap { flex: 1; display: flex; align-items: center; gap: 0.75rem; }
+        .progress-bar { flex: 1; height: 6px; background: var(--border); border-radius: 99px; overflow: hidden; }
+        .progress-fill { height: 100%; background: var(--gold); border-radius: 99px; transition: width 0.3s; width: 0%; }
+        .progress-text { font-size: 0.8rem; color: var(--muted); white-space: nowrap; }
+        .btn-pdf {
+            background: var(--gold);
+            color: #000;
+            font-weight: 700;
+            font-size: 0.8rem;
+            border: none;
+            border-radius: var(--radius);
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+        }
+        .btn-pdf:hover { opacity: 0.85; }
+
+        @media print {
+            .summary-bar { display: none; }
+            body { background: #fff; color: #111; }
+            .header .logo { color: #a07800; }
+            .header h1 { color: #000; }
+            .section-title { color: #a07800; border-color: #ddd; }
+            .tester-box, .bug-box { border-color: #ccc; background: #fafafa; }
+            .field input { border-bottom-color: #ccc; }
+            .bug-box { border-left-color: #c00; }
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+
+    <div class="header">
+        <div class="logo">Bitácora de Vuelo — Prueba Beta</div>
+        <h1>Checklist de Pruebas</h1>
+        <p>Completa cada punto, anota los problemas que encuentres y guarda como PDF para enviarlo al equipo.</p>
+    </div>
+
+    <div class="tester-box">
+        <div class="field">
+            <label>Nombre del tester</label>
+            <input type="text" placeholder="Tu nombre completo">
+        </div>
+        <div class="field">
+            <label>Fecha de prueba</label>
+            <input type="date">
+        </div>
+        <div class="field">
+            <label>Dispositivo y navegador</label>
+            <input type="text" placeholder="ej: iPhone 15 / Safari">
+        </div>
+        <div class="field">
+            <label>Plan activo</label>
+            <input type="text" placeholder="Lite / Pro / Trial">
+        </div>
+    </div>
+
+    <!-- 1. Configuración inicial -->
+    <div class="section">
+        <div class="section-title">1 · Configuración inicial</div>
+        <div class="check-item"><input type="checkbox" id="c1"><label for="c1">Inicié sesión con mi correo y contraseña correctamente.</label></div>
+        <div class="check-item"><input type="checkbox" id="c2"><label for="c2">Agregué al menos una licencia DGAC en Configuración → Licencias.<span class="sub">El rol (Piloto o Alumno) debe actualizarse al guardar.</span></label></div>
+        <div class="check-item"><input type="checkbox" id="c3"><label for="c3">Completé mis datos personales (nombre, RUT, teléfono, domicilio) y guardé.</label></div>
+        <div class="check-item"><input type="checkbox" id="c4"><label for="c4">El dashboard se cargó con mis datos al volver a la pantalla principal.</label></div>
+        <div class="bug-box">
+            <label>Problemas encontrados</label>
+            <textarea placeholder="Qué hiciste, qué esperabas ver, qué ocurrió en cambio..."></textarea>
+        </div>
+    </div>
+
+    <!-- 2. Registro de vuelos -->
+    <div class="section">
+        <div class="section-title">2 · Registro de vuelos</div>
+        <div class="check-item"><input type="checkbox" id="c5"><label for="c5">Abrí el formulario "Añadir Vuelo" desde el menú Bitácora.</label></div>
+        <div class="check-item"><input type="checkbox" id="c6"><label for="c6"><strong>Paso 1:</strong> No pude avanzar dejando Aeronave, Matrícula, Desde o Hasta vacíos.<span class="sub">El formulario debe mostrar un error claro en cada campo faltante.</span></label></div>
+        <div class="check-item"><input type="checkbox" id="c7"><label for="c7"><strong>Paso 2:</strong> Con Duración Total = 0 se mostró error al intentar avanzar.</label></div>
+        <div class="check-item"><input type="checkbox" id="c8"><label for="c8"><strong>Paso 2:</strong> Diurno + Nocturno distinto a la Duración Total mostró error de suma.</label></div>
+        <div class="check-item"><input type="checkbox" id="c9"><label for="c9"><strong>Paso 2:</strong> Al ingresar Horas IFR aparecieron los campos de Nº Aproximaciones y Tipo.</label></div>
+        <div class="check-item"><input type="checkbox" id="c10"><label for="c10"><strong>Paso 2:</strong> Ingresar decimal en Aterrizajes Día o Noche mostró error.</label></div>
+        <div class="check-item"><input type="checkbox" id="c11"><label for="c11"><strong>Paso 3 (Piloto):</strong> PIC + SIC distinto a Duración Total mostró error.</label></div>
+        <div class="check-item"><input type="checkbox" id="c12"><label for="c12"><strong>Paso 3 (Alumno):</strong> Instrucción Recibida distinto a Duración Total mostró error.</label></div>
+        <div class="check-item"><input type="checkbox" id="c13"><label for="c13"><strong>Paso 4:</strong> El resumen mostró todos los datos correctamente antes de guardar.</label></div>
+        <div class="check-item"><input type="checkbox" id="c14"><label for="c14">El vuelo se guardó y apareció en el Registro Detallado.</label></div>
+        <div class="check-item"><input type="checkbox" id="c15"><label for="c15">Edité un vuelo existente y los cambios se guardaron correctamente.</label></div>
+        <div class="check-item"><input type="checkbox" id="c16"><label for="c16">Eliminé un vuelo: se pidió confirmación y desapareció de la lista.</label></div>
+        <div class="bug-box">
+            <label>Problemas encontrados</label>
+            <textarea placeholder="Qué hiciste, qué esperabas ver, qué ocurrió en cambio..."></textarea>
+        </div>
+    </div>
+
+    <!-- 3. Registro detallado -->
+    <div class="section">
+        <div class="section-title">3 · Registro detallado</div>
+        <div class="check-item"><input type="checkbox" id="c17"><label for="c17">Los vuelos se listan correctamente con fecha, aeronave y ruta.</label></div>
+        <div class="check-item"><input type="checkbox" id="c18"><label for="c18">El ordenamiento (Más reciente / Más antiguo / Orden de carga) funciona.</label></div>
+        <div class="check-item"><input type="checkbox" id="c19"><label for="c19">La paginación avanza y retrocede sin perder datos.</label></div>
+        <div class="check-item"><input type="checkbox" id="c20"><label for="c20">El botón "Ver detalle" expande y colapsa la fila correctamente.</label></div>
+        <div class="bug-box">
+            <label>Problemas encontrados</label>
+            <textarea placeholder="Qué hiciste, qué esperabas ver, qué ocurrió en cambio..."></textarea>
+        </div>
+    </div>
+
+    <!-- 4. Dashboard -->
+    <div class="section">
+        <div class="section-title">4 · Dashboard</div>
+        <div class="check-item"><input type="checkbox" id="c21"><label for="c21">Los indicadores muestran los totales correctos (comparé con mis vuelos).</label></div>
+        <div class="check-item"><input type="checkbox" id="c22"><label for="c22">El gráfico de distribución de tiempos se muestra sin errores.</label></div>
+        <div class="check-item"><input type="checkbox" id="c23"><label for="c23">La sección "Últimos vuelos" muestra mis vuelos más recientes.</label></div>
+        <div class="check-item"><input type="checkbox" id="c24"><label for="c24">Cambié los indicadores en Configuración → Dashboard y los cambios se aplicaron.</label></div>
+        <div class="bug-box">
+            <label>Problemas encontrados</label>
+            <textarea placeholder="Qué hiciste, qué esperabas ver, qué ocurrió en cambio..."></textarea>
+        </div>
+    </div>
+
+    <!-- 5. Resúmenes -->
+    <div class="section">
+        <div class="section-title">5 · Resúmenes</div>
+        <div class="check-item"><input type="checkbox" id="c25"><label for="c25"><strong>Por Página:</strong> Totales por página y acumulados son correctos.</label></div>
+        <div class="check-item"><input type="checkbox" id="c26"><label for="c26"><strong>Anual / Mensual:</strong> Las horas coinciden con los vuelos registrados.</label></div>
+        <div class="check-item"><input type="checkbox" id="c27"><label for="c27"><strong>Pro:</strong> Por Tipo de Avión, Por Aeronave, Por Aeródromo y Resumen IFR funcionan.<span class="sub">Si tienes plan Lite, debe aparecer el mensaje de upgrade al intentar acceder.</span></label></div>
+        <div class="bug-box">
+            <label>Problemas encontrados</label>
+            <textarea placeholder="Qué hiciste, qué esperabas ver, qué ocurrió en cambio..."></textarea>
+        </div>
+    </div>
+
+    <!-- 6. Reportes -->
+    <div class="section">
+        <div class="section-title">6 · Reportes y exportación (Plan Pro)</div>
+        <div class="check-item"><input type="checkbox" id="c28"><label for="c28">Generé un reporte PDF de bitácora y se ve correctamente al imprimir.</label></div>
+        <div class="check-item"><input type="checkbox" id="c29"><label for="c29">Exporté en Excel (.xlsx) y el archivo se descargó con todos los datos.</label></div>
+        <div class="check-item"><input type="checkbox" id="c30"><label for="c30">Exporté en CSV y el archivo abrió correctamente en una planilla.</label></div>
+        <div class="bug-box">
+            <label>Problemas encontrados</label>
+            <textarea placeholder="Qué hiciste, qué esperabas ver, qué ocurrió en cambio..."></textarea>
+        </div>
+    </div>
+
+    <!-- 7. General -->
+    <div class="section">
+        <div class="section-title">7 · Comportamiento general</div>
+        <div class="check-item"><input type="checkbox" id="c31"><label for="c31">La app se ve bien en mi dispositivo (sin textos cortados ni botones superpuestos).</label></div>
+        <div class="check-item"><input type="checkbox" id="c32"><label for="c32">En móvil: el menú hamburguesa y la navegación funcionan correctamente.</label></div>
+        <div class="check-item"><input type="checkbox" id="c33"><label for="c33">Cerré sesión y volví a ingresar sin problemas.</label></div>
+        <div class="check-item"><input type="checkbox" id="c34"><label for="c34">No encontré textos en inglés en la interfaz.</label></div>
+        <div class="check-item"><input type="checkbox" id="c35"><label for="c35">El Manual de Usuario (enlace "Manual" en el menú) abre y se lee correctamente.</label></div>
+        <div class="bug-box">
+            <label>Problemas encontrados</label>
+            <textarea placeholder="Qué hiciste, qué esperabas ver, qué ocurrió en cambio..."></textarea>
+        </div>
+    </div>
+
+    <!-- 8. Offline -->
+    <div class="section">
+        <div class="section-title">8 · Prueba offline (sin conexión)</div>
+        <div class="check-item"><input type="checkbox" id="c36"><label for="c36">Con la app abierta, desactivé el WiFi o los datos móviles.<span class="sub">Debe aparecer la barra naranja "⚡ Sin conexión" en la parte superior.</span></label></div>
+        <div class="check-item"><input type="checkbox" id="c37"><label for="c37">Registré un vuelo sin conexión y se guardó correctamente (visible en la bitácora).<span class="sub">La notificación debe decir "Sin conexión — el vuelo se guardó localmente..."</span></label></div>
+        <div class="check-item"><input type="checkbox" id="c38"><label for="c38">La barra naranja muestra el número correcto de vuelos pendientes de sincronizar.</label></div>
+        <div class="check-item"><input type="checkbox" id="c39"><label for="c39">Al recuperar la conexión, la sincronización comenzó sola sin que hiciera nada.<span class="sub">Debe aparecer la notificación verde "✓ X vuelo(s) sincronizado(s) correctamente".</span></label></div>
+        <div class="check-item"><input type="checkbox" id="c40"><label for="c40">Después de sincronizar, la barra naranja desapareció.</label></div>
+        <div class="check-item"><input type="checkbox" id="c41"><label for="c41">Guardé un vuelo sin conexión, cerré la app completamente, recuperé señal y volví a abrir la app.<span class="sub">La sincronización debe ocurrir automáticamente al abrir, sin necesidad de reconectar el WiFi.</span></label></div>
+        <div class="bug-box">
+            <label>Problemas encontrados</label>
+            <textarea placeholder="Qué hiciste, qué esperabas ver, qué ocurrió en cambio..."></textarea>
+        </div>
+    </div>
+
+    <!-- 9. Comentarios -->
+    <div class="section">
+        <div class="section-title">9 · Comentarios generales</div>
+        <div class="bug-box" style="border-left-color: #D4AF37">
+            <label>¿Algo que te resultó confuso, lento o que mejorarías?</label>
+            <textarea style="min-height:100px" placeholder="Sugerencias, impresiones generales, algo que faltó..."></textarea>
+        </div>
+    </div>
+
+    <p style="text-align:center; color:#9E9E9E; font-size:0.78rem; margin-top:1rem;">
+        Gracias por tu tiempo. Una vez completado, presiona "Guardar PDF" y envíalo al equipo.
+    </p>
+</div>
+
+<!-- Barra inferior -->
+<div class="summary-bar">
+    <div class="progress-wrap">
+        <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+        <div class="progress-text" id="progress-text">0 / 41 completados</div>
+    </div>
+    <button class="btn-pdf" onclick="window.print()">⬇ Guardar PDF</button>
+</div>
+
+<script>
+    const total = document.querySelectorAll('input[type="checkbox"]').length;
+    const fill  = document.getElementById('progress-fill');
+    const lbl   = document.getElementById('progress-text');
+
+    function update() {
+        const done = document.querySelectorAll('input[type="checkbox"]:checked').length;
+        fill.style.width = (done / total * 100) + '%';
+        lbl.textContent = `${done} / ${total} completados`;
+        document.querySelectorAll('.check-item').forEach(item => {
+            const cb = item.querySelector('input[type="checkbox"]');
+            item.classList.toggle('completed', cb.checked);
+        });
+    }
+
+    document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        const saved = sessionStorage.getItem(cb.id);
+        if (saved === 'true') cb.checked = true;
+        cb.addEventListener('change', () => {
+            sessionStorage.setItem(cb.id, cb.checked);
+            update();
+        });
+    });
+
+    // Fecha de hoy por defecto
+    const d = document.querySelector('input[type="date"]');
+    if (d) d.value = new Date().toISOString().split('T')[0];
+
+    update();
+</script>
+</body>
+</html>

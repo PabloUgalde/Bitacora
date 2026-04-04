@@ -22,9 +22,16 @@ const app = {
         } else {
             ui.showView('view-dashboard');
         }
-        plan.apply(); 
+        plan.apply();
         await backupManager.initialize();
         app.updateSortButtonText();
+        app.updateOfflineBar();
+        app.setupOfflineListeners();
+        // Sincronizar pendientes si hay señal al abrir (ej: se guardaron offline y se reabrió con conexión)
+        if (navigator.onLine && api._getPendingQueue().length > 0) {
+            await api.syncPendingFlights();
+            app.updateOfflineBar();
+        }
         anotaciones.injectStyles();
         await anotaciones.load();
         setTimeout(async () => {
@@ -430,6 +437,40 @@ const app = {
             });
             window.globalClickListenerAttached = true;
         }
+    },
+
+    updateOfflineBar: () => {
+        const bar     = document.getElementById('offline-bar');
+        const label   = document.getElementById('offline-pending-label');
+        if (!bar) return;
+        const pending = api._getPendingQueue().length;
+        const offline = !navigator.onLine;
+        if (offline || pending > 0) {
+            bar.style.display = 'flex';
+            if (pending > 0) {
+                label.textContent = `— ${pending} vuelo(s) pendiente(s) de sincronizar`;
+            } else {
+                label.textContent = '— Los vuelos se guardarán localmente hasta recuperar señal.';
+            }
+        } else {
+            bar.style.display = 'none';
+        }
+    },
+
+    setupOfflineListeners: () => {
+        window.addEventListener('offline', () => {
+            app.updateOfflineBar();
+        });
+        window.addEventListener('online', async () => {
+            const pending = api._getPendingQueue().length;
+            if (pending > 0) {
+                await api.syncPendingFlights();
+                await api.loadInitialFlights();
+                render.dashboard();
+                render.detailedLog();
+            }
+            app.updateOfflineBar();
+        });
     },
 
     openFilterModal: () => { document.getElementById('filter-modal').classList.add('open'); },
