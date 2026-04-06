@@ -17,11 +17,56 @@
 <body>
 <script>
 (function() {
-    // Si no hay sesión, redirigir al landing
-    const stored = localStorage.getItem('sb-rdnniehpsdforkfngwrf-auth-token');
-    if (!stored) {
-        // Solo redirigir si no estamos ya en el landing
-        if (!stored && !window.location.search.includes('auth=1')) {
+    const isAuthCallback = window.location.search.includes('auth=1');
+
+    if (isAuthCallback) {
+        // Viene del link de confirmación de email.
+        // Supabase procesa el token del hash de forma asíncrona —
+        // esperamos a que lo resuelva antes de decidir qué hacer.
+        window.addEventListener('load', function() {
+            const SUPABASE_URL = 'https://rdnniehpsdforkfngwrf.supabase.co';
+            const SUPABASE_ANON_KEY = 'sb_publishable_iavyVSmxuwncUjdCM9e9kw_5c4QC-b5';
+
+            // Pequeño delay para que supabase-js procese el hash
+            setTimeout(async function() {
+                try {
+                    const sb = window.supabaseClient || supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                    const { data: { session } } = await sb.auth.getSession();
+
+                    if (session) {
+                        // Enviar email de bienvenida (solo si es primera vez)
+                        const isNew = session.user.created_at === session.user.last_sign_in_at
+                            || (Date.now() - new Date(session.user.created_at).getTime()) < 60000;
+
+                        if (isNew) {
+                            fetch('https://rdnniehpsdforkfngwrf.supabase.co/functions/v1/bienvenida-hook', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': 'Bearer ' + session.access_token
+                                },
+                                body: JSON.stringify({
+                                    event: 'email_confirmed',
+                                    user: session.user
+                                })
+                            }).catch(e => console.warn('Bienvenida hook error:', e));
+                        }
+
+                        // Limpiar el ?auth=1 de la URL sin recargar
+                        window.history.replaceState({}, '', '/');
+                    } else {
+                        window.location.replace('/landing.html');
+                    }
+                } catch(e) {
+                    console.error('Auth callback error:', e);
+                    window.location.replace('/landing.html');
+                }
+            }, 800);
+        });
+    } else {
+        // Flujo normal — si no hay sesión va al landing
+        const stored = localStorage.getItem('sb-rdnniehpsdforkfngwrf-auth-token');
+        if (!stored) {
             window.location.replace('/landing.html');
         }
     }
