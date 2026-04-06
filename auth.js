@@ -75,7 +75,8 @@ const auth = {
         auth._setLoading(true, 'Creando cuenta...');
         const { data, error } = await supabaseClient.auth.signUp({
             email, password,
-            options: { data: { full_name: name } }
+            options: { data: { full_name: name } },
+            emailRedirectTo: 'https://bitacoradevuelo.cl/?auth=1'
         });
         if (error) {
             auth._setLoading(false);
@@ -97,7 +98,7 @@ const auth = {
     forgotPassword: async (email) => {
         auth._setLoading(true, 'Enviando email...');
         const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
-            redirectTo: window.location.origin + window.location.pathname
+            redirectTo: 'https://bitacoradevuelo.cl/?auth=1'
         });
         auth._setLoading(false);
         if (error) {
