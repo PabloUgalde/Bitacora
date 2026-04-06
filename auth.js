@@ -46,23 +46,26 @@ const auth = {
 
                     // Es signup confirmado — enviar email de bienvenida
                     if (type === 'signup') {
-                        const { data: { session: newSession } } = await supabaseClient.auth.getSession();
-                        if (newSession) {
-                            const createdAt = new Date(newSession.user.created_at).getTime();
-                            const isNew = (Date.now() - createdAt) < 120000; // menos de 2 min
-                            if (isNew) {
-                                fetch('https://rdnniehpsdforkfngwrf.supabase.co/functions/v1/bienvenida-hook', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                        'Authorization': 'Bearer ' + newSession.access_token
-                                    },
-                                    body: JSON.stringify({
-                                        event: 'email_confirmed',
-                                        user: newSession.user
-                                    })
-                                }).catch(e => console.warn('Bienvenida hook error:', e));
-                            }
+                        const createdAt = new Date(
+                            JSON.parse(atob(accessToken.split('.')[1])).email_confirmed_at 
+                            || Date.now()
+                        ).getTime();
+                        const isNew = (Date.now() - createdAt) < 120000;
+                        if (isNew) {
+                            fetch('https://rdnniehpsdforkfngwrf.supabase.co/functions/v1/bienvenida-hook', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': 'Bearer ' + accessToken
+                                },
+                                body: JSON.stringify({
+                                    event: 'email_confirmed',
+                                    user: { 
+                                        email: JSON.parse(atob(accessToken.split('.')[1])).email,
+                                        user_metadata: JSON.parse(atob(accessToken.split('.')[1])).user_metadata || {}
+                                    }
+                                })
+                            }).catch(e => console.warn('Bienvenida hook error:', e));
                         }
                     }
                     // Continuar con getSession normal
