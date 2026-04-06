@@ -35,13 +35,37 @@ const auth = {
                         access_token: accessToken,
                         refresh_token: refreshToken || ''
                     });
-                    window.history.replaceState({}, '', window.location.pathname);
-                    
+
+                    // Limpiar hash Y query string (?auth=1) de la URL
+                    window.history.replaceState({}, '', '/');
+
                     if (type === 'recovery') {
                         auth._showAuthScreen('reset');
                         return false;
                     }
-                    // Para signup y otros tipos, continuar con getSession normal
+
+                    // Es signup confirmado — enviar email de bienvenida
+                    if (type === 'signup') {
+                        const { data: { session: newSession } } = await supabaseClient.auth.getSession();
+                        if (newSession) {
+                            const createdAt = new Date(newSession.user.created_at).getTime();
+                            const isNew = (Date.now() - createdAt) < 120000; // menos de 2 min
+                            if (isNew) {
+                                fetch('https://rdnniehpsdforkfngwrf.supabase.co/functions/v1/bienvenida-hook', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Authorization': 'Bearer ' + newSession.access_token
+                                    },
+                                    body: JSON.stringify({
+                                        event: 'email_confirmed',
+                                        user: newSession.user
+                                    })
+                                }).catch(e => console.warn('Bienvenida hook error:', e));
+                            }
+                        }
+                    }
+                    // Continuar con getSession normal
                 }
             }
             // Verificar si ya hay sesión activa
