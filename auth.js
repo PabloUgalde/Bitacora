@@ -46,12 +46,9 @@ const auth = {
 
                     // Es signup confirmado — enviar email de bienvenida
                     if (type === 'signup') {
-                        const createdAt = new Date(
-                            JSON.parse(atob(accessToken.split('.')[1])).email_confirmed_at 
-                            || Date.now()
-                        ).getTime();
-                        const isNew = (Date.now() - createdAt) < 120000;
-                        if (isNew) {
+                        try {
+                            const payload = JSON.parse(atob(accessToken.split('.')[1]));
+                            console.log('Disparando bienvenida para:', payload.email);
                             fetch('https://rdnniehpsdforkfngwrf.supabase.co/functions/v1/bienvenida-hook', {
                                 method: 'POST',
                                 headers: {
@@ -60,13 +57,20 @@ const auth = {
                                 },
                                 body: JSON.stringify({
                                     event: 'email_confirmed',
-                                    user: { 
-                                        email: JSON.parse(atob(accessToken.split('.')[1])).email,
-                                        user_metadata: JSON.parse(atob(accessToken.split('.')[1])).user_metadata || {}
+                                    user: {
+                                        email: payload.email,
+                                        user_metadata: payload.user_metadata || {}
                                     }
                                 })
-                            }).catch(e => console.warn('Bienvenida hook error:', e));
+                            }).then(r => console.log('Bienvenida response:', r.status))
+                            .catch(e => console.warn('Bienvenida hook error:', e));
+                        } catch(e) {
+                            console.error('Error en bienvenida:', e);
                         }
+                    }
+                    if (type === 'recovery') {
+                        auth._showAuthScreen('reset');
+                        return false;
                     }
                     // Continuar con getSession normal
                 }
