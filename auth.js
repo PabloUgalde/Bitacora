@@ -68,10 +68,6 @@ const auth = {
                             console.error('Error en bienvenida:', e);
                         }
                     }
-                    if (type === 'recovery') {
-                        auth._showAuthScreen('reset');
-                        return false;
-                    }
                     // Continuar con getSession normal
                 }
             }
