@@ -99,8 +99,10 @@ const auth = {
         auth._setLoading(true, 'Creando cuenta...');
         const { data, error } = await supabaseClient.auth.signUp({
             email, password,
-            options: { data: { full_name: name } },
-            emailRedirectTo: 'https://bitacoradevuelo.cl/?auth=1'
+            options: {
+                data: { full_name: name },
+                emailRedirectTo: 'https://bitacoradevuelo.cl/?auth=1'
+            }
         });
         if (error) {
             auth._setLoading(false);
