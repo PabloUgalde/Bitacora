@@ -304,6 +304,7 @@
             <div class="toc-section">
                 <div class="toc-section-title">Funciones Principales</div>
                 <a class="toc-link" href="#bitacora">Registro detallado</a>
+                <a class="toc-link sub" href="#col-visibility">Visibilidad de columnas</a>
                 <a class="toc-link" href="#dashboard">Dashboard</a>
                 <a class="toc-link" href="#resumenes">Resúmenes</a>
                 <a class="toc-link" href="#reportes">Reportes e informes</a>
@@ -406,6 +407,11 @@
         <section class="section" id="nuevo-vuelo">
             <h2><span class="icon">📝</span> Añadir un vuelo</h2>
             <p>Para registrar un vuelo ve al menú <strong>Bitácora → Añadir Vuelo</strong>. El formulario se divide en 4 pasos. No puedes avanzar al siguiente paso si hay errores en el actual.</p>
+
+            <div class="callout ok">
+                <span class="callout-icon">✓</span>
+                <span><strong>Autocompletado inteligente:</strong> Los campos Aeronave, Matrícula, Desde, Hasta y Tipo de Aproximación ofrecen sugerencias basadas en tus vuelos anteriores. Basta con comenzar a escribir para ver las opciones. El campo Observaciones también muestra sugerencias de anotaciones usadas previamente.</span>
+            </div>
 
             <!-- Paso 1 -->
             <h3 id="paso1">Paso 1 — Datos del vuelo</h3>
@@ -705,6 +711,18 @@
                 <li><strong>Ver detalle</strong> — Expande la fila para ver todos los campos del vuelo.</li>
             </ul>
 
+            <h3 id="col-visibility">Visibilidad de columnas</h3>
+            <p>El botón <strong>Columnas ▾</strong> abre un panel que permite mostrar u ocultar columnas de la tabla. Las columnas se organizan en grupos colapsables:</p>
+            <ul>
+                <li><strong>Matrícula, Observaciones, Pág. Bitácora</strong> — columnas simples.</li>
+                <li><strong>Tipo de Avión</strong> — LSA, Monomotor, Multimotor, Turbo Hélice, Turbo Jet, Helicóptero, Planeador, Ultraliviano.</li>
+                <li><strong>Aterrizajes</strong> — Día y Noche.</li>
+                <li><strong>Condición de Vuelo</strong> — Diurno, Nocturno, IFR.</li>
+                <li><strong>Aproximaciones</strong> — Nº (NO) y Tipo.</li>
+                <li><strong>Roles / Tiempos</strong> — Simulador, Travesía, Solo, PIC, SIC, Instrucción, Instructor.</li>
+            </ul>
+            <p>Usa <strong>Mostrar todo</strong> para restablecer todas las columnas o <strong>Aplicar</strong> para confirmar los cambios.</p>
+
             <h3>Filtro avanzado <span class="badge pro">Pro</span></h3>
             <p>El botón <strong>Filtro</strong> abre un panel con más de 20 criterios para encontrar vuelos específicos:</p>
             <ul>
@@ -722,25 +740,37 @@
             <h2><span class="icon">📊</span> Dashboard</h2>
             <p>El dashboard es la pantalla principal de la aplicación. Muestra un resumen de tus horas y actividad reciente.</p>
 
-            <h3>Indicadores disponibles</h3>
-            <p>Un indicador de <strong>Horas Totales</strong> siempre está visible. Puedes configurar hasta 7 indicadores adicionales:</p>
+            <h3>Tiles disponibles</h3>
+            <p>La tile de <strong>Horas Totales</strong> siempre está visible. Las tiles adicionales son configurables; puedes elegir cuántas mostrar (2, 4, 6 u 8) desde <strong>Configuración → Dashboard</strong>.</p>
 
             <div class="table-wrap">
                 <table>
                     <thead>
-                        <tr><th>Indicador</th><th>Descripción</th></tr>
+                        <tr><th>Tile</th><th>Descripción</th></tr>
                     </thead>
                     <tbody>
                         <tr><td>Horas PIC</td><td>Total de horas como Piloto al Mando.</td></tr>
+                        <tr><td>Horas SIC</td><td>Total de horas como Copiloto.</td></tr>
                         <tr><td>Total Aterrizajes</td><td>Suma de aterrizajes diurnos y nocturnos.</td></tr>
+                        <tr><td>Ater. Diurnos</td><td>Número de aterrizajes en condición diurna.</td></tr>
+                        <tr><td>Ater. Nocturnos</td><td>Número de aterrizajes en condición nocturna.</td></tr>
                         <tr><td>Horas IFR</td><td>Total de horas en condiciones instrumentales.</td></tr>
+                        <tr><td>Horas Diurnas</td><td>Total de horas en condición diurna.</td></tr>
+                        <tr><td>Horas Nocturnas</td><td>Total de horas en condición nocturna.</td></tr>
                         <tr><td>Horas Solo</td><td>Total de horas en vuelo solo.</td></tr>
                         <tr><td>Horas Travesía</td><td>Total de horas de travesía (XC).</td></tr>
-                        <tr><td>Horas Nocturnas</td><td>Total de horas en condición nocturna.</td></tr>
-                        <tr><td>Aterrizajes Nocturnos</td><td>Número de aterrizajes nocturnos.</td></tr>
                         <tr><td>Instrucción Recibida</td><td>Total de horas de instrucción recibida.</td></tr>
                         <tr><td>Como Instructor</td><td>Total de horas impartiendo instrucción.</td></tr>
                         <tr><td>Horas Simulador</td><td>Total de horas en simulador o entrenador.</td></tr>
+                        <tr><td>Nº Aproximaciones</td><td>Total de aproximaciones registradas.</td></tr>
+                        <tr><td>Monomotor</td><td>Horas en aeronave monomotor.</td></tr>
+                        <tr><td>Multimotor</td><td>Horas en aeronave multimotor.</td></tr>
+                        <tr><td>Turbo Hélice</td><td>Horas en aeronave turbo hélice.</td></tr>
+                        <tr><td>Turbo Jet</td><td>Horas en aeronave turbo jet.</td></tr>
+                        <tr><td>Helicóptero</td><td>Horas en helicóptero.</td></tr>
+                        <tr><td>Planeador</td><td>Horas en planeador.</td></tr>
+                        <tr><td>Ultraliviano</td><td>Horas en aeronave ultraliviana.</td></tr>
+                        <tr><td>LSA</td><td>Horas en aeronave liviana deportiva (LSA).</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -908,7 +938,12 @@
         <!-- ─────────────────── 11. DASHBOARD CONFIG ─────────────────── -->
         <section class="section" id="config-dashboard">
             <h2><span class="icon">🎛</span> Configuración — Personalizar dashboard</h2>
-            <p>En <strong>Configuración → Dashboard</strong> puedes seleccionar cuáles de los 10 indicadores disponibles quieres mostrar en los 7 espacios configurables. El indicador de <strong>Horas Totales</strong> siempre está visible y no se puede reemplazar.</p>
+            <p>En <strong>Configuración → Dashboard</strong> puedes elegir cuántas tiles mostrar y qué indicador asignar a cada una.</p>
+            <ul>
+                <li><strong>Tiles adicionales:</strong> elige entre 2, 4, 6 u 8 tiles. La primera tile (Horas Totales) es siempre fija.</li>
+                <li>Para cada tile configurable, selecciona el indicador desde la lista desplegable correspondiente.</li>
+                <li>Hay más de 20 indicadores disponibles, incluyendo horas por tipo de aeronave.</li>
+            </ul>
             <p>Los cambios se aplican al guardar la configuración.</p>
         </section>
 
