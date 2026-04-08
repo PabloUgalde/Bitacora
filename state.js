@@ -13,8 +13,9 @@ const logbookState = {
     itemsPerPage: 50,
     filteredData: [],
     filters: {},
-    sortOrder: 'natural', // <--- CAMBIO CLAVE: El orden por defecto ahora es 'natural' (orden del archivo)
-    editingFlightId: null // <--- NUEVA PROPIEDAD para saber si estamos editando
+    sortOrder: 'natural',
+    editingFlightId: null,
+    hiddenColumns: new Set()
 };
 
 // --- CONSTANTES DE LA APLICACIÓN ---
@@ -40,15 +41,27 @@ const calculateTotals = (data, headers) => headers.reduce((totals, header) => { 
 
 // --- CONFIGURACIÓN DEL DASHBOARD ---
 const DASHBOARD_CARDS = [
-    { id: 'totalHours', label: 'Horas Totales', dataKey: 'Duracion Total de Vuelo', isFixed: true, formatFn: val => val.toFixed(1), customClass: 'primary-card' },
-    { id: 'picHours', label: 'Horas PIC', dataKey: 'Piloto al Mando (PIC)', isFixed: false, formatFn: val => val.toFixed(1) },
-    { id: 'totalLandings', label: 'Total Aterrizajes', dataKey: ['Aterrizajes Dia', 'Aterrizajes Noche'], isFixed: false, formatFn: val => Math.round(val) },
-    { id: 'ifrHours', label: 'Horas IFR', dataKey: 'IFR', isFixed: false, formatFn: val => val.toFixed(1) },
-    { id: 'soloHours', label: 'Horas Solo', dataKey: 'Solo', isFixed: false, formatFn: val => val.toFixed(1) },
-    { id: 'xcHours', label: 'Horas Travesía', dataKey: 'Travesia', isFixed: false, formatFn: val => val.toFixed(1) },
-    { id: 'nightHours', label: 'Horas Nocturnas', dataKey: 'Nocturno', isFixed: false, formatFn: val => val.toFixed(1) },
-    { id: 'nightLandings', label: 'Ater. Nocturnos', dataKey: 'Aterrizajes Noche', isFixed: false, formatFn: val => Math.round(val) },
-    { id: 'dualHours', label: 'Instrucción Recibida', dataKey: 'Instruccion Recibida', isFixed: false, formatFn: val => val.toFixed(1) },
-    { id: 'instructorHours', label: 'Como Instructor', dataKey: 'Como Instructor', isFixed: false, formatFn: val => val.toFixed(1) },
-    { id: 'simHours', label: 'Horas Simulador', dataKey: 'Simulador o Entrenador de Vuelo', isFixed: false, formatFn: val => val.toFixed(1) }
+    { id: 'totalHours',      label: 'Horas Totales',        dataKey: 'Duracion Total de Vuelo',                      isFixed: true,  formatFn: val => val.toFixed(1), customClass: 'primary-card' },
+    { id: 'picHours',        label: 'Horas PIC',            dataKey: 'Piloto al Mando (PIC)',                        isFixed: false, formatFn: val => val.toFixed(1) },
+    { id: 'sicHours',        label: 'Horas SIC',            dataKey: 'Copiloto (SIC)',                               isFixed: false, formatFn: val => val.toFixed(1) },
+    { id: 'totalLandings',   label: 'Total Aterrizajes',    dataKey: ['Aterrizajes Dia', 'Aterrizajes Noche'],       isFixed: false, formatFn: val => Math.round(val) },
+    { id: 'dayLandings',     label: 'Ater. Diurnos',        dataKey: 'Aterrizajes Dia',                              isFixed: false, formatFn: val => Math.round(val) },
+    { id: 'nightLandings',   label: 'Ater. Nocturnos',      dataKey: 'Aterrizajes Noche',                            isFixed: false, formatFn: val => Math.round(val) },
+    { id: 'ifrHours',        label: 'Horas IFR',            dataKey: 'IFR',                                          isFixed: false, formatFn: val => val.toFixed(1) },
+    { id: 'dayHours',        label: 'Horas Diurnas',        dataKey: 'Diurno',                                       isFixed: false, formatFn: val => val.toFixed(1) },
+    { id: 'nightHours',      label: 'Horas Nocturnas',      dataKey: 'Nocturno',                                     isFixed: false, formatFn: val => val.toFixed(1) },
+    { id: 'soloHours',       label: 'Horas Solo',           dataKey: 'Solo',                                         isFixed: false, formatFn: val => val.toFixed(1) },
+    { id: 'xcHours',         label: 'Horas Travesía',       dataKey: 'Travesia',                                     isFixed: false, formatFn: val => val.toFixed(1) },
+    { id: 'dualHours',       label: 'Instrucción Recibida', dataKey: 'Instruccion Recibida',                         isFixed: false, formatFn: val => val.toFixed(1) },
+    { id: 'instructorHours', label: 'Como Instructor',      dataKey: 'Como Instructor',                              isFixed: false, formatFn: val => val.toFixed(1) },
+    { id: 'simHours',        label: 'Horas Simulador',      dataKey: 'Simulador o Entrenador de Vuelo',              isFixed: false, formatFn: val => val.toFixed(1) },
+    { id: 'approaches',      label: 'Nº Aproximaciones',    dataKey: 'NO',                                           isFixed: false, formatFn: val => Math.round(val) },
+    { id: 'singleEngine',    label: 'Monomotor',            dataKey: 'Monomotor',                                    isFixed: false, formatFn: val => val.toFixed(1) },
+    { id: 'multiEngine',     label: 'Multimotor',           dataKey: 'Multimotor',                                   isFixed: false, formatFn: val => val.toFixed(1) },
+    { id: 'turboProps',      label: 'Turbo Hélice',         dataKey: 'Turbo Helice',                                 isFixed: false, formatFn: val => val.toFixed(1) },
+    { id: 'turboJet',        label: 'Turbo Jet',            dataKey: 'Turbo Jet',                                    isFixed: false, formatFn: val => val.toFixed(1) },
+    { id: 'heliHours',       label: 'Helicóptero',          dataKey: 'Helicoptero',                                  isFixed: false, formatFn: val => val.toFixed(1) },
+    { id: 'gliderHours',     label: 'Planeador',            dataKey: 'Planeador',                                    isFixed: false, formatFn: val => val.toFixed(1) },
+    { id: 'ultraHours',      label: 'Ultraliviano',         dataKey: 'Ultraliviano',                                 isFixed: false, formatFn: val => val.toFixed(1) },
+    { id: 'lsaHours',        label: 'LSA',                  dataKey: 'LSA',                                          isFixed: false, formatFn: val => val.toFixed(1) },
 ];

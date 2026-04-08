@@ -294,62 +294,75 @@ const render = {
             container.innerHTML = cardsHtml;
         
         } else {
-            // --- RENDERIZADO DE ESCRITORIO (TABLA) ---
-            let headerHtml = `<thead><tr>`;
-            HEADER_STRUCTURE.forEach(header => { headerHtml += `<th ${header.isGroup ? `colspan="${header.colspan}"` : `rowspan="2"`}>${header.short || header.name}</th>`; });
-            headerHtml += `<th rowspan="2">Acciones</th>`;
-            headerHtml += `</tr><tr>`;
-            HEADER_STRUCTURE.forEach(header => { if (!header.isGroup) return; header.children.forEach(child => { headerHtml += `<th>${child.replace("Aterrizajes ", "")}</th>`; }); });
-            headerHtml += `</tr></thead>`;
-            
-            // --- INICIO DE LA CORRECCIÓN ---
-            // Aseguramos que bodyHtml esté aquí
-            let bodyHtml = '<tbody>';
-            let previousPageNumber = null;
+            // --- RENDERIZADO DE ESCRITORIO (TABLA COMPLETA + colgroup para ocultar) ---
+            // Siempre renderizamos TODAS las columnas para preservar nth-child y divisores CSS.
+            // Las columnas ocultas se esconden con visibility:collapse en el colgroup.
+            const hiddenCols = logbookState.hiddenColumns || new Set();
+            const allLeafCols = HEADER_STRUCTURE.flatMap(h => h.isGroup ? h.children : [h.name]);
 
-            // Cambiamos a un bucle 'for' para tener acceso al índice y al elemento anterior
+            // colgroup: una col por cada columna hoja + la col de acciones
+            let colgroupHtml = '<colgroup>';
+            allLeafCols.forEach(colName => {
+                const hidden = hiddenCols.has(colName);
+                colgroupHtml += `<col data-col="${colName.replace(/[^a-zA-Z0-9]/g,'_')}"${hidden ? ' style="visibility:collapse;"' : ''}>`;
+            });
+            colgroupHtml += '<col>'; // col de acciones
+            colgroupHtml += '</colgroup>';
+
+            // thead: siempre estructura completa con colspan ORIGINAL intacto.
+            // El browser ajusta el ancho visual de los th que abarcan cols colapsadas vía colgroup.
+            // NUNCA modificar colspan aquí — eso mueve los nth-child y rompe las divisoras CSS.
+            let headerHtml = `<thead><tr>`;
+            HEADER_STRUCTURE.forEach(header => {
+                if (!header.isGroup) {
+                    headerHtml += `<th rowspan="2">${header.short || header.name}</th>`;
+                } else {
+                    headerHtml += `<th colspan="${header.colspan}">${header.short || header.name}</th>`;
+                }
+            });
+            headerHtml += `<th rowspan="2">Acciones</th></tr><tr>`;
+            HEADER_STRUCTURE.forEach(header => {
+                if (!header.isGroup) return;
+                header.children.forEach(child => { headerHtml += `<th>${child.replace("Aterrizajes ", "")}</th>`; });
+            });
+            headerHtml += `</tr></thead>`;
+
+            const fullColspan = allLeafCols.length + 1;
+            let bodyHtml = '<tbody>';
+
             for (let i = 0; i < pageData.length; i++) {
                 const flight = pageData[i];
                 const currentPageNumber = flight["Pagina Bitacora a Replicar"];
-                let rowClass = '';
-                
-                // Determinamos el índice absoluto del vuelo en la lista filtrada
                 const absoluteIndex = startIndex + i;
-                
-                // Comparamos con el vuelo anterior solo si no es el primer vuelo de toda la lista
+
                 if (absoluteIndex > 0) {
                     const previousFlight = logbookState.filteredData[absoluteIndex - 1];
                     if (previousFlight && previousFlight["Pagina Bitacora a Replicar"] !== currentPageNumber) {
-                        const colspan = HEADER_STRUCTURE.flatMap(h => h.isGroup ? h.children : [h.name]).length + 1;
-                        bodyHtml += `<tr class="page-break-separator"><td colspan="${colspan}" style="padding:0; height:3px; background: var(--primary-color); border:none;"></td></tr>`;
+                        bodyHtml += `<tr class="page-break-separator"><td colspan="${fullColspan}" style="padding:0; height:3px; background: var(--primary-color); border:none;"></td></tr>`;
                     }
                 }
-                
-                bodyHtml += `<tr id="flight-${flight.id}"${rowClass}>`;
-                
-                HEADER_STRUCTURE.flatMap(h => h.isGroup ? h.children : [h.name]).forEach(headerName => {
+
+                bodyHtml += `<tr id="flight-${flight.id}">`;
+                allLeafCols.forEach(headerName => {
                     let value = flight[headerName];
                     let formattedValue = "";
                     let cellStyle = 'text-align: center;';
                     if (WRAPPABLE_COLUMNS.includes(headerName)) { cellStyle = 'text-align: left; white-space: pre-wrap; word-break: break-word;'; }
                     if (value instanceof Date) { formattedValue = !isNaN(value.getTime()) ? value.toLocaleDateString("es-CL", { timeZone: "UTC" }).split("-").reverse().join("-") : 'Sin Fecha'; }
-                    else if (typeof value === 'number' && headerName !== 'Tipo') { 
-                        formattedValue = (SUMMARIZABLE_HEADERS.includes(headerName) && !headerName.includes("Aterrizajes") && headerName !== "NO") ? value.toFixed(1) : value; 
+                    else if (typeof value === 'number' && headerName !== 'Tipo') {
+                        formattedValue = (SUMMARIZABLE_HEADERS.includes(headerName) && !headerName.includes("Aterrizajes") && headerName !== "NO") ? value.toFixed(1) : value;
                     }
                     else { formattedValue = value === undefined || value === null ? "" : value; }
                     bodyHtml += `<td style="${cellStyle}">${formattedValue}</td>`;
                 });
-                bodyHtml += `
-                    <td style="text-align: center; white-space: nowrap;">
+                bodyHtml += `<td style="text-align: center; white-space: nowrap;">
                         <button class="edit-flight-btn" data-flight-id="${flight.id}" title="Editar Vuelo">✏️</button>
                         <button class="delete-flight-btn" data-flight-id="${flight.id}" title="Borrar Vuelo">🗑️</button>
-                    </td>`;                
-                bodyHtml += `</tr>`;
+                    </td></tr>`;
             }
 
             bodyHtml += '</tbody>';
-            container.innerHTML = `<div class="table-container"><table>${headerHtml}${bodyHtml}</table></div>`;
-            // --- FIN DE LA CORRECCIÓN ---
+            container.innerHTML = `<div class="table-container"><table>${colgroupHtml}${headerHtml}${bodyHtml}</table></div>`;
         }
 
 

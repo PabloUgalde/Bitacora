@@ -4,6 +4,7 @@ const app = {
     initialize: async () => {
         await api.loadInitialFlights();
         app.loadSettings();
+        app.updateDataLists();
         const licencias = Array.isArray(userProfile.licenses?.dgac) 
             ? userProfile.licenses.dgac 
             : [];
@@ -88,7 +89,7 @@ const app = {
                         const success = await api.deleteFlight(flightId);
                         if (success) {
                             ui.showNotification("Vuelo borrado con éxito.", "success");
-                            await render.detailedLog();
+                            render.detailedLog();
                         } else {
                             alert("No se pudo encontrar el vuelo para borrar.");
                         }
@@ -124,11 +125,25 @@ const app = {
         const hamburgerBtn = document.getElementById('hamburger-btn');
         const mainNav = document.getElementById('main-nav');
 
+        const colVisibilityPanel = document.getElementById('col-visibility-panel');
         const closeAllDropdowns = () => {
             navDropdownMenu?.classList.remove('active');
             bitacoraDropdownMenu?.classList.remove('active');
             sortDropdownMenu?.classList.remove('active');
+            if (colVisibilityPanel) colVisibilityPanel.style.display = 'none';
         };
+
+        document.getElementById('col-visibility-toggle')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isOpen = colVisibilityPanel.style.display === 'block';
+            closeAllDropdowns();
+            colVisibilityPanel.style.display = isOpen ? 'none' : 'block';
+        });
+        document.addEventListener('click', (e) => {
+            if (colVisibilityPanel && colVisibilityPanel.style.display === 'block' && !colVisibilityPanel.contains(e.target) && e.target.id !== 'col-visibility-toggle') {
+                colVisibilityPanel.style.display = 'none';
+            }
+        });
 
         const closeMobileNav = () => {
             hamburgerBtn?.classList.remove('open');
@@ -277,6 +292,12 @@ const app = {
             document.getElementById('advanced-filter-form').querySelectorAll('input[data-filter-key]').forEach(input => {
                 if (input.value) logbookState.filters[input.dataset.filterKey] = input.value;
             });
+            const hidden = new Set();
+            document.querySelectorAll('[data-hide-col]').forEach(cb => {
+                if (!cb.checked) hidden.add(cb.dataset.hideCol);
+            });
+            logbookState.hiddenColumns = hidden;
+            userProfile.hiddenColumns = [...hidden];
             logbookState.currentPage = 1;
             render.detailedLog();
             app.closeFilterModal();
@@ -284,6 +305,8 @@ const app = {
 
         document.getElementById('reset-filter-btn').addEventListener('click', () => {
             logbookState.filters = {};
+            logbookState.hiddenColumns = new Set();
+            userProfile.hiddenColumns = [];
             document.getElementById('advanced-filter-form').reset();
             logbookState.currentPage = 1;
             render.detailedLog();
@@ -476,6 +499,106 @@ const app = {
     openFilterModal: () => { document.getElementById('filter-modal').classList.add('open'); },
     closeFilterModal: () => { document.getElementById('filter-modal').classList.remove('open'); },
 
+    toggleColGroup: (labelEl, childrenId) => {
+        // preventDefault evita que el click en el label marque/desmarque el checkbox del grupo dos veces
+        const groupCb = labelEl.querySelector('[data-group-toggle]');
+        const childrenDiv = document.getElementById(childrenId);
+        if (!groupCb || !childrenDiv) return;
+        // El estado del checkbox ya fue actualizado por el click nativo — propagamos a los hijos
+        setTimeout(() => {
+            childrenDiv.querySelectorAll('[data-hide-col]').forEach(cb => { cb.checked = groupCb.checked; });
+        }, 0);
+    },
+
+    applyColVisibility: () => {
+        const hidden = new Set();
+        document.querySelectorAll('#col-visibility-panel [data-hide-col]').forEach(cb => {
+            if (!cb.checked) hidden.add(cb.dataset.hideCol);
+        });
+        logbookState.hiddenColumns = hidden;
+        userProfile.hiddenColumns = [...hidden];
+        document.getElementById('col-visibility-panel').style.display = 'none';
+        render.detailedLog();
+    },
+
+    resetColVisibility: () => {
+        document.querySelectorAll('#col-visibility-panel [data-hide-col]').forEach(cb => { cb.checked = true; });
+        document.querySelectorAll('#col-visibility-panel [data-group-toggle]').forEach(cb => { cb.checked = true; });
+        logbookState.hiddenColumns = new Set();
+        userProfile.hiddenColumns = [];
+        document.getElementById('col-visibility-panel').style.display = 'none';
+        render.detailedLog();
+    },
+
+    refreshDashboardSlots: () => {
+        // count = total de tiles (incluyendo la fija "Horas Totales")
+        // → slots seleccionables = count - 1
+        const count = parseInt(document.getElementById('dashboard-card-count')?.value) || 8;
+        const slotsCount = count - 1;
+        const container = document.getElementById('dashboard-cards-config-container');
+        if (!container) return;
+        container.innerHTML = '';
+        DASHBOARD_CARDS.filter(c => c.isFixed).forEach(card => {
+            container.innerHTML += `<div class="card-slot fixed"><label>Tile 1 (Fija)</label><p>${card.label}</p></div>`;
+        });
+        const defaultSelection = ['picHours', 'totalLandings', 'ifrHours', 'soloHours', 'xcHours', 'nightHours', 'nightLandings'];
+        const userSelection = userProfile.dashboardCards?.length ? userProfile.dashboardCards : defaultSelection;
+        const availableOptions = DASHBOARD_CARDS.filter(c => !c.isFixed);
+        for (let i = 0; i < slotsCount; i++) {
+            const slotEl = document.createElement('div');
+            slotEl.className = 'card-slot';
+            const optionsHtml = availableOptions.map(opt => `<option value="${opt.id}" ${userSelection[i] === opt.id ? 'selected' : ''}>${opt.label}</option>`).join('');
+            slotEl.innerHTML = `<label>Tile ${i + 2}</label><select id="card-slot-select-${i}">${optionsHtml}</select>`;
+            container.appendChild(slotEl);
+        }
+    },
+
+    trackFlightValues: (data) => {
+        const stored = JSON.parse(localStorage.getItem('flightLogFrequentValues') || '{}');
+        const textFields = [['aeronave', data.aeronave], ['matricula', data.matricula], ['desde', data.desde], ['hasta', data.hasta], ['approaches-tip', data.approaches?.tipo]];
+        textFields.forEach(([field, val]) => {
+            if (!val) return;
+            const key = val.toUpperCase();
+            if (!stored[field]) stored[field] = {};
+            stored[field][key] = (stored[field][key] || 0) + 1;
+        });
+        if (data.observaciones?.trim()) {
+            const obs = data.observaciones.trim();
+            if (!stored['observaciones']) stored['observaciones'] = {};
+            stored['observaciones'][obs] = (stored['observaciones'][obs] || 0) + 1;
+        }
+        localStorage.setItem('flightLogFrequentValues', JSON.stringify(stored));
+        app.updateDataLists();
+    },
+
+    updateDataLists: () => {
+        const stored = JSON.parse(localStorage.getItem('flightLogFrequentValues') || '{}');
+        [['aeronave', 'datalist-aeronave'], ['matricula', 'datalist-matricula'], ['desde', 'datalist-desde'], ['hasta', 'datalist-hasta'], ['approaches-tip', 'datalist-approaches-tip']].forEach(([field, listId]) => {
+            const dl = document.getElementById(listId);
+            if (!dl) return;
+            const values = Object.entries(stored[field] || {}).sort((a, b) => b[1] - a[1]).slice(0, 10);
+            dl.innerHTML = values.map(([v]) => `<option value="${v}">`).join('');
+        });
+        // Dropdown de observaciones (textarea)
+        const obsArea = document.getElementById('observaciones');
+        const obsSug = document.getElementById('obs-suggestions');
+        if (obsArea && obsSug && !obsArea.dataset.acBound) {
+            obsArea.dataset.acBound = '1';
+            const obsValues = () => Object.entries(stored['observaciones'] || {}).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([v]) => v);
+            obsArea.addEventListener('input', () => {
+                const q = obsArea.value.toLowerCase();
+                const matches = obsValues().filter(v => v.toLowerCase().includes(q));
+                if (!q || matches.length === 0) { obsSug.style.display = 'none'; return; }
+                obsSug.innerHTML = matches.map(v => `<div class="obs-suggestion-item" style="padding:8px 12px; cursor:pointer; font-size:13px; border-bottom:1px solid var(--border-color,#222);">${v}</div>`).join('');
+                obsSug.style.display = 'block';
+                obsSug.querySelectorAll('.obs-suggestion-item').forEach(item => {
+                    item.addEventListener('mousedown', (e) => { e.preventDefault(); obsArea.value = item.textContent; obsSug.style.display = 'none'; });
+                });
+            });
+            obsArea.addEventListener('blur', () => setTimeout(() => { obsSug.style.display = 'none'; }, 150));
+        }
+    },
+
     updateSortButtonText: () => {
         const sortOptions = document.querySelectorAll('#sort-order-menu .sort-option');
         sortOptions.forEach(opt => {
@@ -484,8 +607,9 @@ const app = {
     },
 
     saveSettings: async () => {
+        const cardCount = parseInt(document.getElementById('dashboard-card-count')?.value) || 8;
         const selectedCards = [];
-        for (let i = 0; i < 7; i++) {
+        for (let i = 0; i < cardCount - 1; i++) {
             const selectEl = document.getElementById(`card-slot-select-${i}`);
             if (selectEl) selectedCards.push(selectEl.value);
         }
@@ -494,6 +618,8 @@ const app = {
             personal: {},
             licenses: {},
             dashboardCards: selectedCards,
+            dashboardCardCount: cardCount,
+            hiddenColumns: [...(logbookState.hiddenColumns || [])],
             backupRetentionDays: document.getElementById('backup-retention-select')?.value,
         };
         if (!profileValidator.validateProfileForm()) {
@@ -522,27 +648,21 @@ const app = {
         const savedLicencias = userProfile.licenses?.dgac || [];
         licenseSystem.init('licenses-container', savedLicencias);
 
-        const cardsContainer = document.getElementById('dashboard-cards-config-container');
-        if (cardsContainer) {
-            cardsContainer.innerHTML = '';
-            DASHBOARD_CARDS.filter(c => c.isFixed).forEach((card, index) => {
-                cardsContainer.innerHTML += `<div class="card-slot fixed"><label>Tarjeta Fija ${index + 1}</label><p>${card.label}</p></div>`;
-            });
-            const defaultSelection = ['picHours', 'totalLandings', 'ifrHours', 'soloHours', 'xcHours', 'nightHours', 'nightLandings'];
-            const userSelection = userProfile.dashboardCards || defaultSelection;
-            const availableOptions = DASHBOARD_CARDS.filter(c => !c.isFixed);
-            for (let i = 0; i < 7; i++) {
-                const slotEl = document.createElement('div');
-                slotEl.className = 'card-slot';
-                let optionsHtml = '';
-                availableOptions.forEach(opt => {
-                    const isSelected = userSelection[i] === opt.id;
-                    optionsHtml += `<option value="${opt.id}" ${isSelected ? 'selected' : ''}>${opt.label}</option>`;
-                });
-                slotEl.innerHTML = `<label>Tarjeta ${i + 2}</label><select id="card-slot-select-${i}">${optionsHtml}</select>`;
-                cardsContainer.appendChild(slotEl);
-            }
+        const countSelect = document.getElementById('dashboard-card-count');
+        if (countSelect) countSelect.value = userProfile.dashboardCardCount || 8;
+        app.refreshDashboardSlots();
+
+        // Email auto-fill desde cuenta autenticada
+        const emailInput = document.getElementById('profile-email');
+        if (emailInput && !emailInput.value && currentUser?.email) {
+            emailInput.value = currentUser.email;
         }
+
+        // Init columnas ocultas
+        logbookState.hiddenColumns = new Set(userProfile.hiddenColumns || []);
+        document.querySelectorAll('[data-hide-col]').forEach(cb => {
+            cb.checked = !logbookState.hiddenColumns.has(cb.dataset.hideCol);
+        });
         if (userProfile.backupRetentionDays) document.getElementById('backup-retention-select').value = userProfile.backupRetentionDays;
         ui.showBackupFolderPath();
         ui.updateFormForRole();
@@ -597,6 +717,7 @@ const app = {
                     : await api.saveFlight(result.data);
                 if (success) {
                     ui.showNotification(`¡Vuelo ${isEditing ? 'actualizado' : 'guardado'}!`, "success");
+                    app.trackFlightValues(result.data);
                     const savedId = isEditing ? logbookState.editingFlightId : flightData[0]?.id;
                     ui.resetFlightForm();
                     addFlightModal.close();

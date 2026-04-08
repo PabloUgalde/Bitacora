@@ -10,8 +10,9 @@ const api = {
 
     // Convierte un objeto de vuelo (formato app) a fila de Supabase
     _flightToRow(flight, userId) {
-        const fecha = flight.Fecha instanceof Date && !isNaN(flight.Fecha)
-            ? `${flight.Fecha.getUTCFullYear()}-${String(flight.Fecha.getUTCMonth()+1).padStart(2,'0')}-${String(flight.Fecha.getUTCDate()).padStart(2,'0')}`
+        const fechaDate = flight.Fecha instanceof Date ? flight.Fecha : (flight.Fecha ? new Date(flight.Fecha) : null);
+        const fecha = fechaDate && !isNaN(fechaDate)
+            ? `${fechaDate.getUTCFullYear()}-${String(fechaDate.getUTCMonth()+1).padStart(2,'0')}-${String(fechaDate.getUTCDate()).padStart(2,'0')}`
             : null;
         return {
             id:                    flight.id,
@@ -357,9 +358,10 @@ const api = {
             email:            profileData.personal?.['profile-email'] || null,
             domicilio:        profileData.personal?.['profile-domicilio'] || null,
             licencias:        profileData.licenses || {},
-            dashboard_cards:  profileData.dashboardCards || [],
-            user_role:        profileData.userRole || 'student',
-            updated_at:       new Date().toISOString(),
+            dashboard_cards:       profileData.dashboardCards || [],
+            dashboard_card_count:  profileData.dashboardCardCount || 8,
+            user_role:             profileData.userRole || 'student',
+            updated_at:            new Date().toISOString(),
         };
         const { error } = await supabaseClient
             .from('profiles')
@@ -380,11 +382,12 @@ const api = {
                 if (!error && data) {
                     const profile = {
                         dataSource: 'supabase',
-                        userRole:   data.user_role || 'student',
-                        dashboardCards: data.dashboard_cards || [],
-                        licenses:   data.licencias || {},
-                        plan:       data.plan || 'lite',           // ← agregar
-                        planExpiresAt: data.plan_expires_at || null, // ← agregar
+                        userRole:          data.user_role || 'student',
+                        dashboardCards:    data.dashboard_cards || [],
+                        dashboardCardCount: data.dashboard_card_count || 8,
+                        licenses:          data.licencias || {},
+                        plan:              data.plan || 'lite',
+                        planExpiresAt:     data.plan_expires_at || null,
                         personal: {
                             'profile-pais':       data.pais || 'CL',
                             'profile-nombre':     data.full_name || '',
