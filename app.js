@@ -634,6 +634,7 @@ const app = {
         userProfile = profileToSave;
         await api.saveProfile(userProfile);
         ui.updateFormForRole();
+        render.dashboard();
         ui.showNotification("¡Configuración guardada!", "success");
         window.dispatchEvent(new CustomEvent('settings-saved'));
     },
