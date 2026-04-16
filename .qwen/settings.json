@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/pablougalde/Library/CloudStorage/Dropbox/TO&VI/tovi-gestion/src/lib/**)",
+      "Read(//Users/pablougalde/Library/CloudStorage/Dropbox/TO&VI/tovi-gestion/src/app/**)",
+      "Read(//Users/pablougalde/Library/CloudStorage/Dropbox/TO&VI/tovi-gestion/src/types/**)",
+      "Read(//Users/pablougalde/Library/CloudStorage/Dropbox/TO&VI/tovi-gestion/src/**)",
+      "Read(//Users/pablougalde/Library/CloudStorage/Dropbox/TO&VI/tovi-gestion/**)",
+      "Bash(npx *)"
+    ]
+  },
+  "$version": 3
+}

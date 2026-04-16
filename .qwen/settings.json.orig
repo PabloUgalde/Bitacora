@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/pablougalde/Library/CloudStorage/Dropbox/TO&VI/tovi-gestion/src/lib/**)"
+    ]
+  }
+}
