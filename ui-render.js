@@ -351,6 +351,8 @@ const render = {
                     if (value instanceof Date) { formattedValue = !isNaN(value.getTime()) ? value.toLocaleDateString("es-CL", { timeZone: "UTC" }).split("-").reverse().join("-") : 'Sin Fecha'; }
                     else if (typeof value === 'number' && headerName !== 'Tipo') {
                         formattedValue = (SUMMARIZABLE_HEADERS.includes(headerName) && !headerName.includes("Aterrizajes") && headerName !== "NO") ? value.toFixed(1) : value;
+                        // [REGISTRO DETALLADO] Ceros atenuados para destacar valores con datos
+                        if (value === 0) cellStyle += ' color: rgba(180,180,180,0.3);';
                     }
                     else { formattedValue = value === undefined || value === null ? "" : value; }
                     bodyHtml += `<td style="${cellStyle}">${formattedValue}</td>`;
@@ -439,18 +441,19 @@ const render = {
 
             if (value instanceof Date) {
                 formattedValue = !isNaN(value.getTime()) ? value.toLocaleDateString("es-CL", { timeZone: "UTC" }).split("-").reverse().join("-") : 'Sin Fecha';
-            } 
+            }
             // --- INICIO DE LA CORRECCIÓN ---
             // Se añade la condición `headerName !== 'Tipo'` para que no trate la columna "Tipo" como un número.
             else if (typeof value === 'number' && headerName !== 'Tipo') {
                 const isRoundingNeeded = headerName.includes("Aterrizajes") || headerName === "NO";
                 formattedValue = SUMMARIZABLE_HEADERS.includes(headerName) && !isRoundingNeeded ? value.toFixed(1) : value;
-            } 
+                if (value !== 0) cellStyle += ' color: #c9a84c; font-weight: 600;';
+            }
             // --- FIN DE LA CORRECCIÓN ---
             else {
                 formattedValue = value === undefined || value === null ? "" : value;
             }
-            
+
             bodyHtml += `<td style="${cellStyle}">${formattedValue}</td>`;
         });
         bodyHtml += `</tr></tbody>`;
