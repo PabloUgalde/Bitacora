@@ -380,25 +380,38 @@ const api = {
                     .eq('id', userId)
                     .maybeSingle(); 
                 if (!error && data) {
+                    // Si el perfil en Supabase está incompleto (RLS bloqueó saves previos),
+                    // fusionamos con localStorage para sincronizar automáticamente
+                    const isIncomplete = !data.domicilio && !data.user_role &&
+                        (!data.licencias || Object.keys(data.licencias).length === 0);
+                    const cached = localStorage.getItem('flightLogUserProfile');
+                    const local = cached ? JSON.parse(cached) : null;
+
                     const profile = {
                         dataSource: 'supabase',
-                        userRole:          data.user_role || 'student',
-                        dashboardCards:    data.dashboard_cards || [],
-                        dashboardCardCount: data.dashboard_card_count || 8,
-                        licenses:          data.licencias || {},
+                        userRole:          data.user_role || local?.userRole || 'student',
+                        dashboardCards:    (data.dashboard_cards?.length ? data.dashboard_cards : local?.dashboardCards) || [],
+                        dashboardCardCount: data.dashboard_card_count || local?.dashboardCardCount || 8,
+                        licenses:          (data.licencias && Object.keys(data.licencias).length ? data.licencias : local?.licenses) || {},
                         plan:              data.plan || 'lite',
                         planExpiresAt:     data.plan_expires_at || null,
                         personal: {
-                            'profile-pais':       data.pais || 'CL',
-                            'profile-nombre':     data.full_name || '',
-                            'profile-rut':        data.rut || '',
-                            'profile-nacimiento': data.fecha_nacimiento || '',
-                            'profile-documento':  data.carnet || '',
-                            'profile-telefono':   data.telefono || '',
-                            'profile-email':      data.email || '',
-                            'profile-domicilio':  data.domicilio || '',
+                            'profile-pais':       data.pais || local?.personal?.['profile-pais'] || 'CL',
+                            'profile-nombre':     data.full_name || local?.personal?.['profile-nombre'] || '',
+                            'profile-rut':        data.rut || local?.personal?.['profile-rut'] || '',
+                            'profile-nacimiento': data.fecha_nacimiento || local?.personal?.['profile-nacimiento'] || '',
+                            'profile-documento':  data.carnet || local?.personal?.['profile-documento'] || '',
+                            'profile-telefono':   data.telefono || local?.personal?.['profile-telefono'] || '',
+                            'profile-email':      data.email || local?.personal?.['profile-email'] || '',
+                            'profile-domicilio':  data.domicilio || local?.personal?.['profile-domicilio'] || '',
                         },
                     };
+
+                    // Si Supabase estaba incompleto y localStorage tenía datos, sincronizar
+                    if (isIncomplete && local) {
+                        api.saveProfile(profile).catch(() => {});
+                    }
+
                     // Actualizar caché local
                     localStorage.setItem('flightLogUserProfile', JSON.stringify(profile));
                     return profile;
