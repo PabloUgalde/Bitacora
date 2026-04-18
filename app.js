@@ -5,9 +5,7 @@ const app = {
         await api.loadInitialFlights();
         app.loadSettings();
         app.updateDataLists();
-        const licencias = Array.isArray(userProfile.licenses?.dgac) 
-            ? userProfile.licenses.dgac 
-            : [];
+        const licencias = userProfile.licenses?.dgac?.licencias || [];
         const esUsuarioNuevo = licencias.length === 0 && flightData.length === 0;
 
         if (esUsuarioNuevo && !onboarding.isDone()) {
@@ -200,7 +198,7 @@ const app = {
             if (!link) return;
             e.preventDefault();
             const licenciasGuardadas = licenseSystem.getData()?.licencias || [];
-            const licenciasProfile = Array.isArray(userProfile.licenses?.dgac) ? userProfile.licenses.dgac : [];
+            const licenciasProfile = userProfile.licenses?.dgac?.licencias || [];
             const sinLicencias = licenciasGuardadas.length === 0 && licenciasProfile.length === 0;
             if (sinLicencias && flightData.length === 0 && link.dataset.view !== 'view-settings') {
                 ui.showNotification('Agrega al menos una licencia antes de continuar.', 'error');
@@ -403,6 +401,13 @@ const app = {
 
         // --- CONFIGURACIÓN ---
         document.getElementById('save-settings-btn').addEventListener('click', app.saveSettings);
+
+        // Detectar cambios en cualquier input/select del panel de configuración
+        const settingsView = document.getElementById('view-settings');
+        if (settingsView) {
+            settingsView.addEventListener('change', () => app._setSettingsDirty(true));
+            settingsView.addEventListener('input',  () => app._setSettingsDirty(true));
+        }
         document.getElementById('download-excel-btn')?.addEventListener('click', () => api.exportToExcel());
         document.getElementById('download-csv-btn')?.addEventListener('click', () => api.exportToCSV());
         document.getElementById('clear-local-data-btn')?.addEventListener('click', () => backupManager.clearLocalCache());
@@ -606,6 +611,12 @@ const app = {
         });
     },
 
+    _setSettingsDirty: (dirty) => {
+        document.querySelectorAll('.settings-save-btn').forEach(btn => {
+            btn.disabled = !dirty;
+        });
+    },
+
     saveSettings: async () => {
         const cardCount = parseInt(document.getElementById('dashboard-card-count')?.value) || 8;
         const selectedCards = [];
@@ -633,6 +644,7 @@ const app = {
         profileToSave.userRole = licenseSystem.getUserRole();
         userProfile = profileToSave;
         await api.saveProfile(userProfile);
+        app._setSettingsDirty(false);
         ui.updateFormForRole();
         render.dashboard();
         ui.showNotification("¡Configuración guardada!", "success");
@@ -647,7 +659,9 @@ const app = {
             });
         }
         const savedLicencias = userProfile.licenses?.dgac || [];
+        licenseSystem._onDataChange = () => app._setSettingsDirty(true);
         licenseSystem.init('licenses-container', savedLicencias);
+        app._setSettingsDirty(false);
 
         const countSelect = document.getElementById('dashboard-card-count');
         if (countSelect) countSelect.value = userProfile.dashboardCardCount || 8;

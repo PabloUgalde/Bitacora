@@ -3,8 +3,8 @@
 // Sistema de licencias y habilitaciones DGAC Chile
 // Basado en DAR 61 / DAN 61
 // Estructura:
-//   1. Licencias (con categoría propia)
-//   2. Habilitaciones de Clase (independientes)
+//   1. Licencias (numero, tipo, vencimiento)
+//   2. Habilitaciones de Categoría y Clase (independientes, ref a licencia)
 //   3. Habilitaciones de Función (independientes)
 //   4. Habilitaciones Especiales (IFR, Agrícola, etc.)
 //   5. Habilitaciones de Tipo (aeronaves específicas)
@@ -57,22 +57,43 @@ const licenseSystem = {
     ],
 
     data: {
-        licencias: [], habClase: [], habFuncion: [],
+        licencias: [], habCategoriaClase: [], habClase: [], habFuncion: [],
         habEspeciales: [], habTipo: [], certMedico: [],
     },
 
     containerId: '',
 
+    // Migración automática desde formato v1 (categoria/clase dentro de la licencia)
+    // al formato v2 (habCategoriaClase como contenedor independiente).
+    // Es idempotente: si ya está migrado no hace nada.
+    _migrateV1(data) {
+        if (!data.habCategoriaClase) data.habCategoriaClase = [];
+        data.licencias.forEach(lic => {
+            if (!lic.categoria) return;
+            data.habCategoriaClase.push({
+                id:          Date.now().toString() + Math.random().toString(36).slice(2, 7),
+                licenciaRef: lic.id,
+                categoria:   lic.categoria,
+                clase:       lic.clase || '',
+            });
+            delete lic.categoria;
+            delete lic.clase;
+        });
+        return data;
+    },
+
     init(containerId, savedData = {}) {
         this.containerId = containerId;
-        this.data = {
-            licencias:     savedData.licencias     || [],
-            habClase:      savedData.habClase      || [],
-            habFuncion:    savedData.habFuncion     || [],
-            habEspeciales: savedData.habEspeciales  || [],
-            habTipo:       savedData.habTipo        || [],
-            certMedico:    savedData.certMedico     || [],
+        const raw = {
+            licencias:         savedData.licencias          || [],
+            habCategoriaClase: savedData.habCategoriaClase  || [],
+            habClase:          savedData.habClase            || [],
+            habFuncion:        savedData.habFuncion          || [],
+            habEspeciales:     savedData.habEspeciales       || [],
+            habTipo:           savedData.habTipo             || [],
+            certMedico:        savedData.certMedico          || [],
         };
+        this.data = this._migrateV1(raw);
         this.render();
     },
 
@@ -81,6 +102,7 @@ const licenseSystem = {
         if (!container) return;
         container.innerHTML = `<div class="lic-sys">
             ${this._sec('Licencias', this._licencias())}
+            ${this._sec('Habilitaciones de Categoría y Clase', this._habCategoriaClase())}
             ${this._sec('Habilitaciones de Función', this._habFuncion())}
             ${this._sec('Habilitaciones Especiales', this._habEspeciales())}
             ${this._sec('Habilitaciones de Tipo (Aeronave)', this._habTipo())}
@@ -97,8 +119,6 @@ const licenseSystem = {
 
     _licencias() {
         const rows = this.data.licencias.map((lic, i) => {
-            const def = this.LICENCIAS.find(l => l.id === lic.licenciaId);
-            const cats = lic.licenciaId ? (this.CATEGORIAS[lic.licenciaId] || []) : [];
             return `<div class="lic-row">
                 <div class="lic-field">
                     <label>Licencia</label>
@@ -117,25 +137,50 @@ const licenseSystem = {
                     <input type="date" value="${lic.vencimiento || ''}"
                         onchange="licenseSystem.data.licencias[${i}].vencimiento = this.value">
                 </div>
-                ${cats.length > 0 ? `<div class="lic-field">
-                    <label>${def?.catLabel || 'Hab. Categoría'}</label>
-                    <select onchange="licenseSystem._onCatChange(${i}, this.value)">
-                        <option value="">Ninguna</option>
-                        ${cats.map(c => `<option value="${c}" ${lic.categoria === c ? 'selected' : ''}>${c}</option>`).join('')}
-                    </select>
-                </div>` : ''}
-${lic.categoria === 'Avión' ? `<div class="lic-field">
-    <label>Hab. de Clase (Avión)</label>
-    <select onchange="licenseSystem.data.licencias[${i}].clase = this.value">
-        <option value="">Ninguna</option>
-        ${this.HAB_CLASE.map(c => `<option value="${c}" ${lic.clase === c ? 'selected' : ''}>${c}</option>`).join('')}
-    </select>
-</div>` : ''}
                 <button type="button" class="lic-remove" onclick="licenseSystem._removeLic(${i})" title="Eliminar">✕</button>
             </div>`;
         }).join('') || '<p class="lic-empty">Sin licencias.</p>';
 
         return rows + `<button type="button" class="lic-add-btn" onclick="licenseSystem._addLic()">+ Agregar licencia</button>`;
+    },
+
+    _habCategoriaClase() {
+        const rows = this.data.habCategoriaClase.map((h, i) => {
+            const refLic   = this.data.licencias.find(l => l.id === h.licenciaRef);
+            const licId    = refLic?.licenciaId || '';
+            const cats     = licId ? (this.CATEGORIAS[licId] || []) : [];
+            const licOpts  = this.data.licencias.map(l => {
+                const def   = this.LICENCIAS.find(d => d.id === l.licenciaId);
+                const label = def ? `${def.label}${l.numero ? ' (' + l.numero + ')' : ''}` : '—';
+                return `<option value="${l.id}" ${h.licenciaRef === l.id ? 'selected' : ''}>${label}</option>`;
+            }).join('');
+            return `<div class="lic-row">
+                <div class="lic-field">
+                    <label>Licencia</label>
+                    <select onchange="licenseSystem._onHabCatLicChange(${i}, this.value)">
+                        <option value="">Seleccionar...</option>
+                        ${licOpts}
+                    </select>
+                </div>
+                ${cats.length > 0 ? `<div class="lic-field">
+                    <label>Categoría</label>
+                    <select onchange="licenseSystem._onHabCatCatChange(${i}, this.value)">
+                        <option value="">Seleccionar...</option>
+                        ${cats.map(c => `<option value="${c}" ${h.categoria === c ? 'selected' : ''}>${c}</option>`).join('')}
+                    </select>
+                </div>` : ''}
+                ${h.categoria === 'Avión' ? `<div class="lic-field">
+                    <label>Clase</label>
+                    <select onchange="licenseSystem.data.habCategoriaClase[${i}].clase = this.value">
+                        <option value="">Ninguna</option>
+                        ${this.HAB_CLASE.map(c => `<option value="${c}" ${h.clase === c ? 'selected' : ''}>${c}</option>`).join('')}
+                    </select>
+                </div>` : ''}
+                <button type="button" class="lic-remove" onclick="licenseSystem._removeArr('habCategoriaClase', ${i})">✕</button>
+            </div>`;
+        }).join('') || '<p class="lic-empty">Sin habilitaciones de categoría y clase.</p>';
+
+        return rows + `<button type="button" class="lic-add-btn" onclick="licenseSystem._addArr('habCategoriaClase')">+ Agregar habilitación</button>`;
     },
 
     _habFuncion() {
@@ -223,36 +268,51 @@ ${lic.categoria === 'Avión' ? `<div class="lic-field">
 
     // ── Acciones ─────────────────────────────────────────────────
 
+    // Hook que app.js puede asignar para detectar cambios estructurales
+    // (agregar/quitar filas). Los cambios en campos individuales se detectan
+    // vía event delegation sobre el contenedor de configuración.
+    _onDataChange: null,
+
     _addLic() {
-        this.data.licencias.push({ id: Date.now().toString(), licenciaId: '', numero: '', vencimiento: '', categoria: '' });
+        this.data.licencias.push({ id: Date.now().toString(), licenciaId: '', numero: '', vencimiento: '' });
         this.render();
+        this._onDataChange?.();
     },
 
     _removeLic(i) {
         this.data.licencias.splice(i, 1);
         this.render();
+        this._onDataChange?.();
     },
 
     _onLicChange(i, value) {
         this.data.licencias[i].licenciaId = value;
-        this.data.licencias[i].categoria = '';
         this.render();
     },
 
-    _onCatChange(i, value) {
-        this.data.licencias[i].categoria = value;
-        this.data.licencias[i].clase = '';
+    _onHabCatLicChange(i, licId) {
+        this.data.habCategoriaClase[i].licenciaRef = licId;
+        this.data.habCategoriaClase[i].categoria   = '';
+        this.data.habCategoriaClase[i].clase        = '';
+        this.render();
+    },
+
+    _onHabCatCatChange(i, value) {
+        this.data.habCategoriaClase[i].categoria = value;
+        this.data.habCategoriaClase[i].clase      = '';
         this.render();
     },
 
     _addArr(section) {
         this.data[section].push({ id: Date.now().toString() });
         this.render();
+        this._onDataChange?.();
     },
 
     _removeArr(section, i) {
         this.data[section].splice(i, 1);
         this.render();
+        this._onDataChange?.();
     },
 
     getData() { return this.data; },
