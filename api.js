@@ -429,10 +429,11 @@ const api = {
     // Mantiene exportación a Excel (igual que antes)
     exportToExcel: () => {
         if (flightData.length === 0) { alert("No hay vuelos para exportar."); return; }
-        const dataForSheet = [HEADERS];
+        const exportHeaders = HEADERS.slice(1); // excluir 'id' para que sea re-importable
+        const dataForSheet = [exportHeaders];
         [...flightData].filter(Boolean).reverse().forEach(flight => {
             const row = [];
-            HEADERS.forEach(header => {
+            exportHeaders.forEach(header => {
                 let value = flight[header];
                 if (header === 'Fecha') {
                     const date = new Date(value);
@@ -448,6 +449,14 @@ const api = {
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Bitacora");
         XLSX.writeFile(workbook, `Bitacora_de_Vuelo_${new Date().toISOString().split('T')[0]}.xlsx`);
+    },
+
+    downloadTemplate: () => {
+        const templateHeaders = HEADERS.slice(1);
+        const worksheet = XLSX.utils.aoa_to_sheet([templateHeaders]);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Bitacora");
+        XLSX.writeFile(workbook, 'Template_Bitacora_de_Vuelo.xlsx');
     },
 
     // Exportación CSV (para backup)
