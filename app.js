@@ -423,6 +423,7 @@ const app = {
                 if (panelId === 'panel-cuenta') miCuenta.init();
             });
         });
+        document.getElementById('download-template-btn')?.addEventListener('click', () => api.downloadTemplate());
         document.getElementById('upload-excel-btn')?.addEventListener('click', () => {
         document.getElementById('excel-file-input').click();
         });
