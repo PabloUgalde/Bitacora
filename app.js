@@ -460,12 +460,50 @@ const app = {
             if (result.success) {
                 const confirmed = await dataImporter.showValidationModal(result.data);
                 if (confirmed) {
-                    for (const flight of result.data) {
-                        await api.saveFlight(flight);
+                    const dataStatus = document.getElementById('data-status');
+                    dataStatus.textContent = 'Iniciando importación...';
+                    dataStatus.className = 'status info';
+
+                    const progressContainer = document.getElementById('import-progress-container');
+                    const progressBar = document.getElementById('import-progress-bar');
+                    if (progressContainer) progressContainer.classList.remove('hidden');
+
+                    // Bloquear recarga accidental del navegador
+                    const warnUnload = (event) => { event.preventDefault(); event.returnValue = ''; };
+                    window.addEventListener('beforeunload', warnUnload);
+
+                    try {
+                        const total = result.data.length;
+                        const chunkSize = 50; // Procesamos en bloques de 50 para balancear velocidad y feedback
+                        let processed = 0;
+
+                        for (let i = 0; i < total; i += chunkSize) {
+                            const chunk = result.data.slice(i, i + chunkSize);
+                            const success = await api.saveFlightsBatch(chunk);
+                            
+                            if (!success) throw new Error("Error al guardar lote de vuelos.");
+                            
+                            processed += chunk.length;
+                            dataStatus.textContent = `Importando: ${processed} de ${total} vuelos (${Math.round((processed/total)*100)}%)`;
+                            if (progressBar) progressBar.value = Math.round((processed / total) * 100);
+                        }
+
+                        ui.showNotification(`${total} vuelos importados correctamente.`, 'success');
+                        dataStatus.textContent = 'Importación completada con éxito.';
+                        dataStatus.className = 'status success';
+                        
+                        await api.loadInitialFlights();
+                        render.dashboard();
+                    } catch (error) {
+                        console.error(error);
+                        ui.showNotification("Error durante la importación: " + error.message, 'error');
+                        dataStatus.textContent = 'Error en la importación.';
+                        dataStatus.className = 'status error';
+                    } finally {
+                        // Liberar el bloqueo de recarga
+                        window.removeEventListener('beforeunload', warnUnload);
+                        if (progressContainer) progressContainer.classList.add('hidden');
                     }
-                    await api.loadInitialFlights();
-                    render.dashboard();
-                    ui.showNotification(`${result.data.length} vuelos importados correctamente.`, 'success');
                 } else {
                     const dataStatus = document.getElementById('data-status');
                     dataStatus.textContent = 'Importación cancelada.';

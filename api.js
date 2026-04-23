@@ -157,7 +157,12 @@ const api = {
 
     // ── Operaciones CRUD ──────────────────────────────────────────
     saveFlight: async (flightDataToSave) => {
-        const newFlight = ui.createFlightObject(flightDataToSave);
+        // Detectar si ya es un objeto de vuelo procesado (del importador) 
+        // o si son datos crudos del formulario manual.
+        const newFlight = flightDataToSave.id && flightDataToSave.Fecha instanceof Date 
+            ? flightDataToSave 
+            : ui.createFlightObject(flightDataToSave);
+            
         const userId = api._getUserId();
 
         if (userId) {
@@ -186,11 +191,43 @@ const api = {
         return true;
     },
 
+    saveFlightsBatch: async (flightsData) => {
+        const userId = api._getUserId();
+        if (!userId) return false;
+
+        // Convertimos el lote de objetos al formato de tabla de Supabase
+        const rows = flightsData.map(f => api._flightToRow(f, userId));
+
+        if (navigator.onLine) {
+            try {
+                // Supabase permite insertar un array de objetos de una sola vez
+                const { error } = await supabaseClient.from('flights').insert(rows);
+                if (error) {
+                    console.error("Error Supabase batch insert:", error);
+                    return false;
+                }
+            } catch (e) {
+                console.warn("Red caída al guardar lote:", e);
+                return false;
+            }
+        } else {
+            // Si está offline, encolamos individualmente para sincronización posterior
+            flightsData.forEach(f => api._queuePending({ op: 'save', flight: f }));
+        }
+        flightData = [...flightsData, ...flightData];
+        api.saveFlightsToLocalStorage();
+        return true;
+    },
+
     updateFlight: async (flightId, flightDataToUpdate) => {
         const index = flightData.findIndex(f => f && f.id === flightId);
         if (index === -1) return false;
 
-        const updatedFlight = ui.createFlightObject(flightDataToUpdate);
+        // Aplicar la misma lógica de detección que en saveFlight
+        const updatedFlight = flightDataToUpdate.id && flightDataToUpdate.Fecha instanceof Date
+            ? flightDataToUpdate
+            : ui.createFlightObject(flightDataToUpdate);
+            
         updatedFlight.id = flightId;
 
         const userId = api._getUserId();
