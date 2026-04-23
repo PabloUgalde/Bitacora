@@ -458,12 +458,19 @@ const app = {
             if (!file) return;
             const result = await dataImporter.processExcelFile(file);
             if (result.success) {
-                for (const flight of result.data) {
-                    await api.saveFlight(flight);
+                const confirmed = await dataImporter.showValidationModal(result.data);
+                if (confirmed) {
+                    for (const flight of result.data) {
+                        await api.saveFlight(flight);
+                    }
+                    await api.loadInitialFlights();
+                    render.dashboard();
+                    ui.showNotification(`${result.data.length} vuelos importados correctamente.`, 'success');
+                } else {
+                    const dataStatus = document.getElementById('data-status');
+                    dataStatus.textContent = 'Importación cancelada.';
+                    dataStatus.className = 'status';
                 }
-                await api.loadInitialFlights();
-                render.dashboard();
-                ui.showNotification(`${result.data.length} vuelos importados correctamente.`, 'success');
             }
             e.target.value = '';
         });
