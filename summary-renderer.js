@@ -46,7 +46,7 @@ const summaryRenderer = {
                     if (rowType === 'Total Página') value = pageTotals[h] || 0;
                     else if (rowType === 'Total Anterior') value = previousTotals[h] || 0;
                     else value = accumulatedTotals[h] || 0;
-                    table += `<td style="text-align: center;">${(h.includes("Aterrizajes") || h === "NO") ? Math.round(value) : value.toFixed(1)}</td>`;
+                    table += `<td style="text-align: center;">${(h.includes("Aterrizajes") || h === "NO") ? Math.round(value) : formatHours(value)}</td>`;
                 });
                 table += '</tr>';
             });
@@ -81,7 +81,7 @@ const summaryRenderer = {
         });
 
         let yearlyHtml = `<h3>${selectedYear === 'all' ? 'Totales por Año' : `Total para ${selectedYear}`}</h3><div class="table-container"><table><thead><tr><th>Año</th><th>Hrs Totales</th><th>Aterrizajes (D/N)</th><th>Diurno</th><th>Nocturno</th><th>IFR</th><th>Sim</th><th>Travesía</th><th>Solo</th><th>PIC</th><th>SIC</th><th>Instrucción</th><th>Instructor</th></tr></thead><tbody>`;
-        yearlyTotals.forEach(data => { const landings = (data.totals["Aterrizajes Dia"] || 0) + (data.totals["Aterrizajes Noche"] || 0); yearlyHtml += `<tr><td><strong>${data.year}</strong></td><td>${(data.totals["Duracion Total de Vuelo"] || 0).toFixed(1)}</td><td>${landings} (${Math.round(data.totals["Aterrizajes Dia"] || 0)}/${Math.round(data.totals["Aterrizajes Noche"] || 0)})</td><td>${(data.totals["Diurno"] || 0).toFixed(1)}</td><td>${(data.totals["Nocturno"] || 0).toFixed(1)}</td><td>${(data.totals["IFR"] || 0).toFixed(1)}</td><td>${(data.totals["Simulador o Entrenador de Vuelo"] || 0).toFixed(1)}</td><td>${(data.totals["Travesia"] || 0).toFixed(1)}</td><td>${(data.totals["Solo"] || 0).toFixed(1)}</td><td>${(data.totals["Piloto al Mando (PIC)"] || 0).toFixed(1)}</td><td>${(data.totals["Copiloto (SIC)"] || 0).toFixed(1)}</td><td>${(data.totals["Instruccion Recibida"] || 0).toFixed(1)}</td><td>${(data.totals["Como Instructor"] || 0).toFixed(1)}</td></tr>`; });
+        yearlyTotals.forEach(data => { const landings = (data.totals["Aterrizajes Dia"] || 0) + (data.totals["Aterrizajes Noche"] || 0); yearlyHtml += `<tr><td><strong>${data.year}</strong></td><td>${formatHours(data.totals["Duracion Total de Vuelo"] || 0)}</td><td>${landings} (${Math.round(data.totals["Aterrizajes Dia"] || 0)}/${Math.round(data.totals["Aterrizajes Noche"] || 0)})</td><td>${formatHours(data.totals["Diurno"] || 0)}</td><td>${formatHours(data.totals["Nocturno"] || 0)}</td><td>${formatHours(data.totals["IFR"] || 0)}</td><td>${formatHours(data.totals["Simulador o Entrenador de Vuelo"] || 0)}</td><td>${formatHours(data.totals["Travesia"] || 0)}</td><td>${formatHours(data.totals["Solo"] || 0)}</td><td>${formatHours(data.totals["Piloto al Mando (PIC)"] || 0)}</td><td>${formatHours(data.totals["Copiloto (SIC)"] || 0)}</td><td>${formatHours(data.totals["Instruccion Recibida"] || 0)}</td><td>${formatHours(data.totals["Como Instructor"] || 0)}</td></tr>`; });
         yearlyHtml += `</tbody></table></div>`;
         yearlyContainer.innerHTML = yearlyHtml;
 
@@ -90,7 +90,7 @@ const summaryRenderer = {
         const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
         const monthlyTotals = monthNames.map((name, index) => { const monthData = yearData.filter(f => f.Fecha.getUTCMonth() === index); return { month: name, totals: calculateTotals(monthData, summaryHeaders), hasData: monthData.length > 0 }; }).filter(m => m.hasData);
         let monthlyHtml = `<h3>Desglose Mensual para ${selectedYear}</h3><div class="table-container"><table><thead><tr><th>Mes</th><th>Hrs Totales</th><th>Aterrizajes (D/N)</th><th>Diurno</th><th>Nocturno</th><th>IFR</th><th>Sim</th><th>Travesía</th><th>Solo</th><th>PIC</th><th>SIC</th><th>Instrucción</th><th>Instructor</th></tr></thead><tbody>`;
-        monthlyTotals.forEach(data => { const landings = (data.totals["Aterrizajes Dia"] || 0) + (data.totals["Aterrizajes Noche"] || 0); monthlyHtml += `<tr><td><strong>${data.month}</strong></td><td>${(data.totals["Duracion Total de Vuelo"] || 0).toFixed(1)}</td><td>${landings} (${Math.round(data.totals["Aterrizajes Dia"] || 0)}/${Math.round(data.totals["Aterrizajes Noche"] || 0)})</td><td>${(data.totals["Diurno"] || 0).toFixed(1)}</td><td>${(data.totals["Nocturno"] || 0).toFixed(1)}</td><td>${(data.totals["IFR"] || 0).toFixed(1)}</td><td>${(data.totals["Simulador o Entrenador de Vuelo"] || 0).toFixed(1)}</td><td>${(data.totals["Travesia"] || 0).toFixed(1)}</td><td>${(data.totals["Solo"] || 0).toFixed(1)}</td><td>${(data.totals["Piloto al Mando (PIC)"] || 0).toFixed(1)}</td><td>${(data.totals["Copiloto (SIC)"] || 0).toFixed(1)}</td><td>${(data.totals["Instruccion Recibida"] || 0).toFixed(1)}</td><td>${(data.totals["Como Instructor"] || 0).toFixed(1)}</td></tr>`; });
+        monthlyTotals.forEach(data => { const landings = (data.totals["Aterrizajes Dia"] || 0) + (data.totals["Aterrizajes Noche"] || 0); monthlyHtml += `<tr><td><strong>${data.month}</strong></td><td>${formatHours(data.totals["Duracion Total de Vuelo"] || 0)}</td><td>${landings} (${Math.round(data.totals["Aterrizajes Dia"] || 0)}/${Math.round(data.totals["Aterrizajes Noche"] || 0)})</td><td>${formatHours(data.totals["Diurno"] || 0)}</td><td>${formatHours(data.totals["Nocturno"] || 0)}</td><td>${formatHours(data.totals["IFR"] || 0)}</td><td>${formatHours(data.totals["Simulador o Entrenador de Vuelo"] || 0)}</td><td>${formatHours(data.totals["Travesia"] || 0)}</td><td>${formatHours(data.totals["Solo"] || 0)}</td><td>${formatHours(data.totals["Piloto al Mando (PIC)"] || 0)}</td><td>${formatHours(data.totals["Copiloto (SIC)"] || 0)}</td><td>${formatHours(data.totals["Instruccion Recibida"] || 0)}</td><td>${formatHours(data.totals["Como Instructor"] || 0)}</td></tr>`; });
         monthlyHtml += `</tbody></table></div>`;
         monthlyContainer.innerHTML = monthlyHtml;
     },
@@ -130,14 +130,14 @@ const summaryRenderer = {
             const summaryHeaders = ["Duracion Total de Vuelo", "Aterrizajes Dia", "Aterrizajes Noche", "Diurno", "Nocturno", "IFR", "Travesia", "Solo", "Piloto al Mando (PIC)", "Copiloto (SIC)", "Instruccion Recibida", "Como Instructor"];
             const aircraftTotals = Object.entries(aircraftGroups).map(([key, flights]) => ({ key: key, totals: calculateTotals(flights, summaryHeaders) })).sort((a, b) => b.totals["Duracion Total de Vuelo"] - a.totals["Duracion Total de Vuelo"]);
             let tableHtml = `<div class="table-container"><table><thead><tr><th>Matrícula</th><th>Hrs Totales</th><th>Aterrizajes (D/N)</th><th>Diurno</th><th>Nocturno</th><th>IFR</th><th>Travesía</th><th>Solo</th><th>PIC</th><th>SIC</th><th>Instrucción</th><th>Instructor</th></tr></thead><tbody>`;
-            aircraftTotals.forEach(data => { const landings = (data.totals["Aterrizajes Dia"] || 0) + (data.totals["Aterrizajes Noche"] || 0); tableHtml += `<tr><td><strong>${data.key}</strong></td><td>${(data.totals["Duracion Total de Vuelo"] || 0).toFixed(1)}</td><td>${landings} (${Math.round(data.totals["Aterrizajes Dia"] || 0)}/${Math.round(data.totals["Aterrizajes Noche"] || 0)})</td><td>${(data.totals["Diurno"] || 0).toFixed(1)}</td><td>${(data.totals["Nocturno"] || 0).toFixed(1)}</td><td>${(data.totals["IFR"] || 0).toFixed(1)}</td><td>${(data.totals["Travesia"] || 0).toFixed(1)}</td><td>${(data.totals["Solo"] || 0).toFixed(1)}</td><td>${(data.totals["Piloto al Mando (PIC)"] || 0).toFixed(1)}</td><td>${(data.totals["Copiloto (SIC)"] || 0).toFixed(1)}</td><td>${(data.totals["Instruccion Recibida"] || 0).toFixed(1)}</td><td>${(data.totals["Como Instructor"] || 0).toFixed(1)}</td></tr>`; });
+            aircraftTotals.forEach(data => { const landings = (data.totals["Aterrizajes Dia"] || 0) + (data.totals["Aterrizajes Noche"] || 0); tableHtml += `<tr><td><strong>${data.key}</strong></td><td>${formatHours(data.totals["Duracion Total de Vuelo"] || 0)}</td><td>${landings} (${Math.round(data.totals["Aterrizajes Dia"] || 0)}/${Math.round(data.totals["Aterrizajes Noche"] || 0)})</td><td>${formatHours(data.totals["Diurno"] || 0)}</td><td>${formatHours(data.totals["Nocturno"] || 0)}</td><td>${formatHours(data.totals["IFR"] || 0)}</td><td>${formatHours(data.totals["Travesia"] || 0)}</td><td>${formatHours(data.totals["Solo"] || 0)}</td><td>${formatHours(data.totals["Piloto al Mando (PIC)"] || 0)}</td><td>${formatHours(data.totals["Copiloto (SIC)"] || 0)}</td><td>${formatHours(data.totals["Instruccion Recibida"] || 0)}</td><td>${formatHours(data.totals["Como Instructor"] || 0)}</td></tr>`; });
             tableHtml += `</tbody></table></div>`;
             tableContainer.innerHTML = tableHtml;
         } else {
             const summaryHeaders = ["Duracion Total de Vuelo", "Aterrizajes Dia", "Aterrizajes Noche", "Diurno", "Nocturno", "IFR", "Simulador o Entrenador de Vuelo", "Travesia", "Solo", "Piloto al Mando (PIC)", "Copiloto (SIC)", "Instruccion Recibida", "Como Instructor"];
             const aircraftTotals = Object.entries(aircraftGroups).map(([key, flights]) => ({ key: key, totals: calculateTotals(flights, summaryHeaders) })).sort((a, b) => b.totals["Duracion Total de Vuelo"] - a.totals["Duracion Total de Vuelo"]);
             let tableHtml = `<div class="table-container"><table><thead><tr><th>Modelo</th><th>Hrs Totales</th><th>Aterrizajes (D/N)</th><th>Diurno</th><th>Nocturno</th><th>IFR</th><th>Simulador</th><th>Travesía</th><th>Solo</th><th>PIC</th><th>SIC</th><th>Instrucción</th><th>Instructor</th></tr></thead><tbody>`;
-            aircraftTotals.forEach(data => { const landings = (data.totals["Aterrizajes Dia"] || 0) + (data.totals["Aterrizajes Noche"] || 0); tableHtml += `<tr><td><strong>${data.key}</strong></td><td>${(data.totals["Duracion Total de Vuelo"] || 0).toFixed(1)}</td><td>${landings} (${Math.round(data.totals["Aterrizajes Dia"] || 0)}/${Math.round(data.totals["Aterrizajes Noche"] || 0)})</td><td>${(data.totals["Diurno"] || 0).toFixed(1)}</td><td>${(data.totals["Nocturno"] || 0).toFixed(1)}</td><td>${(data.totals["IFR"] || 0).toFixed(1)}</td><td>${(data.totals["Simulador o Entrenador de Vuelo"] || 0).toFixed(1)}</td><td>${(data.totals["Travesia"] || 0).toFixed(1)}</td><td>${(data.totals["Solo"] || 0).toFixed(1)}</td><td>${(data.totals["Piloto al Mando (PIC)"] || 0).toFixed(1)}</td><td>${(data.totals["Copiloto (SIC)"] || 0).toFixed(1)}</td><td>${(data.totals["Instruccion Recibida"] || 0).toFixed(1)}</td><td>${(data.totals["Como Instructor"] || 0).toFixed(1)}</td></tr>`; });
+            aircraftTotals.forEach(data => { const landings = (data.totals["Aterrizajes Dia"] || 0) + (data.totals["Aterrizajes Noche"] || 0); tableHtml += `<tr><td><strong>${data.key}</strong></td><td>${formatHours(data.totals["Duracion Total de Vuelo"] || 0)}</td><td>${landings} (${Math.round(data.totals["Aterrizajes Dia"] || 0)}/${Math.round(data.totals["Aterrizajes Noche"] || 0)})</td><td>${formatHours(data.totals["Diurno"] || 0)}</td><td>${formatHours(data.totals["Nocturno"] || 0)}</td><td>${formatHours(data.totals["IFR"] || 0)}</td><td>${formatHours(data.totals["Simulador o Entrenador de Vuelo"] || 0)}</td><td>${formatHours(data.totals["Travesia"] || 0)}</td><td>${formatHours(data.totals["Solo"] || 0)}</td><td>${formatHours(data.totals["Piloto al Mando (PIC)"] || 0)}</td><td>${formatHours(data.totals["Copiloto (SIC)"] || 0)}</td><td>${formatHours(data.totals["Instruccion Recibida"] || 0)}</td><td>${formatHours(data.totals["Como Instructor"] || 0)}</td></tr>`; });
             tableHtml += `</tbody></table></div>`;
             tableContainer.innerHTML = tableHtml;
         }
@@ -233,10 +233,10 @@ byIFR: () => {
 
             tableHtml += `<tr>
                 <td><strong>${data.key}</strong></td>
-                <td style="text-align: center;">${data.totals.IFR.toFixed(1)}</td>
+                <td style="text-align: center;">${formatHours(data.totals.IFR)}</td>
                 <td style="text-align: center;">${Math.round(data.totals.NO)}</td>
                 <td style="text-align: center; ${dateStyle}">${dateStr}</td>
-                <td style="text-align: center;">${data.totals["Simulador o Entrenador de Vuelo"].toFixed(1)}</td>
+                <td style="text-align: center;">${formatHours(data.totals["Simulador o Entrenador de Vuelo"])}</td>
                 <td style="text-align: center;">${Math.round(data.totals["Aterrizajes Dia"])}/${Math.round(data.totals["Aterrizajes Noche"])}</td>
             </tr>`;
         });
@@ -370,7 +370,7 @@ byIFR: () => {
 
                 tableHtml += `<tr>
                     <td><strong>${type}</strong></td>
-                    <td style="text-align: center;">${typeHours.toFixed(1)}</td>
+                    <td style="text-align: center;">${formatHours(typeHours)}</td>
                     <td style="text-align: center;">${dayLandings + nightLandings} (${dayLandings}/${nightLandings})</td>
                     <td style="text-align: center;">${approaches}</td>
                 </tr>`;

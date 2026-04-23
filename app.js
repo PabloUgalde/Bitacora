@@ -399,6 +399,17 @@ const app = {
             }
         });
 
+        // --- FORMATO DE HORAS ---
+        document.querySelectorAll('input[name="hoursFormat"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                userProfile.hoursFormat = e.target.value;
+                api.saveProfile(userProfile);
+                const activeView = document.querySelector('.view.active');
+                const renderFn = activeView ? ui.renderMap[activeView.id] : null;
+                if (renderFn) renderFn();
+            });
+        });
+
         // --- CONFIGURACIÓN ---
         document.getElementById('save-settings-btn').addEventListener('click', app.saveSettings);
 
@@ -633,6 +644,7 @@ const app = {
             dashboardCardCount: cardCount,
             hiddenColumns: [...(logbookState.hiddenColumns || [])],
             backupRetentionDays: document.getElementById('backup-retention-select')?.value,
+            hoursFormat: document.querySelector('input[name="hoursFormat"]:checked')?.value || 'decimal',
         };
         if (!profileValidator.validateProfileForm()) {
             ui.showNotification("Corrige los errores en Datos Personales.", "error");
@@ -673,6 +685,11 @@ const app = {
         if (emailInput && !emailInput.value && currentUser?.email) {
             emailInput.value = currentUser.email;
         }
+
+        // Init formato de horas
+        const hoursFormat = userProfile.hoursFormat || 'decimal';
+        const hoursRadio = document.querySelector(`input[name="hoursFormat"][value="${hoursFormat}"]`);
+        if (hoursRadio) hoursRadio.checked = true;
 
         // Init columnas ocultas
         logbookState.hiddenColumns = new Set(userProfile.hiddenColumns || []);

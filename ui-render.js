@@ -27,7 +27,7 @@ const render = {
             container.innerHTML = finalCards.map(cardDef => {
                 if (!cardDef) return '';
                 const formattedZero = cardDef.formatFn(0);
-                const zeroValue = String(formattedZero).includes('.') ? '0.0' : '0';
+                const zeroValue = String(formattedZero);
                 // Añadimos la clase personalizada si existe
                 return `<div class="summary-card ${cardDef.customClass || ''}"><h3>${cardDef.label}</h3><div class="value">${zeroValue}</div></div>`;
             }).join('');
@@ -70,14 +70,14 @@ const render = {
                 for (let i = 0; i < groupHeaders.length; i += 2) { tableHtml += '<tr>'; 
                     const header1 = groupHeaders[i]; 
                     if (header1) { 
-                        const value1 = (header1.includes("Aterrizajes") || header1 === "NO") ? Math.round(totals[header1] || 0) : (totals[header1] || 0).toFixed(1); 
+                        const value1 = (header1.includes("Aterrizajes") || header1 === "NO") ? Math.round(totals[header1] || 0) : formatHours(totals[header1] || 0); 
                         tableHtml += `<td>${header1.replace("(PIC)", "").replace("(SIC)", "")}</td><td>${value1}</td>`; 
                     } else { 
                         tableHtml += '<td></td><td></td>'; 
                     } 
                     const header2 = groupHeaders[i + 1]; 
                     if (header2) { 
-                        const value2 = (header2.includes("Aterrizajes") || header2 === "NO") ? Math.round(totals[header2] || 0) : (totals[header2] || 0).toFixed(1); 
+                        const value2 = (header2.includes("Aterrizajes") || header2 === "NO") ? Math.round(totals[header2] || 0) : formatHours(totals[header2] || 0); 
                         tableHtml += `<td>${header2.replace("(PIC)", "").replace("(SIC)", "")}</td><td style="text-align: center; padding-right: 1.5rem;">${value2}</td>`;
                     } 
                     else { 
@@ -110,7 +110,7 @@ const render = {
                             <td>${flight.Fecha ? flight.Fecha.toLocaleDateString("es-CL", { timeZone: "UTC" }) : 'N/A'}</td>
                             <td style="text-align: center;">${flight["Aeronave Marca y Modelo"]}</td>
                             <td style="text-align: center;">${ruta}</td>
-                            <td style="text-align: center;">${duration.toFixed(1)}</td>
+                            <td style="text-align: center;">${formatHours(duration)}</td>
                             <td style="text-align: center;">${roles}</td>
                         </tr>`
                     }); 
@@ -164,9 +164,9 @@ const render = {
         const totals = calculateTotals(periodFlights, headers);
         
         // 2. Se preparan los valores para el nuevo formato de horas y aterrizajes.
-        const totalHours = (totals["Duracion Total de Vuelo"] || 0).toFixed(1);
-        const dayHours = (totals["Diurno"] || 0).toFixed(1);
-        const nightHours = (totals["Nocturno"] || 0).toFixed(1);
+        const totalHours = formatHours(totals["Duracion Total de Vuelo"] || 0);
+        const dayHours = formatHours(totals["Diurno"] || 0);
+        const nightHours = formatHours(totals["Nocturno"] || 0);
         const hoursText = `${totalHours} (${dayHours}/${nightHours})`;
 
         // 3. Se preparan los valores para el nuevo formato de aterrizajes.
@@ -180,7 +180,7 @@ const render = {
                         <td><strong>${period.label}</strong></td>
                         <td style="text-align: center;">${hoursText}</td>
                         <td style="text-align: center;">${landingsText}</td>
-                        <td style="text-align: center;">${(totals["IFR"] || 0).toFixed(1)}</td>
+                        <td style="text-align: center;">${formatHours(totals["IFR"] || 0)}</td>
                         <td style="text-align: center;">${Math.round(totals["NO"] || 0)}</td>
                     </tr>`;
     });
@@ -237,7 +237,7 @@ const render = {
             // --- RENDERIZADO MÓVIL (TARJETAS) ---
             let cardsHtml = '<div class="logbook-cards-container">';
             pageData.forEach(flight => {
-                const duration = (flight['Duracion Total de Vuelo'] || 0).toFixed(1);
+                const duration = formatHours(flight['Duracion Total de Vuelo'] || 0);
                 const landings = (flight['Aterrizajes Dia'] || 0) + (flight['Aterrizajes Noche'] || 0);
             let aircraftType = '';
             // AIRCRAFT_TYPE_HEADERS es una constante global de state.js
@@ -350,7 +350,7 @@ const render = {
                     if (WRAPPABLE_COLUMNS.includes(headerName)) { cellStyle = 'text-align: left; white-space: pre-wrap; word-break: break-word;'; }
                     if (value instanceof Date) { formattedValue = !isNaN(value.getTime()) ? value.toLocaleDateString("es-CL", { timeZone: "UTC" }).split("-").reverse().join("-") : 'Sin Fecha'; }
                     else if (typeof value === 'number' && headerName !== 'Tipo') {
-                        formattedValue = (SUMMARIZABLE_HEADERS.includes(headerName) && !headerName.includes("Aterrizajes") && headerName !== "NO") ? value.toFixed(1) : value;
+                        formattedValue = (SUMMARIZABLE_HEADERS.includes(headerName) && !headerName.includes("Aterrizajes") && headerName !== "NO") ? formatHours(value) : value;
                         // [REGISTRO DETALLADO] Ceros atenuados para destacar valores con datos
                         if (value === 0) cellStyle += ' color: rgba(180,180,180,0.3);';
                     }
@@ -446,7 +446,7 @@ const render = {
             // Se añade la condición `headerName !== 'Tipo'` para que no trate la columna "Tipo" como un número.
             else if (typeof value === 'number' && headerName !== 'Tipo') {
                 const isRoundingNeeded = headerName.includes("Aterrizajes") || headerName === "NO";
-                formattedValue = SUMMARIZABLE_HEADERS.includes(headerName) && !isRoundingNeeded ? value.toFixed(1) : value;
+                formattedValue = SUMMARIZABLE_HEADERS.includes(headerName) && !isRoundingNeeded ? formatHours(value) : value;
                 if (value !== 0) cellStyle += ' color: #c9a84c; font-weight: 600;';
             }
             // --- FIN DE LA CORRECCIÓN ---

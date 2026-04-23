@@ -32,19 +32,20 @@ const ui = {
     },
 
     populateAircraftTypes: () => {
-    const select = document.getElementById('tipoAvion');
-
-
-    // Limpiamos y añadimos la opción por defecto
-    select.innerHTML = '<option value="" disabled selected>Selecciona un tipo...</option>';
-    
-    // AIRCRAFT_TYPE_HEADERS es una variable global que ya tienes en state.js
-    AIRCRAFT_TYPE_HEADERS.forEach(type => {
-        const option = document.createElement('option');
-        option.value = type;
-        option.textContent = type;
-        select.appendChild(option);
-    });
+        const container = document.getElementById('tipoAvion');
+        container.innerHTML = '';
+        container.style.cssText = 'display:flex; flex-wrap:wrap; padding:0.5rem 0.75rem; border:1px solid var(--border-color,#444); border-radius:8px; margin-top:0.25rem;';
+        AIRCRAFT_TYPE_HEADERS.forEach(type => {
+            const label = document.createElement('label');
+            label.style.cssText = 'display:flex; align-items:center; gap:0.5rem; cursor:pointer; font-size:14px; font-weight:normal; white-space:nowrap; width:50%; padding:0.3rem 0; margin:0;';
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.value = type;
+            cb.name = 'tipoAvion';
+            label.appendChild(cb);
+            label.appendChild(document.createTextNode(type));
+            container.appendChild(label);
+        });
     },
 
     renderMap: { 
@@ -124,22 +125,11 @@ const ui = {
         document.getElementById('rol-travesia').value = flight.Travesia || '';
         document.getElementById('rol-simulador').value = flight['Simulador o Entrenador de Vuelo'] || '';
         document.getElementById('observaciones').value = flight.Observaciones || '';
-        const tipoAvionSelect = document.getElementById('tipoAvion');
-        let tipoAvion = '';
-        for (const header of AIRCRAFT_TYPE_HEADERS) {
-            if (flight[header] > 0) {
-                tipoAvion = header;
-                break;
-            }
-        }
-        tipoAvionSelect.innerHTML = '<option value="" disabled>Selecciona un tipo...</option>';
+        ui.populateAircraftTypes();
         AIRCRAFT_TYPE_HEADERS.forEach(type => {
-            const option = document.createElement('option');
-            option.value = type;
-            option.textContent = type;
-        tipoAvionSelect.appendChild(option);
-});
-tipoAvionSelect.value = tipoAvion;
+            const cb = document.querySelector(`input[name="tipoAvion"][value="${type}"]`);
+            if (cb) cb.checked = flight[type] > 0;
+        });
         document.getElementById('ifr-approaches-container').classList.toggle('hidden', !(flight.IFR > 0));
     },
 
@@ -191,16 +181,19 @@ createFlightObject: (data) => {
         "Pagina Bitacora a Replicar": pageNumber, // Usamos el número de página calculado.
     };
     AIRCRAFT_TYPE_HEADERS.forEach(type => { newFlight[type] = 0; });
-    if (data.tipoAvion && AIRCRAFT_TYPE_HEADERS.includes(data.tipoAvion)) {
-        newFlight[data.tipoAvion] = data.duracion;
-    }
+    const tiposSeleccionados = Array.isArray(data.tipoAvion) ? data.tipoAvion : [data.tipoAvion];
+    tiposSeleccionados.forEach(tipo => {
+        if (tipo && AIRCRAFT_TYPE_HEADERS.includes(tipo)) {
+            newFlight[tipo] = data.duracion;
+        }
+    });
     return newFlight;
 },
 
     validateAndGetData: () => {
-        document.querySelectorAll('input.error, select.error').forEach(el => el.classList.remove('error'));
+        document.querySelectorAll('input.error, select.error, #tipoAvion.error').forEach(el => el.classList.remove('error'));
         document.getElementById('status-message').textContent = '';
-        const data = { fecha: document.getElementById('fecha').value || ui.getTodayString(), aeronave: document.getElementById('aeronave').value, matricula: document.getElementById('matricula').value, desde: document.getElementById('desde').value, hasta: document.getElementById('hasta').value, duracion: parseFloat(document.getElementById('duracion').value) || 0, tipoAvion: document.getElementById('tipoAvion').value, condiciones: { Diurno: parseFloat(document.getElementById('condicionDiurno').value) || 0, Nocturno: parseFloat(document.getElementById('condicionNocturno').value) || 0, IFR: parseFloat(document.getElementById('condicionIFR').value) || 0, }, approaches: { no: document.getElementById('approaches-no').value, tipo: document.getElementById('approaches-tip').value }, aterrizajesDia: document.getElementById('aterrizajesDia').value, aterrizajesNoche: document.getElementById('aterrizajesNoche').value, roles: { simulador: parseFloat(document.getElementById('rol-simulador').value) || 0, travesia: parseFloat(document.getElementById('rol-travesia').value) || 0, solo: parseFloat(document.getElementById('rol-solo').value) || 0, pic: parseFloat(document.getElementById('rol-pic').value) || 0, sic: parseFloat(document.getElementById('rol-sic').value) || 0, instruccion: parseFloat(document.getElementById('rol-instruccion').value) || 0, instructor: parseFloat(document.getElementById('rol-instructor').value) || 0 }, observaciones: document.getElementById('observaciones').value, };
+        const data = { fecha: document.getElementById('fecha').value || ui.getTodayString(), aeronave: document.getElementById('aeronave').value, matricula: document.getElementById('matricula').value, desde: document.getElementById('desde').value, hasta: document.getElementById('hasta').value, duracion: parseFloat(document.getElementById('duracion').value) || 0, tipoAvion: Array.from(document.querySelectorAll('input[name="tipoAvion"]:checked')).map(cb => cb.value), condiciones: { Diurno: parseFloat(document.getElementById('condicionDiurno').value) || 0, Nocturno: parseFloat(document.getElementById('condicionNocturno').value) || 0, IFR: parseFloat(document.getElementById('condicionIFR').value) || 0, }, approaches: { no: document.getElementById('approaches-no').value, tipo: document.getElementById('approaches-tip').value }, aterrizajesDia: document.getElementById('aterrizajesDia').value, aterrizajesNoche: document.getElementById('aterrizajesNoche').value, roles: { simulador: parseFloat(document.getElementById('rol-simulador').value) || 0, travesia: parseFloat(document.getElementById('rol-travesia').value) || 0, solo: parseFloat(document.getElementById('rol-solo').value) || 0, pic: parseFloat(document.getElementById('rol-pic').value) || 0, sic: parseFloat(document.getElementById('rol-sic').value) || 0, instruccion: parseFloat(document.getElementById('rol-instruccion').value) || 0, instructor: parseFloat(document.getElementById('rol-instructor').value) || 0 }, observaciones: document.getElementById('observaciones').value, };
         const errors = [];
         const addError = (message, fieldIds, stepIndex) => errors.push({ message, fieldIds, stepIndex });
         if (!data.aeronave) addError('El campo "Aeronave" es obligatorio.', ['aeronave'], 0);
@@ -210,7 +203,7 @@ createFlightObject: (data) => {
         if (data.duracion <= 0) addError('La "Duración Total" debe ser mayor a 0.', ['duracion'], 1);
         const integerFields = { 'aterrizajesDia': 'Aterrizajes Día', 'aterrizajesNoche': 'Aterrizajes Noche', 'approaches-no': 'Nº Aprox. (NO)' };
         for (const [id, name] of Object.entries(integerFields)) { const input = document.getElementById(id); const value = input.value; if (value && !Number.isInteger(Number(value))) { addError(`El campo "${name}" debe ser un número entero (sin decimales).`, [id], 2); } }
-        if (data.roles.simulador > 0) { if (Math.abs(data.roles.simulador - data.duracion) > 0.01) { addError('Si es un vuelo de simulador, la "Duración Total" debe ser igual al tiempo de "Simulador".', ['duracion', 'rol-simulador'], 2); } } else { if (!data.tipoAvion) addError('El "Tipo de Avión" es obligatorio.', ['tipoAvion'], 1); }
+        if (data.roles.simulador > 0) { if (Math.abs(data.roles.simulador - data.duracion) > 0.01) { addError('Si es un vuelo de simulador, la "Duración Total" debe ser igual al tiempo de "Simulador".', ['duracion', 'rol-simulador'], 2); } } else { if (!data.tipoAvion || data.tipoAvion.length === 0) addError('El "Tipo de Avión" es obligatorio.', ['tipoAvion'], 1); }
         if (data.duracion > 0 && Math.abs((data.condiciones.Diurno + data.condiciones.Nocturno) - data.duracion) > 0.01) addError('La suma de Diurno y Nocturno debe ser igual a la Duración Total.', ['condicionDiurno', 'condicionNocturno'], 1);
         if (data.condiciones.IFR > data.duracion) addError('Las Horas IFR no pueden ser mayores que la Duración Total.', ['condicionIFR'], 1);
         if (userProfile.userRole === 'pilot') { if (data.duracion > 0 && Math.abs((data.roles.pic + data.roles.sic) - data.duracion) > 0.01) addError('Como piloto, la suma de PIC y SIC debe ser igual a la Duración Total.', ['rol-pic', 'rol-sic'], 2); } else { if (data.duracion > 0 && Math.abs(data.roles.instruccion - data.duracion) > 0.01) addError('Como alumno, la Instrucción debe ser igual a la Duración Total.', ['rol-instruccion'], 2); }
