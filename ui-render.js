@@ -204,7 +204,12 @@ const render = {
                 if (!aTime) return 1;  // Mueve los vuelos sin fecha al final
                 if (!bTime) return -1; // Mueve los vuelos sin fecha al final
 
-                return logbookState.sortOrder === 'desc' ? bTime - aTime : aTime - bTime;
+                const timeDiff = logbookState.sortOrder === 'desc' ? bTime - aTime : aTime - bTime;
+                if (timeDiff !== 0) return timeDiff;
+                // Mismo día: orden por página para mantener páginas contiguas (sin separadores falsos)
+                const aPage = parseInt(a["Pagina Bitacora a Replicar"]) || 0;
+                const bPage = parseInt(b["Pagina Bitacora a Replicar"]) || 0;
+                return logbookState.sortOrder === 'desc' ? bPage - aPage : aPage - bPage;
             });
         }
         logbookState.filteredData = processedData;

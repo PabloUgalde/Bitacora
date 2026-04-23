@@ -178,9 +178,14 @@ const dataImporter = {
                     return null; // Invalid flight if no duration
                 }
 
-                // Ensure Pagina Bitacora a Replicar has a default if null
+                // Ensure Pagina Bitacora a Replicar has a default if null.
+                // Offset by existing flight count so new imports continúan la paginación
+                // desde donde quedó la bitácora, en vez de empezar siempre desde página 1.
                 if (newFlight["Pagina Bitacora a Replicar"] === null) {
-                    newFlight["Pagina Bitacora a Replicar"] = Math.floor(rowIndex / 8) + 1;
+                    const existingCount = (typeof flightData !== 'undefined' && Array.isArray(flightData))
+                        ? flightData.filter(f => f && !f.es_saldo_inicial).length
+                        : 0;
+                    newFlight["Pagina Bitacora a Replicar"] = Math.floor((rowIndex + existingCount) / 8) + 1;
                 }
                 
                 // Ensure 'es_saldo_inicial' is always a boolean, defaulting to false

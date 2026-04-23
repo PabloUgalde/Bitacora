@@ -920,6 +920,28 @@ tbody td:nth-child(3), tbody td:nth-child(4), tbody td:nth-child(30) { text-alig
 }
 
 /* --- ESTILOS BARRA DE PROGRESO IMPORTACIÓN --- */
+.import-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    background: #7a3a00;
+    color: #ffd580;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.45rem 1rem;
+    text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 201;
+    transition: background-color 0.4s ease;
+}
+
+.import-bar.success {
+    background-color: #1a3020;
+    color: #4a9a4a;
+}
+
 progress {
     -webkit-appearance: none;
     appearance: none;
@@ -933,4 +955,8 @@ progress::-webkit-progress-value {
     background-color: #ffd580; /* Color del texto de la barra offline */
     border-radius: 4px;
     transition: width 0.3s ease;
+}
+
+.import-bar.success progress::-webkit-progress-value {
+    background-color: #4a9a4a;
 }

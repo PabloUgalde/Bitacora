@@ -4,6 +4,18 @@
 // app.js, ui.js y el resto del código no necesitan cambios.
 // =================================================================
 
+// Orden canónico de flightData: fecha desc, luego página desc para mismo día, saldo al final.
+function _sortFlightData(arr) {
+    arr.sort((a, b) => {
+        if (a.es_saldo_inicial) return 1;
+        if (b.es_saldo_inicial) return -1;
+        const aTime = a.Fecha ? a.Fecha.getTime() : 0;
+        const bTime = b.Fecha ? b.Fecha.getTime() : 0;
+        if (aTime !== bTime) return bTime - aTime;
+        return (parseInt(b["Pagina Bitacora a Replicar"]) || 0) - (parseInt(a["Pagina Bitacora a Replicar"]) || 0);
+    });
+}
+
 const api = {
 
     // ── Helpers internos ─────────────────────────────────────────
@@ -132,6 +144,7 @@ const api = {
                     .select('*')
                     .eq('user_id', userId)
                     .order('fecha', { ascending: false })
+                    .order('pagina_bitacora', { ascending: false })
                     .range(offset, offset + limit - 1);
 
                 if (error) throw error;
@@ -141,11 +154,7 @@ const api = {
             }
 
             flightData = allRows.map(row => api._rowToFlight(row));
-            flightData.sort((a, b) => {
-                if (a.es_saldo_inicial) return 1;
-                if (b.es_saldo_inicial) return -1;
-                return 0;
-            });
+            _sortFlightData(flightData);
             api.saveFlightsToLocalStorage(); // caché local
             console.log(`${flightData.length} vuelos cargados desde Supabase.`);
         } catch (err) {
@@ -402,6 +411,7 @@ const api = {
                     flight.Fecha = new Date(flight.Fecha);
                     return flight;
                 }).filter(Boolean);
+                _sortFlightData(flightData);
                 console.log(`${flightData.length} vuelos cargados desde localStorage (caché).`);
             } catch (e) {
                 console.error("Error al parsear caché local:", e);

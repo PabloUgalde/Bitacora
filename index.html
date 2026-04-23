@@ -15,11 +15,24 @@
     <link rel="stylesheet" href="print.css" media="print">
 </head>
 <body>
+    <script>
+    (function() {
+        // Verificamos si existe un token de sesión en el almacenamiento local
+        const session = localStorage.getItem('sb-rdnniehpsdforkfngwrf-auth-token');
+        
+        // Si NO hay sesión y NO estamos en proceso de recuperación/confirmación, 
+        // mandamos al usuario al landing.html
+        const isAuthCallback = window.location.hash.includes('access_token') || window.location.search.includes('auth=1');
+        if (!session && !isAuthCallback) {
+            window.location.replace('landing.html');
+        }
+    })();
+    </script>
     <div id="offline-bar" style="display:none; align-items:center; justify-content:center; gap:0.6rem; background:#7a3a00; color:#ffd580; font-size:0.8rem; font-weight:600; padding:0.45rem 1rem; text-align:center; position:sticky; top:0; z-index:200;">
         <span>⚡ Sin conexión</span>
         <span id="offline-pending-label" style="opacity:0.85"></span>
     </div>
-    <div id="import-bar" class="hidden" style="display: flex; align-items:center; justify-content:center; gap:1rem; background:#7a3a00; color:#ffd580; font-size:0.8rem; font-weight:600; padding:0.45rem 1rem; text-align:center; position:sticky; top:0; z-index:201;">
+    <div id="import-bar" class="import-bar hidden">
         <span id="import-bar-text">Importando vuelos...</span>
         <progress id="import-progress-bar" value="0" max="100" style="width: 200px;"></progress>
     </div>
@@ -56,7 +69,7 @@
                 </div>
             </div>
             <a href="#" data-view="view-settings" class="nav-link">Configuración</a>
-            <a href="/manual.html" target="_blank" class="nav-link">Manual</a>
+            <a href="manual.html" target="_blank" class="nav-link">Manual</a>
             <a href="#" class="nav-link" onclick="if(confirm('¿Estás seguro que deseas cerrar sesión?')) auth.logout(); return false;">Cerrar sesión</a>
         </nav>
         <!-- FIN DE LA MODIFICACIÓN -->
@@ -746,8 +759,8 @@
 <datalist id="datalist-approaches-tip"></datalist>
 
 <footer style="text-align:center; padding:20px; font-size:12px; color:#333; border-top:1px solid #1a1a1a; margin-top:40px;">
-    <a href="/terminos.html" style="color:#555; text-decoration:none; margin:0 8px;">Términos</a>
-    <a href="/privacidad.html" style="color:#555; text-decoration:none; margin:0 8px;">Privacidad</a>
+    <a href="terminos.html" style="color:#555; text-decoration:none; margin:0 8px;">Términos</a>
+    <a href="privacidad.html" style="color:#555; text-decoration:none; margin:0 8px;">Privacidad</a>
 </footer>
 </body>
 </html>

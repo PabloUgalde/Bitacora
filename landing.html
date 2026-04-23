@@ -194,6 +194,14 @@
     </style>
 </head>
 <body>
+<script>
+(function() {
+    const session = localStorage.getItem('sb-rdnniehpsdforkfngwrf-auth-token');
+    if (session) {
+        window.location.replace('index.html');
+    }
+})();
+</script>
 
 <!-- NAV -->
 <nav>
@@ -207,7 +215,7 @@
         <a href="#precios">Precios</a>
         <a href="#faq">FAQ</a>
     </div>
-    <a href="/?auth=1" class="nav-cta" id="nav-cta">Comenzar gratis</a>
+    <a href="index.html?auth=1" class="nav-cta" id="nav-cta">Comenzar gratis</a>
 </nav>
 
 <!-- HERO -->
@@ -218,7 +226,7 @@
     <h1 class="hero-title">Tu bitácora<br><span>en la nube</span></h1>
     <p class="hero-sub">Registra, gestiona y analiza tus vuelos desde cualquier dispositivo. Diseñada para pilotos civiles y militares.</p>
     <div class="hero-actions">
-        <a href="/?auth=1" class="btn-primary">Comenzar gratis →</a>
+        <a href="index.html?auth=1" class="btn-primary">Comenzar gratis →</a>
         <a href="#demo" class="btn-secondary">Ver demo</a>
     </div>
     <div class="hero-stats">
@@ -549,7 +557,7 @@
     <div class="section-inner">
         <h2 class="cta-title">Listo para<br><span>despegar?</span></h2>
         <p class="cta-sub">Crea tu cuenta gratis y prueba el plan Pro por 14 días sin tarjeta.</p>
-        <a href="/?auth=1" class="btn-primary" style="font-size:16px; padding:16px 40px;">Comenzar ahora — es gratis →</a>
+        <a href="index.html?auth=1" class="btn-primary" style="font-size:16px; padding:16px 40px;">Comenzar ahora — es gratis →</a>
     </div>
 </section>
 

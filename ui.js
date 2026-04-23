@@ -162,6 +162,36 @@ const ui = {
         });
     },
 
+    setupBoltButtons: () => {
+        const duracionEl = document.getElementById('duracion');
+        if (!duracionEl) return;
+
+        const updateBoltStates = () => {
+            const hasValue = duracionEl.value && ui.parseTimeInput(duracionEl.value) > 0;
+            document.querySelectorAll('.bolt-btn').forEach(btn => {
+                btn.disabled = !hasValue;
+            });
+        };
+
+        duracionEl.addEventListener('input', updateBoltStates);
+        updateBoltStates();
+
+        document.querySelectorAll('.bolt-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const total = ui.parseTimeInput(duracionEl.value);
+                if (total <= 0) return;
+                const targetEl = document.getElementById(btn.dataset.target);
+                if (!targetEl) return;
+                targetEl.value = formatHours(total);
+                targetEl.dispatchEvent(new Event('input', { bubbles: true }));
+                targetEl.classList.remove('input-flash');
+                void targetEl.offsetWidth; // fuerza reflow para reiniciar animación
+                targetEl.classList.add('input-flash');
+                setTimeout(() => targetEl.classList.remove('input-flash'), 400);
+            });
+        });
+    },
+
     populateFlightForm: (flight) => {
         if (!flight) return;
         document.getElementById('fecha').value = flight.Fecha && !isNaN(flight.Fecha.getTime()) ? flight.Fecha.toISOString().split('T')[0] : '';
@@ -203,25 +233,11 @@ createFlightObject: (data) => {
         pageNumber = originalFlight ? originalFlight["Pagina Bitacora a Replicar"] : 1;
     } else {
         // Si estamos creando un nuevo vuelo, calculamos la nueva página.
-        if (flightData.length === 0) {
-            // Si es el primer vuelo de la bitácora, la página es la 1.
-            pageNumber = 1;
-        } else {
-            // Obtenemos el número de la última página existente.
-            const lastPageNumber = flightData[0]["Pagina Bitacora a Replicar"] || 1;
-            
-            // Contamos cuántos vuelos ya existen en esa última página.
-            const flightsOnLastPage = flightData.filter(f => f["Pagina Bitacora a Replicar"] === lastPageNumber).length;
-            
-            // Verificamos si la última página ya está llena (8 registros).
-            if (flightsOnLastPage >= 8) {
-                // Si está llena, el nuevo vuelo va en la siguiente página.
-                pageNumber = lastPageNumber + 1;
-            } else {
-                // Si no está llena, el nuevo vuelo va en la misma página.
-                pageNumber = lastPageNumber;
-            }
-        }
+        // Usamos ui.getLastPageNumber() que hace Math.max sobre todos los vuelos,
+        // evitando el bug de usar flightData[0] que depende del orden por fecha.
+        const lastPageNumber = ui.getLastPageNumber();
+        const flightsOnLastPage = flightData.filter(f => parseInt(f["Pagina Bitacora a Replicar"]) === lastPageNumber).length;
+        pageNumber = flightsOnLastPage >= 8 ? lastPageNumber + 1 : lastPageNumber;
     }
     // --- FIN DE LA LÓGICA DE PAGINACIÓN CORREGIDA ---
 

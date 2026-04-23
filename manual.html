@@ -302,6 +302,13 @@
                 <a class="toc-link" href="#roles">Roles: Piloto vs. Alumno</a>
             </div>
             <div class="toc-section">
+                <div class="toc-section-title">Importación de datos</div>
+                <a class="toc-link" href="#importar">Importar desde Excel</a>
+                <a class="toc-link sub" href="#importar-template">Template de importación</a>
+                <a class="toc-link sub" href="#importar-verificar">Verificación de totales</a>
+                <a class="toc-link sub" href="#importar-progreso">Barra de progreso</a>
+            </div>
+            <div class="toc-section">
                 <div class="toc-section-title">Funciones Principales</div>
                 <a class="toc-link" href="#bitacora">Registro detallado</a>
                 <a class="toc-link sub" href="#col-visibility">Visibilidad de columnas</a>
@@ -314,6 +321,7 @@
                 <a class="toc-link" href="#config-personal">Datos personales</a>
                 <a class="toc-link" href="#config-licencias">Licencias y habilitaciones</a>
                 <a class="toc-link" href="#config-dashboard">Personalizar dashboard</a>
+                <a class="toc-link" href="#config-horas">Formato de horas</a>
             </div>
             <div class="toc-section">
                 <div class="toc-section-title">Planes</div>
@@ -399,7 +407,7 @@
 
             <div class="callout info">
                 <span class="callout-icon">💡</span>
-                <span>Si vienes de otra bitácora, puedes importar tus vuelos anteriores desde <strong>Configuración → Importar Excel (.xlsx)</strong>. También puedes ingresar un saldo inicial de horas desde el panel de datos.</span>
+                <span>Si vienes de otra bitácora, puedes importar tus vuelos anteriores desde <strong>Configuración → Datos y Exportación → Importar Excel (.xlsx)</strong>. Descarga primero el <strong>Template</strong> para preparar tu archivo en el formato correcto. También puedes ingresar un saldo inicial de horas desde el panel de datos.</span>
             </div>
         </section>
 
@@ -411,6 +419,16 @@
             <div class="callout ok">
                 <span class="callout-icon">✓</span>
                 <span><strong>Autocompletado inteligente:</strong> Los campos Aeronave, Matrícula, Desde, Hasta y Tipo de Aproximación ofrecen sugerencias basadas en tus vuelos anteriores. Basta con comenzar a escribir para ver las opciones. El campo Observaciones también muestra sugerencias de anotaciones usadas previamente.</span>
+            </div>
+
+            <div class="callout info">
+                <span class="callout-icon">💡</span>
+                <span><strong>Validación en tiempo real:</strong> Los campos de tiempo (Duración Total, Diurno, Nocturno, IFR, PIC, SIC, etc.) se validan mientras escribes. Si detecta un error, el campo se marca de inmediato en rojo sin esperar a que intentes avanzar al paso siguiente.</span>
+            </div>
+
+            <div class="callout ok">
+                <span class="callout-icon">⚡</span>
+                <span><strong>Botón ⚡ — Copiar duración total:</strong> Cada campo de tiempo en los pasos 2 y 3 tiene un pequeño botón ⚡ a su derecha. Al hacer clic, el campo se llena automáticamente con el valor de <strong>Duración Total</strong> y destella en dorado como confirmación. El botón aparece deshabilitado mientras la Duración Total esté vacía. Útil, por ejemplo, para llenar PIC en un vuelo solo, o Diurno cuando todo el vuelo fue de día.</span>
             </div>
 
             <!-- Paso 1 -->
@@ -478,7 +496,7 @@
                         <tr>
                             <td><strong>Tipo de Avión</strong></td>
                             <td><span class="cond">Condicional</span></td>
-                            <td>Requerido si no es un vuelo de simulador. Selecciona la categoría de la aeronave.</td>
+                            <td>Requerido si no es un vuelo de simulador. Selecciona uno o más tipos mediante <strong>casillas de verificación</strong> (checkboxes): LSA, Monomotor, Multimotor, Turbo Hélice, Turbo Jet, Helicóptero, Planeador, Ultraliviano. Puedes marcar más de uno si el vuelo involucra distintas categorías.</td>
                         </tr>
                         <tr>
                             <td><strong>Horas Diurnas</strong></td>
@@ -522,6 +540,18 @@
             <div class="callout warn">
                 <span class="callout-icon">⚠</span>
                 <span><strong>Vuelo de simulador:</strong> Si ingresas tiempo en el campo "Simulador" (Paso 3), la Duración Total debe ser igual al tiempo de simulador. En ese caso, el "Tipo de Avión" no es requerido.</span>
+            </div>
+
+            <h4>Campos con botón ⚡ en el Paso 2</h4>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>Campo</th><th>Cuándo usarlo</th></tr></thead>
+                    <tbody>
+                        <tr><td><strong>Horas Diurnas ⚡</strong></td><td>Vuelo completamente diurno (el caso más común).</td></tr>
+                        <tr><td><strong>Horas Nocturnas ⚡</strong></td><td>Vuelo completamente nocturno.</td></tr>
+                        <tr><td><strong>Horas IFR ⚡</strong></td><td>Todo el vuelo fue en condición IFR.</td></tr>
+                    </tbody>
+                </table>
             </div>
 
             <!-- Paso 3 -->
@@ -602,6 +632,22 @@
                             <td><span class="opt">Opcional</span></td>
                             <td>Texto libre. Anotaciones adicionales del vuelo.</td>
                         </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h4>Campos con botón ⚡ en el Paso 3</h4>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>Campo</th><th>Cuándo usarlo</th></tr></thead>
+                    <tbody>
+                        <tr><td><strong>PIC ⚡</strong></td><td>Vuelo completamente como piloto al mando (sin copiloto, sin instrucción).</td></tr>
+                        <tr><td><strong>SIC ⚡</strong></td><td>Todo el vuelo como copiloto (operación multiequipaje).</td></tr>
+                        <tr><td><strong>Como Instructor ⚡</strong></td><td>Todo el vuelo impartiendo instrucción.</td></tr>
+                        <tr><td><strong>Instrucción Recibida ⚡</strong></td><td>Todo el vuelo recibiendo instrucción (modo alumno o piloto en entrenamiento).</td></tr>
+                        <tr><td><strong>Solo ⚡</strong></td><td>Vuelo completamente en solitario.</td></tr>
+                        <tr><td><strong>Travesía ⚡</strong></td><td>Todo el vuelo fue de travesía (XC).</td></tr>
+                        <tr><td><strong>Simulador ⚡</strong></td><td>Sesión completa en simulador.</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -829,11 +875,80 @@
             </ul>
 
             <h3>Importar datos</h3>
-            <p>Puedes cargar vuelos desde un archivo Excel previamente exportado desde la aplicación o de una bitácora anterior compatible. Ve a <strong>Configuración → Importar Excel (.xlsx)</strong>.</p>
+            <p>Carga vuelos desde un archivo Excel con soporte de template descargable, verificación de totales y barra de progreso. Ver la sección <a href="#importar" style="color:var(--primary)">Importar desde Excel</a> para el detalle completo.</p>
+
+        </section>
+
+        <!-- ─────────────────── IMPORTAR DATOS ─────────────────── -->
+        <section class="section" id="importar">
+            <h2><span class="icon">📥</span> Importar datos desde Excel</h2>
+            <p>Puedes cargar vuelos desde un archivo Excel previamente exportado desde la aplicación o de una bitácora anterior. Ve a <strong>Configuración → Datos y Exportación → Importar Excel (.xlsx)</strong>.</p>
+
+            <h3 id="importar-template">Descargar el template</h3>
+            <p>Antes de importar, usa el botón <strong>Descargar Template (.xlsx)</strong> para obtener un archivo Excel con el formato exacto que espera la aplicación. El template incluye todas las columnas con sus nombres correctos y una fila de ejemplo.</p>
+
+            <div class="callout ok">
+                <span class="callout-icon">✓</span>
+                <span>Si tus vuelos ya están en un Excel exportado desde Bitácora de Vuelo, no necesitas el template: puedes importarlo directamente. El template es para preparar datos desde cero o desde otra fuente.</span>
+            </div>
+
+            <h4>Formatos de hora aceptados</h4>
+            <p>El importador reconoce automáticamente tres formatos para las columnas de tiempo:</p>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>Formato</th><th>Ejemplo</th><th>Descripción</th></tr></thead>
+                    <tbody>
+                        <tr><td>Decimal</td><td>1.5</td><td>Horas en número decimal (punto o coma).</td></tr>
+                        <tr><td>HH:MM</td><td>1:30</td><td>Horas y minutos separados por dos puntos.</td></tr>
+                        <tr><td>HH:MM:SS</td><td>1:30:00</td><td>Horas, minutos y segundos.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3 id="importar-verificar">Modal de verificación</h3>
+            <p>Una vez que la aplicación procesa el archivo, se abre un <strong>modal de verificación</strong> antes de confirmar la importación. Este paso es opcional pero muy recomendado.</p>
+            <div class="steps">
+                <div class="step">
+                    <div class="step-num">1</div>
+                    <div class="step-body">
+                        <h4>Revisa los vuelos procesados</h4>
+                        <p>El modal muestra cuántos vuelos se detectaron en el archivo y los totales calculados (horas totales, aterrizajes diurnos, aterrizajes nocturnos).</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">2</div>
+                    <div class="step-body">
+                        <h4>Ingresa tus totales de referencia (opcional)</h4>
+                        <p>En la columna "Tu total", escribe los valores que ves en tu Excel original. Luego presiona <strong>Verificar</strong> para comparar.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">3</div>
+                    <div class="step-body">
+                        <h4>Comprueba los íconos de estado</h4>
+                        <p>Un ✓ verde indica que los totales coinciden (con tolerancia de 2 minutos para horas). Un ✗ rojo indica discrepancia; el tooltip muestra la diferencia exacta.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">4</div>
+                    <div class="step-body">
+                        <h4>Confirma o cancela</h4>
+                        <p>Presiona <strong>Confirmar importación</strong> para proceder o <strong>Cancelar</strong> para volver sin importar nada.</p>
+                    </div>
+                </div>
+            </div>
+
+            <h3 id="importar-progreso">Barra de progreso</h3>
+            <p>Durante la importación aparece una barra de progreso en la parte superior de la pantalla que indica cuántos vuelos se han guardado del total. La aplicación procesa los vuelos en lotes de 50 para mantener la interfaz respondiendo.</p>
 
             <div class="callout warn">
                 <span class="callout-icon">⚠</span>
-                <span>Verifica que el archivo Excel tenga el mismo formato de columnas que usa la aplicación. Si hay columnas faltantes o renombradas, algunos datos podrían no importarse correctamente.</span>
+                <span><strong>No cierres ni recargues la página</strong> mientras la barra de progreso está visible. La aplicación bloqueará automáticamente la recarga accidental y pedirá confirmación si intentas salir, pero lo más seguro es esperar a que termine.</span>
+            </div>
+
+            <div class="callout info">
+                <span class="callout-icon">💡</span>
+                <span>El importador detecta automáticamente la fila de encabezados aunque haya filas vacías o de título antes de ella. También salta filas de totales o subtotales que empiecen con las palabras "Total" o "Subtotal".</span>
             </div>
         </section>
 
@@ -945,6 +1060,39 @@
                 <li>Hay más de 20 indicadores disponibles, incluyendo horas por tipo de aeronave.</li>
             </ul>
             <p>Los cambios se aplican al guardar la configuración.</p>
+        </section>
+
+        <!-- ─────────────────── FORMATO DE HORAS ─────────────────── -->
+        <section class="section" id="config-horas">
+            <h2><span class="icon">🕐</span> Configuración — Formato de horas</h2>
+            <p>En <strong>Configuración → Datos y Exportación</strong> puedes elegir cómo se muestran las horas en toda la aplicación.</p>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr><th>Opción</th><th>Ejemplo</th><th>Descripción</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Decimal</strong></td>
+                            <td>1.5</td>
+                            <td>Formato estándar en horas decimales. Opción predeterminada.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>HH:MM</strong></td>
+                            <td>1:30</td>
+                            <td>Formato de horas y minutos, similar a una bitácora física.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p>El formato elegido se aplica en toda la aplicación: dashboard, registro detallado, últimos vuelos, actividad reciente y resúmenes. El cambio es instantáneo al seleccionar la opción; no es necesario guardar la configuración primero.</p>
+
+            <div class="callout info">
+                <span class="callout-icon">💡</span>
+                <span>El formato de horas es una preferencia de visualización y no afecta los datos almacenados. Los vuelos se guardan siempre en decimal internamente.</span>
+            </div>
         </section>
 
         <!-- ─────────────────── 12. PLANES ─────────────────── -->

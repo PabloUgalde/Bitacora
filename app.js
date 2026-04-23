@@ -494,10 +494,16 @@ const app = {
                             if (progressBar) progressBar.value = Math.round((processed / total) * 100);
                         }
 
-                        ui.showNotification(`${total} vuelos importados correctamente.`, 'success');
-                        dataStatus.textContent = 'Importación completada con éxito.';
+                        const successMsg = `✓ ${total} vuelos importados con éxito.`;
+                        ui.showNotification(successMsg, 'success');
+                        dataStatus.textContent = successMsg;
                         dataStatus.className = 'status success';
                         
+                        if (importBar) {
+                            importBar.classList.add('success');
+                            if (importBarText) importBarText.textContent = successMsg;
+                        }
+
                         await api.loadInitialFlights();
                         render.dashboard();
                     } catch (error) {
@@ -508,7 +514,9 @@ const app = {
                     } finally {
                         // Liberar el bloqueo de recarga
                         window.removeEventListener('beforeunload', warnUnload);
-                        if (importBar) importBar.classList.add('hidden');
+                        setTimeout(() => {
+                            if (importBar) importBar.classList.add('hidden');
+                        }, 4000);
                     }
                 } else {
                     const dataStatus = document.getElementById('data-status');
