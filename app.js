@@ -412,6 +412,18 @@ const app = {
             });
         });
 
+        // Soporte para selector dropdown si se usa en lugar de radios
+        const hoursSelector = document.getElementById('hoursFormatSelector');
+        if (hoursSelector) {
+            hoursSelector.addEventListener('change', (e) => {
+                userProfile.hoursFormat = e.target.value;
+                api.saveProfile(userProfile);
+                const activeView = document.querySelector('.view.active');
+                const renderFn = activeView ? ui.renderMap[activeView.id] : null;
+                if (renderFn) renderFn();
+            });
+        }
+
         // --- CONFIGURACIÓN ---
         document.getElementById('save-settings-btn').addEventListener('click', app.saveSettings);
 
@@ -692,6 +704,8 @@ const app = {
         const hoursFormat = userProfile.hoursFormat || 'decimal';
         const hoursRadio = document.querySelector(`input[name="hoursFormat"][value="${hoursFormat}"]`);
         if (hoursRadio) hoursRadio.checked = true;
+        const hoursSelect = document.getElementById('hoursFormatSelector');
+        if (hoursSelect) hoursSelect.value = hoursFormat;
 
         // Init columnas ocultas
         logbookState.hiddenColumns = new Set(userProfile.hiddenColumns || []);

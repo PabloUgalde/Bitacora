@@ -361,6 +361,7 @@ const api = {
             dashboard_cards:       profileData.dashboardCards || [],
             dashboard_card_count:  profileData.dashboardCardCount || 8,
             user_role:             profileData.userRole || 'student',
+            hours_format:          profileData.hoursFormat || 'decimal',
             updated_at:            new Date().toISOString(),
         };
         const { error } = await supabaseClient
@@ -390,6 +391,7 @@ const api = {
                     const profile = {
                         dataSource: 'supabase',
                         userRole:          data.user_role || local?.userRole || 'student',
+                        hoursFormat:       data.hours_format || local?.hoursFormat || 'decimal',
                         dashboardCards:    (data.dashboard_cards?.length ? data.dashboard_cards : local?.dashboardCards) || [],
                         dashboardCardCount: data.dashboard_card_count || local?.dashboardCardCount || 8,
                         licenses:          (data.licencias && Object.keys(data.licencias).length ? data.licencias : local?.licenses) || {},
