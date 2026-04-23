@@ -28,37 +28,74 @@ const miCuenta = {
         }
     },
 
-    confirmDeleteAccount: () => {
-        const confirmed = confirm(
-            '⚠️ ¿Estás seguro?\n\nEsto eliminará permanentemente tu cuenta y todos tus vuelos. Esta acción no se puede deshacer.'
-        );
-        if (!confirmed) return;
-        const reconfirmed = confirm('Última confirmación: ¿eliminar cuenta definitivamente?');
-        if (!reconfirmed) return;
-        miCuenta.deleteAccount();
+    confirmDeleteAccount: async () => {
+        // Mostrar un modal de confirmación robusto para evitar eliminaciones accidentales
+        const modal = document.createElement('div');
+        modal.className = 'modal open';
+        modal.style.zIndex = "10002";
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width:450px;">
+                <div class="modal-header">
+                    <h3>Eliminar Cuenta y Datos</h3>
+                    <span class="close-button" onclick="this.closest('.modal').remove()">×</span>
+                </div>
+                <p style="color:var(--text-muted-color); margin-bottom:1.5rem;">
+                    Esta acción eliminará **permanentemente** todos tus registros de vuelo y tu perfil de la base de datos.
+                    <br><br>
+                    Para confirmar, por favor escribe tu email:
+                </p>
+                <input type="email" id="confirm-delete-email" placeholder="tu@email.com" style="width:100%; margin-bottom:1rem;">
+                <p id="delete-error-message" style="color:var(--accent-color-red); font-size:0.9rem; min-height:1.2em;"></p>
+                <div style="display:flex; justify-content:flex-end; gap:12px; padding-top:1rem; border-top:1px solid var(--border-color);">
+                    <button class="prev-btn" onclick="this.closest('.modal').remove()">Cancelar</button>
+                    <button id="confirm-delete-btn" class="settings-btn-danger" disabled style="background-color: var(--accent-color-red); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">Confirmar Eliminación</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        const confirmEmailInput = document.getElementById('confirm-delete-email');
+        const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+        const deleteErrorMessage = document.getElementById('delete-error-message');
+
+        const currentUserEmail = currentUser?.email;
+
+        confirmEmailInput.addEventListener('input', () => {
+            if (confirmEmailInput.value.trim().toLowerCase() === currentUserEmail?.toLowerCase()) {
+                confirmDeleteBtn.disabled = false;
+                deleteErrorMessage.textContent = '';
+            } else {
+                confirmDeleteBtn.disabled = true;
+                deleteErrorMessage.textContent = 'El email no coincide.';
+            }
+        });
+
+        confirmDeleteBtn.addEventListener('click', async () => {
+            if (confirmDeleteBtn.disabled) return;
+            
+            confirmDeleteBtn.disabled = true;
+            confirmDeleteBtn.textContent = 'Procesando...';
+            
+            const success = await miCuenta.deleteAccount();
+            if (success) {
+                modal.remove();
+            } else {
+                confirmDeleteBtn.disabled = false;
+                confirmDeleteBtn.textContent = 'Confirmar Eliminación';
+                deleteErrorMessage.textContent = 'Error al eliminar los datos.';
+            }
+        });
     },
 
     deleteAccount: async () => {
-        ui.showNotification('Eliminando cuenta...', 'info');
+        ui.showNotification('Eliminando datos...', 'info');
         try {
-            const { data: { session } } = await supabaseClient.auth.getSession();
-            const token = session?.access_token;
-            const res = await fetch(
-                'https://rdnniehpsdforkfngwrf.supabase.co/functions/v1/delete-account',
-                {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`,
-                    },
-                }
-            );
-            const data = await res.json();
-            if (data.error) throw new Error(data.error);
-            await supabaseClient.auth.signOut();
-            window.location.reload();
+            // Llamamos a la lógica cliente en api.js para evitar el error de CORS 
+            // que tiene la Edge Function configurada para el dominio oficial.
+            return await api.deleteUserAccountAndData();
         } catch (err) {
             ui.showNotification('Error al eliminar cuenta: ' + err.message, 'error');
+            return false;
         }
     },
 };

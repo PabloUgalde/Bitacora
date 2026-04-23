@@ -15,21 +15,13 @@
     <link rel="stylesheet" href="print.css" media="print">
 </head>
 <body>
-<script>
-(function() {
-    // Si no hay sesión, redirigir al landing
-    const stored = localStorage.getItem('sb-rdnniehpsdforkfngwrf-auth-token');
-    if (!stored) {
-        // Solo redirigir si no estamos ya en el landing
-        if (!stored && !window.location.search.includes('auth=1')) {
-            window.location.replace('/landing.html');
-        }
-    }
-})();
-</script>
     <div id="offline-bar" style="display:none; align-items:center; justify-content:center; gap:0.6rem; background:#7a3a00; color:#ffd580; font-size:0.8rem; font-weight:600; padding:0.45rem 1rem; text-align:center; position:sticky; top:0; z-index:200;">
         <span>⚡ Sin conexión</span>
         <span id="offline-pending-label" style="opacity:0.85"></span>
+    </div>
+    <div id="import-bar" class="hidden" style="display: flex; align-items:center; justify-content:center; gap:1rem; background:#7a3a00; color:#ffd580; font-size:0.8rem; font-weight:600; padding:0.45rem 1rem; text-align:center; position:sticky; top:0; z-index:201;">
+        <span id="import-bar-text">Importando vuelos...</span>
+        <progress id="import-progress-bar" value="0" max="100" style="width: 200px;"></progress>
     </div>
     <header>
         <a href="#" data-view="view-dashboard" class="logo-link nav-link">
@@ -635,9 +627,6 @@
                                     <button id="download-template-btn" type="button" class="settings-btn-secondary">Descargar Template (.xlsx)</button>
                                     <input type="file" id="excel-file-input" accept=".xlsx, .xls" style="display:none;">
                                     <button id="upload-excel-btn" type="button" class="settings-btn-secondary">Importar Excel (.xlsx)</button>
-                                    <div id="import-progress-container" class="hidden" style="margin-top: 10px;">
-                                        <progress id="import-progress-bar" value="0" max="100" style="width: 100%;"></progress>
-                                    </div>
                                     <p id="data-status" class="status"></p>
                                 </div>
                             </div>

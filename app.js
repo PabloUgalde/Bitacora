@@ -464,9 +464,11 @@ const app = {
                     dataStatus.textContent = 'Iniciando importación...';
                     dataStatus.className = 'status info';
 
-                    const progressContainer = document.getElementById('import-progress-container');
+                    const importBar = document.getElementById('import-bar');
+                    const importBarText = document.getElementById('import-bar-text');
                     const progressBar = document.getElementById('import-progress-bar');
-                    if (progressContainer) progressContainer.classList.remove('hidden');
+
+                    if (importBar) importBar.classList.remove('hidden');
 
                     // Bloquear recarga accidental del navegador
                     const warnUnload = (event) => { event.preventDefault(); event.returnValue = ''; };
@@ -484,7 +486,11 @@ const app = {
                             if (!success) throw new Error("Error al guardar lote de vuelos.");
                             
                             processed += chunk.length;
-                            dataStatus.textContent = `Importando: ${processed} de ${total} vuelos (${Math.round((processed/total)*100)}%)`;
+                            const progressMsg = `Importando: ${processed} de ${total} vuelos (${Math.round((processed/total)*100)}%)`;
+                            dataStatus.textContent = progressMsg;
+                            if (importBarText) {
+                                importBarText.textContent = progressMsg;
+                            }
                             if (progressBar) progressBar.value = Math.round((processed / total) * 100);
                         }
 
@@ -502,7 +508,7 @@ const app = {
                     } finally {
                         // Liberar el bloqueo de recarga
                         window.removeEventListener('beforeunload', warnUnload);
-                        if (progressContainer) progressContainer.classList.add('hidden');
+                        if (importBar) importBar.classList.add('hidden');
                     }
                 } else {
                     const dataStatus = document.getElementById('data-status');

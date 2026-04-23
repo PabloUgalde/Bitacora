@@ -291,6 +291,46 @@ const api = {
         return true;
     },
 
+    deleteUserAccountAndData: async () => {
+        const userId = api._getUserId();
+        if (!userId) {
+            ui.showNotification("No hay usuario autenticado para eliminar.", "error");
+            return false;
+        }
+
+        try {
+            // 1. Eliminar todos los vuelos del usuario en Supabase
+            const { error: deleteFlightsError } = await supabaseClient
+                .from('flights')
+                .delete()
+                .eq('user_id', userId);
+
+            if (deleteFlightsError) throw deleteFlightsError;
+
+            // 2. Eliminar el perfil del usuario en Supabase
+            const { error: deleteProfileError } = await supabaseClient
+                .from('profiles')
+                .delete()
+                .eq('id', userId);
+
+            if (deleteProfileError) throw deleteProfileError;
+
+            // 3. Cerrar sesión y limpiar datos locales
+            await supabaseClient.auth.signOut();
+            localStorage.clear();
+            
+            ui.showNotification("Tus registros han sido eliminados. Redirigiendo...", "success");
+            setTimeout(() => {
+                window.location.replace('landing.html');
+            }, 2000);
+            return true;
+        } catch (error) {
+            console.error("Error al eliminar los datos:", error);
+            ui.showNotification(`Error al eliminar datos: ${error.message}`, "error");
+            return false;
+        }
+    },
+
     // ── Cola offline ──────────────────────────────────────────────
     _getPendingQueue: () => {
         try { return JSON.parse(localStorage.getItem('flightLogPendingSync') || '[]'); }

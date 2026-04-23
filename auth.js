@@ -241,7 +241,7 @@ const auth = {
         overlay.id = 'auth-overlay';
         overlay.innerHTML = `
         <div class="auth-card" style="position:relative;">
-            <button onclick="window.location.href='/landing.html'" style="position:absolute; top:12px; right:16px; background:transparent; border:none; color:#555; font-size:24px; cursor:pointer; line-height:1; padding:4px; z-index:10;" title="Volver al inicio">×</button>
+            <button onclick="window.location.href='landing.html'" style="position:absolute; top:12px; right:16px; background:transparent; border:none; color:#555; font-size:24px; cursor:pointer; line-height:1; padding:4px; z-index:10;" title="Volver al inicio">×</button>
             <div class="auth-logo">
                 <div class="pilot-epaulette">
                     <div class="stripe"></div><div class="stripe"></div>
