@@ -40,6 +40,7 @@ const HEADER_STRUCTURE = [ { name: "Fecha", isGroup: false, rowspan: 2 }, { name
 const calculateTotals = (data, headers) => headers.reduce((totals, header) => { totals[header] = data.reduce((sum, flight) => sum + (parseFloat(flight[header]) || 0), 0); return totals; }, {});
 
 const formatHours = (val) => {
+    if (val === 0 || val === null || val === undefined) return "";
     if (userProfile.hoursFormat === 'hhmm') {
         const h = Math.floor(val);
         const m = Math.round((val % 1) * 60);

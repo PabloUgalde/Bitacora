@@ -84,6 +84,31 @@ const saldoInicial = {
         document.getElementById('si-fecha-inicio')?.addEventListener('input', updateObs);
         document.getElementById('si-fecha')?.addEventListener('input', updateObs);
     },
+
+    // Helper para aplicar validación y auto-formateo a los campos de tiempo en Saldo Inicial
+    _setupTimeField: (id) => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.type = 'text';
+            el.setAttribute('inputmode', 'tel');
+            
+            // Validación visual (rojo si el formato es inválido)
+            el.addEventListener('input', () => {
+                const isValid = ui.isValidTimeFormat(el.value);
+                el.style.borderColor = isValid ? '' : '#ef4444';
+            });
+
+            // Auto-formateo al perder el foco (convierte 1:64 a 2:04)
+            el.addEventListener('blur', () => {
+                if (el.value && ui.isValidTimeFormat(el.value)) {
+                    const decimalValue = ui.parseTimeInput(el.value);
+                    // formatHours devolverá el string en HH:MM o Decimal según config
+                    el.value = formatHours(decimalValue);
+                }
+            });
+        }
+    },
+
     open: () => {
             saldoInicial.currentStep = 0;
             const existing = saldoInicial._getExisting();
@@ -163,23 +188,23 @@ const saldoInicial = {
                     <div class="si-fields">
                         <div class="si-field">
                             <label>Duración Total *</label>
-                            <input type="number" step="0.1" min="0" id="si-total" placeholder="Ej: 312.5" value="${num('Duracion Total de Vuelo')}">
+                            <input type="text" id="si-total" placeholder="Ej: 312:30 o 312.5" value="${num('Duracion Total de Vuelo')}">
                         </div>
                         <div class="si-field">
                             <label>Horas Diurnas</label>
-                            <input type="number" step="0.1" min="0" id="si-diurno" placeholder="0" value="${num('Diurno')}">
+                            <input type="text" id="si-diurno" placeholder="0:00" value="${num('Diurno')}">
                         </div>
                         <div class="si-field">
                             <label>Horas Nocturnas</label>
-                            <input type="number" step="0.1" min="0" id="si-nocturno" placeholder="0" value="${num('Nocturno')}">
+                            <input type="text" id="si-nocturno" placeholder="0:00" value="${num('Nocturno')}">
                         </div>
                         <div class="si-field">
                             <label>Horas IFR</label>
-                            <input type="number" step="0.1" min="0" id="si-ifr" placeholder="0" value="${num('IFR')}">
+                            <input type="text" id="si-ifr" placeholder="0:00" value="${num('IFR')}">
                         </div>
                         <div class="si-field">
                             <label>Nº Aproximaciones</label>
-                            <input type="number" step="1" min="0" id="si-no-app" placeholder="0" value="${num('NO')}">
+                            <input type="number" id="si-no-app" placeholder="0" value="${num('NO')}">
                         </div>
                         <div class="si-field">
                             <label>Tipo Aproximaciones</label>
@@ -200,31 +225,31 @@ const saldoInicial = {
                     <div class="si-fields">
                         <div class="si-field">
                             <label>Horas PIC</label>
-                            <input type="number" step="0.1" min="0" id="si-pic" placeholder="0" value="${num('Piloto al Mando (PIC)')}">
+                            <input type="text" id="si-pic" placeholder="0:00" value="${num('Piloto al Mando (PIC)')}">
                         </div>
                         <div class="si-field">
                             <label>Horas SIC</label>
-                            <input type="number" step="0.1" min="0" id="si-sic" placeholder="0" value="${num('Copiloto (SIC)')}">
+                            <input type="text" id="si-sic" placeholder="0:00" value="${num('Copiloto (SIC)')}">
                         </div>
                         <div class="si-field">
                             <label>Instrucción Recibida</label>
-                            <input type="number" step="0.1" min="0" id="si-instruccion" placeholder="0" value="${num('Instruccion Recibida')}">
+                            <input type="text" id="si-instruccion" placeholder="0:00" value="${num('Instruccion Recibida')}">
                         </div>
                         <div class="si-field">
                             <label>Como Instructor</label>
-                            <input type="number" step="0.1" min="0" id="si-instructor" placeholder="0" value="${num('Como Instructor')}">
+                            <input type="text" id="si-instructor" placeholder="0:00" value="${num('Como Instructor')}">
                         </div>
                         <div class="si-field">
                             <label>Horas Solo</label>
-                            <input type="number" step="0.1" min="0" id="si-solo" placeholder="0" value="${num('Solo')}">
+                            <input type="text" id="si-solo" placeholder="0:00" value="${num('Solo')}">
                         </div>
                         <div class="si-field">
                             <label>Horas Travesía</label>
-                            <input type="number" step="0.1" min="0" id="si-travesia" placeholder="0" value="${num('Travesia')}">
+                            <input type="text" id="si-travesia" placeholder="0:00" value="${num('Travesia')}">
                         </div>
                         <div class="si-field">
                             <label>Horas Simulador</label>
-                            <input type="number" step="0.1" min="0" id="si-simulador" placeholder="0" value="${num('Simulador o Entrenador de Vuelo')}">
+                            <input type="text" id="si-simulador" placeholder="0:00" value="${num('Simulador o Entrenador de Vuelo')}">
                         </div>
                         <div class="si-field">
                             <label>Aterrizajes Día</label>
@@ -259,6 +284,20 @@ const saldoInicial = {
             saldoInicial._injectStyles();
             document.body.appendChild(overlay);
             saldoInicial._initObsField();
+
+            // Configurar comportamiento inteligente en todos los campos de tiempo
+            const fields = [
+                'si-total', 'si-diurno', 'si-nocturno', 'si-ifr',
+                'si-pic', 'si-sic', 'si-instruccion', 'si-instructor',
+                'si-solo', 'si-travesia', 'si-simulador'
+            ];
+            
+            // Añadir también los campos dinámicos por tipo de avión
+            AIRCRAFT_TYPE_HEADERS.forEach(t => {
+                fields.push(`si-tipo-${t.replace(/\s/g,'-')}`);
+            });
+
+            fields.forEach(id => saldoInicial._setupTimeField(id));
     },
 
     currentStep: 0,
@@ -353,7 +392,7 @@ const saldoInicial = {
 
     save: async () => {
         const fecha = document.getElementById('si-fecha')?.value;
-        const total = parseFloat(document.getElementById('si-total')?.value);
+        const total = ui.parseTimeInput(document.getElementById('si-total')?.value);
 
         if (!fecha) { ui.showNotification('La fecha de corte es obligatoria.', 'error'); saldoInicial.goToStep(0); return; }
         if (!total || total <= 0) { ui.showNotification('Las horas totales deben ser mayores a 0.', 'error'); saldoInicial.goToStep(1); return; }
@@ -379,18 +418,18 @@ const saldoInicial = {
             'Desde': desde,
             'Hasta': hasta,
             'Duracion Total de Vuelo': total,
-            'Diurno':    parseFloat(document.getElementById('si-diurno')?.value) || 0,
-            'Nocturno':  parseFloat(document.getElementById('si-nocturno')?.value) || 0,
-            'IFR':       parseFloat(document.getElementById('si-ifr')?.value) || 0,
+            'Diurno':    ui.parseTimeInput(document.getElementById('si-diurno')?.value) || 0,
+            'Nocturno':  ui.parseTimeInput(document.getElementById('si-nocturno')?.value) || 0,
+            'IFR':       ui.parseTimeInput(document.getElementById('si-ifr')?.value) || 0,
             'NO':        parseInt(document.getElementById('si-no-app')?.value) || 0,
             'Tipo':      document.getElementById('si-tipo-app')?.value || '',
-            'Piloto al Mando (PIC)':   parseFloat(document.getElementById('si-pic')?.value) || 0,
-            'Copiloto (SIC)':          parseFloat(document.getElementById('si-sic')?.value) || 0,
-            'Instruccion Recibida':    parseFloat(document.getElementById('si-instruccion')?.value) || 0,
-            'Como Instructor':         parseFloat(document.getElementById('si-instructor')?.value) || 0,
-            'Solo':      parseFloat(document.getElementById('si-solo')?.value) || 0,
-            'Travesia':  parseFloat(document.getElementById('si-travesia')?.value) || 0,
-            'Simulador o Entrenador de Vuelo': parseFloat(document.getElementById('si-simulador')?.value) || 0,
+            'Piloto al Mando (PIC)':   ui.parseTimeInput(document.getElementById('si-pic')?.value) || 0,
+            'Copiloto (SIC)':          ui.parseTimeInput(document.getElementById('si-sic')?.value) || 0,
+            'Instruccion Recibida':    ui.parseTimeInput(document.getElementById('si-instruccion')?.value) || 0,
+            'Como Instructor':         ui.parseTimeInput(document.getElementById('si-instructor')?.value) || 0,
+            'Solo':      ui.parseTimeInput(document.getElementById('si-solo')?.value) || 0,
+            'Travesia':  ui.parseTimeInput(document.getElementById('si-travesia')?.value) || 0,
+            'Simulador o Entrenador de Vuelo': ui.parseTimeInput(document.getElementById('si-simulador')?.value) || 0,
             'Aterrizajes Dia':   parseInt(document.getElementById('si-aterrizajes-dia')?.value) || 0,
             'Aterrizajes Noche': parseInt(document.getElementById('si-aterrizajes-noche')?.value) || 0,
             'Observaciones': obs,
@@ -400,7 +439,7 @@ const saldoInicial = {
 
         AIRCRAFT_TYPE_HEADERS.forEach(h => {
             const id = `si-tipo-${h.replace(/\s/g,'-')}`;
-            flightObj[h] = parseFloat(document.getElementById(id)?.value) || 0;
+            flightObj[h] = ui.parseTimeInput(document.getElementById(id)?.value) || 0;
         });
 
         const userId = api._getUserId();

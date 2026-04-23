@@ -102,6 +102,66 @@ const ui = {
             instructorInput.value = ''; }
     },
 
+    // Intérprete de entrada de tiempo (soporta 1.5 y 1:30)
+    parseTimeInput: (val) => {
+        if (!val || val === '') return 0;
+        const strVal = String(val).trim();
+        if (strVal.includes(':')) {
+            const parts = strVal.split(':');
+            const hours = parseInt(parts[0], 10) || 0;
+            const minutes = parseInt(parts[1], 10) || 0;
+            // Permitimos minutos > 59 para que 0:75 sea 1.25
+            return hours + (minutes / 60);
+        }
+        return parseFloat(strVal.replace(',', '.')) || 0;
+    },
+
+    // Validador de formato para feedback visual en tiempo real
+    isValidTimeFormat: (val) => {
+        if (!val || val === '') return true;
+        const strVal = String(val).trim();
+        if (strVal.includes(':')) {
+            const parts = strVal.split(':');
+            if (parts.length !== 2) return false;
+            const [h, m] = parts;
+            // Verifica que sean números y los minutos no excedan 59
+            if (!/^\d+$/.test(h) || !/^\d{0,2}$/.test(m)) return false;
+            // Quitamos la restricción de m >= 60
+            return true;
+        }
+        // Soporte para formato decimal tradicional
+        const floatVal = parseFloat(strVal.replace(',', '.'));
+        return !isNaN(floatVal) && isFinite(floatVal) && /^\d*([.,]\d*)?$/.test(strVal);
+    },
+
+    // Configura la validación visual en tiempo real para todos los campos de tiempo
+    setupRealTimeValidation: () => {
+        const timeFields = [
+            'duracion', 'condicionDiurno', 'condicionNocturno', 'condicionIFR',
+            'rol-simulador', 'rol-travesia', 'rol-solo', 'rol-pic', 'rol-sic',
+            'rol-instruccion', 'rol-instructor'
+        ];
+        timeFields.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                // Cambiamos el tipo a text para permitir el caracter ":"
+                el.type = 'text';
+                // Sugerimos teclado telefónico para acceso rápido a números y símbolos
+                el.setAttribute('inputmode', 'tel');
+                el.addEventListener('input', () => {
+                    el.classList.toggle('error', !ui.isValidTimeFormat(el.value));
+                });
+                // Re-formatear automáticamente al perder el foco (convierte 1:64 a 2:04)
+                el.addEventListener('blur', () => {
+                    if (el.value && ui.isValidTimeFormat(el.value)) {
+                        const decimalValue = ui.parseTimeInput(el.value);
+                        el.value = formatHours(decimalValue);
+                    }
+                });
+            }
+        });
+    },
+
     populateFlightForm: (flight) => {
         if (!flight) return;
         document.getElementById('fecha').value = flight.Fecha && !isNaN(flight.Fecha.getTime()) ? flight.Fecha.toISOString().split('T')[0] : '';
@@ -109,21 +169,21 @@ const ui = {
         document.getElementById('matricula').value = flight['Matricula Aeronave'] || '';
         document.getElementById('desde').value = flight.Desde || '';
         document.getElementById('hasta').value = flight.Hasta || '';
-        document.getElementById('duracion').value = flight['Duracion Total de Vuelo'] || '';
-        document.getElementById('condicionDiurno').value = flight.Diurno || '';
-        document.getElementById('condicionNocturno').value = flight.Nocturno || '';
-        document.getElementById('condicionIFR').value = flight.IFR || '';
+        document.getElementById('duracion').value = formatHours(flight['Duracion Total de Vuelo'] || 0);
+        document.getElementById('condicionDiurno').value = formatHours(flight.Diurno || 0);
+        document.getElementById('condicionNocturno').value = formatHours(flight.Nocturno || 0);
+        document.getElementById('condicionIFR').value = formatHours(flight.IFR || 0);
         document.getElementById('approaches-no').value = flight.NO || '';
         document.getElementById('approaches-tip').value = flight.Tipo || '';
         document.getElementById('aterrizajesDia').value = flight['Aterrizajes Dia'] || '';
         document.getElementById('aterrizajesNoche').value = flight['Aterrizajes Noche'] || '';
-        document.getElementById('rol-pic').value = flight['Piloto al Mando (PIC)'] || '';
-        document.getElementById('rol-sic').value = flight['Copiloto (SIC)'] || '';
-        document.getElementById('rol-instruccion').value = flight['Instruccion Recibida'] || '';
-        document.getElementById('rol-instructor').value = flight['Como Instructor'] || '';
-        document.getElementById('rol-solo').value = flight.Solo || '';
-        document.getElementById('rol-travesia').value = flight.Travesia || '';
-        document.getElementById('rol-simulador').value = flight['Simulador o Entrenador de Vuelo'] || '';
+        document.getElementById('rol-pic').value = formatHours(flight['Piloto al Mando (PIC)'] || 0);
+        document.getElementById('rol-sic').value = formatHours(flight['Copiloto (SIC)'] || 0);
+        document.getElementById('rol-instruccion').value = formatHours(flight['Instruccion Recibida'] || 0);
+        document.getElementById('rol-instructor').value = formatHours(flight['Como Instructor'] || 0);
+        document.getElementById('rol-solo').value = formatHours(flight.Solo || 0);
+        document.getElementById('rol-travesia').value = formatHours(flight.Travesia || 0);
+        document.getElementById('rol-simulador').value = formatHours(flight['Simulador o Entrenador de Vuelo'] || 0);
         document.getElementById('observaciones').value = flight.Observaciones || '';
         ui.populateAircraftTypes();
         AIRCRAFT_TYPE_HEADERS.forEach(type => {
@@ -193,7 +253,36 @@ createFlightObject: (data) => {
     validateAndGetData: () => {
         document.querySelectorAll('input.error, select.error, #tipoAvion.error').forEach(el => el.classList.remove('error'));
         document.getElementById('status-message').textContent = '';
-        const data = { fecha: document.getElementById('fecha').value || ui.getTodayString(), aeronave: document.getElementById('aeronave').value, matricula: document.getElementById('matricula').value, desde: document.getElementById('desde').value, hasta: document.getElementById('hasta').value, duracion: parseFloat(document.getElementById('duracion').value) || 0, tipoAvion: Array.from(document.querySelectorAll('input[name="tipoAvion"]:checked')).map(cb => cb.value), condiciones: { Diurno: parseFloat(document.getElementById('condicionDiurno').value) || 0, Nocturno: parseFloat(document.getElementById('condicionNocturno').value) || 0, IFR: parseFloat(document.getElementById('condicionIFR').value) || 0, }, approaches: { no: document.getElementById('approaches-no').value, tipo: document.getElementById('approaches-tip').value }, aterrizajesDia: document.getElementById('aterrizajesDia').value, aterrizajesNoche: document.getElementById('aterrizajesNoche').value, roles: { simulador: parseFloat(document.getElementById('rol-simulador').value) || 0, travesia: parseFloat(document.getElementById('rol-travesia').value) || 0, solo: parseFloat(document.getElementById('rol-solo').value) || 0, pic: parseFloat(document.getElementById('rol-pic').value) || 0, sic: parseFloat(document.getElementById('rol-sic').value) || 0, instruccion: parseFloat(document.getElementById('rol-instruccion').value) || 0, instructor: parseFloat(document.getElementById('rol-instructor').value) || 0 }, observaciones: document.getElementById('observaciones').value, };
+
+        // Recolección de datos usando el nuevo parser para campos de tiempo
+        const data = {
+            fecha: document.getElementById('fecha').value || ui.getTodayString(),
+            aeronave: document.getElementById('aeronave').value,
+            matricula: document.getElementById('matricula').value,
+            desde: document.getElementById('desde').value,
+            hasta: document.getElementById('hasta').value,
+            duracion: ui.parseTimeInput(document.getElementById('duracion').value),
+            tipoAvion: Array.from(document.querySelectorAll('input[name="tipoAvion"]:checked')).map(cb => cb.value),
+            condiciones: {
+                Diurno: ui.parseTimeInput(document.getElementById('condicionDiurno').value),
+                Nocturno: ui.parseTimeInput(document.getElementById('condicionNocturno').value),
+                IFR: ui.parseTimeInput(document.getElementById('condicionIFR').value),
+            },
+            approaches: { no: document.getElementById('approaches-no').value, tipo: document.getElementById('approaches-tip').value },
+            aterrizajesDia: document.getElementById('aterrizajesDia').value,
+            aterrizajesNoche: document.getElementById('aterrizajesNoche').value,
+            roles: {
+                simulador: ui.parseTimeInput(document.getElementById('rol-simulador').value),
+                travesia: ui.parseTimeInput(document.getElementById('rol-travesia').value),
+                solo: ui.parseTimeInput(document.getElementById('rol-solo').value),
+                pic: ui.parseTimeInput(document.getElementById('rol-pic').value),
+                sic: ui.parseTimeInput(document.getElementById('rol-sic').value),
+                instruccion: ui.parseTimeInput(document.getElementById('rol-instruccion').value),
+                instructor: ui.parseTimeInput(document.getElementById('rol-instructor').value)
+            },
+            observaciones: document.getElementById('observaciones').value,
+        };
+
         const errors = [];
         const addError = (message, fieldIds, stepIndex) => errors.push({ message, fieldIds, stepIndex });
         if (!data.aeronave) addError('El campo "Aeronave" es obligatorio.', ['aeronave'], 0);
