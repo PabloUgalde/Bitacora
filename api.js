@@ -454,7 +454,15 @@ const api = {
         const { error } = await supabaseClient
             .from('profiles')
             .upsert(row, { onConflict: 'id' });
-        if (error) console.error("Error al guardar perfil en Supabase:", error);
+        if (error) {
+            const msg = error?.message || '';
+            if (msg.includes('column') && msg.includes('does not exist')) {
+                const col = msg.match(/column "([^"]+)"/)?.[1] || 'desconocida';
+                console.error(`[saveProfile] La columna "${col}" no existe en la tabla profiles de Supabase. Ejecuta: ALTER TABLE profiles ADD COLUMN IF NOT EXISTS ${col} TEXT;`);
+            } else {
+                console.error('[saveProfile] Error al guardar perfil en Supabase:', error);
+            }
+        }
     },
  
     loadProfile: async () => {
