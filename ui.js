@@ -148,14 +148,54 @@ const ui = {
             if (el) {
                 el.type = 'text';
                 if (isHHMM && isMobile) {
-                    // Móvil + HH:MM: teclado numérico con auto-inserción de ":"
+                    // Móvil + HH:MM: teclado numérico, llenado derecha→izquierda tipo calculadora
+                    // Los últimos 2 dígitos del buffer siempre son minutos, el resto son horas
                     el.setAttribute('inputmode', 'numeric');
-                    el.addEventListener('input', function() {
-                        const digits = this.value.replace(/[^0-9]/g, '');
-                        this.value = digits.length >= 3
-                            ? digits.slice(0, digits.length - 2) + ':' + digits.slice(-2)
-                            : digits;
-                        this.classList.toggle('error', !ui.isValidTimeFormat(this.value));
+
+                    const renderBuf = (input) => {
+                        const buf = input.dataset.digitBuf || '';
+                        input.value = buf.length === 0 ? ''
+                            : buf.length <= 2 ? '00:' + buf.padStart(2, '0')
+                            : buf.slice(0, -2).padStart(2, '0') + ':' + buf.slice(-2);
+                    };
+
+                    el.addEventListener('focus', function() {
+                        // Inicializar buffer desde el valor actual
+                        const val = this.value.trim();
+                        let buf = '';
+                        if (val.includes(':')) {
+                            const [h, m] = val.split(':');
+                            const n = (parseInt(h) || 0) * 100 + (parseInt(m) || 0);
+                            buf = n > 0 ? n.toString() : '';
+                        } else {
+                            buf = val.replace(/[^0-9]/g, '');
+                        }
+                        this.dataset.digitBuf = buf;
+                    });
+
+                    el.addEventListener('input', function(e) {
+                        let buf = this.dataset.digitBuf || '';
+                        if (e.inputType === 'deleteContentBackward' || e.inputType === 'deleteContentForward') {
+                            buf = buf.slice(0, -1);
+                        } else if (e.data) {
+                            buf += e.data.replace(/[^0-9]/g, '');
+                        } else {
+                            // Fallback para paste u otros input types
+                            buf = this.value.replace(/[^0-9]/g, '');
+                        }
+                        this.dataset.digitBuf = buf;
+                        renderBuf(this);
+                        this.classList.remove('error');
+                    });
+
+                    el.addEventListener('blur', function() {
+                        if (this.value && ui.isValidTimeFormat(this.value)) {
+                            this.value = formatHours(ui.parseTimeInput(this.value));
+                            this.classList.remove('error');
+                        } else if (this.value) {
+                            this.classList.add('error');
+                        }
+                        delete this.dataset.digitBuf;
                     });
                 } else {
                     // Desktop o modo decimal
@@ -163,14 +203,14 @@ const ui = {
                     el.addEventListener('input', () => {
                         el.classList.toggle('error', !ui.isValidTimeFormat(el.value));
                     });
+                    // Re-formatear automáticamente al perder el foco (convierte 1:64 a 2:04)
+                    el.addEventListener('blur', () => {
+                        if (el.value && ui.isValidTimeFormat(el.value)) {
+                            const decimalValue = ui.parseTimeInput(el.value);
+                            el.value = formatHours(decimalValue);
+                        }
+                    });
                 }
-                // Re-formatear automáticamente al perder el foco (convierte 1:64 a 2:04)
-                el.addEventListener('blur', () => {
-                    if (el.value && ui.isValidTimeFormat(el.value)) {
-                        const decimalValue = ui.parseTimeInput(el.value);
-                        el.value = formatHours(decimalValue);
-                    }
-                });
             }
         });
     },
