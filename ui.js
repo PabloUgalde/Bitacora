@@ -136,6 +136,8 @@ const ui = {
 
     // Configura la validación visual en tiempo real para todos los campos de tiempo
     setupRealTimeValidation: () => {
+        const isMobile = navigator.maxTouchPoints > 0 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        const isHHMM = userProfile.hoursFormat === 'hhmm';
         const timeFields = [
             'duracion', 'condicionDiurno', 'condicionNocturno', 'condicionIFR',
             'rol-simulador', 'rol-travesia', 'rol-solo', 'rol-pic', 'rol-sic',
@@ -144,13 +146,24 @@ const ui = {
         timeFields.forEach(id => {
             const el = document.getElementById(id);
             if (el) {
-                // Cambiamos el tipo a text para permitir el caracter ":"
                 el.type = 'text';
-                // En modo HH:MM se necesita ":" → teclado de texto; en decimal el tel es suficiente
-                el.setAttribute('inputmode', userProfile.hoursFormat === 'hhmm' ? 'text' : 'tel');
-                el.addEventListener('input', () => {
-                    el.classList.toggle('error', !ui.isValidTimeFormat(el.value));
-                });
+                if (isHHMM && isMobile) {
+                    // Móvil + HH:MM: teclado numérico con auto-inserción de ":"
+                    el.setAttribute('inputmode', 'numeric');
+                    el.addEventListener('input', function() {
+                        const digits = this.value.replace(/[^0-9]/g, '');
+                        this.value = digits.length >= 3
+                            ? digits.slice(0, digits.length - 2) + ':' + digits.slice(-2)
+                            : digits;
+                        this.classList.toggle('error', !ui.isValidTimeFormat(this.value));
+                    });
+                } else {
+                    // Desktop o modo decimal
+                    el.setAttribute('inputmode', isHHMM ? 'text' : 'tel');
+                    el.addEventListener('input', () => {
+                        el.classList.toggle('error', !ui.isValidTimeFormat(el.value));
+                    });
+                }
                 // Re-formatear automáticamente al perder el foco (convierte 1:64 a 2:04)
                 el.addEventListener('blur', () => {
                     if (el.value && ui.isValidTimeFormat(el.value)) {
