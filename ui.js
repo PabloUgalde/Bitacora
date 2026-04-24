@@ -146,8 +146,8 @@ const ui = {
             if (el) {
                 // Cambiamos el tipo a text para permitir el caracter ":"
                 el.type = 'text';
-                // Sugerimos teclado telefónico para acceso rápido a números y símbolos
-                el.setAttribute('inputmode', 'tel');
+                // En modo HH:MM se necesita ":" → teclado de texto; en decimal el tel es suficiente
+                el.setAttribute('inputmode', userProfile.hoursFormat === 'hhmm' ? 'text' : 'tel');
                 el.addEventListener('input', () => {
                     el.classList.toggle('error', !ui.isValidTimeFormat(el.value));
                 });
