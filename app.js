@@ -118,6 +118,7 @@ const app = {
         const navDropdownMenu = document.getElementById('summaries-dropdown-menu');
         // Inicializar validación de campos de tiempo
         ui.setupRealTimeValidation();
+        ui.setupBoltButtons();
         const sortDropdownToggle = document.getElementById('sort-order-toggle');
         const sortDropdownMenu = document.getElementById('sort-order-menu');
         const bitacoraDropdownToggle = document.getElementById('bitacora-dropdown-toggle');
