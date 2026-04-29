@@ -340,6 +340,25 @@ const api = {
         }
     },
 
+    deleteAllFlights: async () => {
+        const userId = api._getUserId();
+        if (!userId) {
+            ui.showNotification("No hay usuario autenticado.", "error");
+            return false;
+        }
+        try {
+            const { error } = await supabaseClient.from('flights').delete().eq('user_id', userId);
+            if (error) throw error;
+            flightData.length = 0;
+            api.saveFlightsToLocalStorage();
+            return true;
+        } catch (error) {
+            console.error("Error al eliminar vuelos:", error);
+            ui.showNotification(`Error al eliminar: ${error.message}`, "error");
+            return false;
+        }
+    },
+
     // ── Cola offline ──────────────────────────────────────────────
     _getPendingQueue: () => {
         try { return JSON.parse(localStorage.getItem('flightLogPendingSync') || '[]'); }

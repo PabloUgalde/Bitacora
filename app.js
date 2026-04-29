@@ -454,6 +454,31 @@ const app = {
         document.getElementById('excel-file-input').click();
         });
 
+        document.getElementById('delete-all-flights-btn')?.addEventListener('click', async () => {
+            const modal = document.createElement('div');
+            modal.className = 'modal open';
+            modal.style.zIndex = "10001";
+            modal.innerHTML = `
+            <div class="modal-content" style="max-width:420px;">
+                <div class="modal-header"><h3>¿Eliminar todos los vuelos?</h3></div>
+                <p style="color:#aaa;margin:0 0 1.5rem;">Esta acción eliminará <strong style="color:#fff;">todos tus vuelos</strong> de la base de datos de forma permanente. No se puede deshacer.</p>
+                <div style="display:flex;gap:12px;justify-content:flex-end;padding-top:1rem;border-top:1px solid #333;">
+                    <button id="del-all-cancel" class="prev-btn" style="padding:10px 20px;background:transparent;border:1px solid #444;">Cancelar</button>
+                    <button id="del-all-confirm" style="padding:10px 24px;background:#c62828;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px;">Eliminar todo</button>
+                </div>
+            </div>`;
+            document.body.appendChild(modal);
+            modal.querySelector('#del-all-cancel').addEventListener('click', () => modal.remove());
+            modal.querySelector('#del-all-confirm').addEventListener('click', async () => {
+                modal.remove();
+                const ok = await api.deleteAllFlights();
+                if (ok) {
+                    ui.showNotification("Todos los vuelos han sido eliminados.", "success");
+                    render.dashboard();
+                }
+            });
+        });
+
         document.getElementById('excel-file-input')?.addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file) return;
@@ -461,6 +486,20 @@ const app = {
             if (result.success) {
                 const confirmed = await dataImporter.showValidationModal(result.data);
                 if (confirmed) {
+                    const currentMaxPage = flightData.reduce((max, f) => {
+                        const p = parseInt(f['Pagina Bitacora a Replicar']) || 0;
+                        return p > max ? p : max;
+                    }, 0);
+                    const pageMode = await dataImporter.showPageNumberModal(result.data, currentMaxPage);
+                    if (pageMode === null) { e.target.value = ''; return; }
+                    if (pageMode === 'auto') {
+                        // result.data is newest-first (reversed from Excel); assign pages so
+                        // the oldest Excel row gets the lowest new page number.
+                        const total = result.data.length;
+                        result.data.forEach((f, i) => {
+                            f['Pagina Bitacora a Replicar'] = currentMaxPage + (total - i);
+                        });
+                    }
                     const dataStatus = document.getElementById('data-status');
                     dataStatus.textContent = 'Iniciando importación...';
                     dataStatus.className = 'status info';
@@ -471,27 +510,24 @@ const app = {
 
                     if (importBar) importBar.classList.remove('hidden');
 
-                    // Bloquear recarga accidental del navegador
                     const warnUnload = (event) => { event.preventDefault(); event.returnValue = ''; };
                     window.addEventListener('beforeunload', warnUnload);
 
                     try {
                         const total = result.data.length;
-                        const chunkSize = 50; // Procesamos en bloques de 50 para balancear velocidad y feedback
+                        const chunkSize = 50;
                         let processed = 0;
 
                         for (let i = 0; i < total; i += chunkSize) {
                             const chunk = result.data.slice(i, i + chunkSize);
                             const success = await api.saveFlightsBatch(chunk);
-                            
+
                             if (!success) throw new Error("Error al guardar lote de vuelos.");
-                            
+
                             processed += chunk.length;
                             const progressMsg = `Importando: ${processed} de ${total} vuelos (${Math.round((processed/total)*100)}%)`;
                             dataStatus.textContent = progressMsg;
-                            if (importBarText) {
-                                importBarText.textContent = progressMsg;
-                            }
+                            if (importBarText) importBarText.textContent = progressMsg;
                             if (progressBar) progressBar.value = Math.round((processed / total) * 100);
                         }
 
@@ -499,7 +535,7 @@ const app = {
                         ui.showNotification(successMsg, 'success');
                         dataStatus.textContent = successMsg;
                         dataStatus.className = 'status success';
-                        
+
                         if (importBar) {
                             importBar.classList.add('success');
                             if (importBarText) importBarText.textContent = successMsg;
@@ -513,7 +549,6 @@ const app = {
                         dataStatus.textContent = 'Error en la importación.';
                         dataStatus.className = 'status error';
                     } finally {
-                        // Liberar el bloqueo de recarga
                         window.removeEventListener('beforeunload', warnUnload);
                         setTimeout(() => {
                             if (importBar) importBar.classList.add('hidden');

@@ -71,8 +71,10 @@ const dataImporter = {
                 year = p1; month = p2 - 1; day = p3;
             } else if (p3 > 1000) { // DD-MM-YYYY
                 day = p1; month = p2 - 1; year = p3;
-            } else if (p1 > 31) { // YYYY-MM-DD (if year is 2-digit, assume 20xx)
+            } else if (p1 > 31) { // YY-MM-DD (2-digit year first)
                 year = p1 < 100 ? 2000 + p1 : p1; month = p2 - 1; day = p3;
+            } else if (p2 > 12 && p1 <= 12) { // MM-DD-YY: p2 > 12 can only be a day, so p1 is month
+                month = p1 - 1; day = p2; year = p3 < 100 ? 2000 + p3 : p3;
             } else { // Assume DD-MM-YY or DD-MM-YYYY (if year is 2-digit, assume 20xx)
                 day = p1; month = p2 - 1; year = p3 < 100 ? 2000 + p3 : p3;
             }
@@ -234,8 +236,9 @@ const dataImporter = {
         // Try to infer date format (YYYY-MM-DD, DD-MM-YYYY, MM-DD-YYYY)
         if (p1 > 1000) { year = p1; month = p2 - 1; day = p3; } // YYYY-MM-DD
         else if (p3 > 1000) { day = p1; month = p2 - 1; year = p3; } // DD-MM-YYYY
-        else if (p1 > 31) { year = p1 < 100 ? 2000 + p1 : p1; month = p2 - 1; day = p3; } // YYYY-MM-DD (if year is 2-digit, assume 20xx)
-        else { day = p1; month = p2 - 1; year = p3 < 100 ? 2000 + p3 : p3; } // Assume DD-MM-YY or DD-MM-YYYY (if year is 2-digit, assume 20xx)
+        else if (p1 > 31) { year = p1 < 100 ? 2000 + p1 : p1; month = p2 - 1; day = p3; } // YY-MM-DD
+        else if (p2 > 12 && p1 <= 12) { month = p1 - 1; day = p2; year = p3 < 100 ? 2000 + p3 : p3; } // MM-DD-YY
+        else { day = p1; month = p2 - 1; year = p3 < 100 ? 2000 + p3 : p3; } // Assume DD-MM-YY or DD-MM-YYYY
 
         const date = new Date(Date.UTC(year, month, day));
         return isNaN(date.getTime()) ? null : date;
@@ -364,6 +367,63 @@ const dataImporter = {
 
             modal.querySelector('#val-confirm-btn').addEventListener('click', () => { cleanup(); resolve(true); });
             modal.querySelector('#val-cancel-btn').addEventListener('click', () => { cleanup(); resolve(false); });
+        });
+    },
+
+    showPageNumberModal: (flights, currentMaxPage) => {
+        return new Promise((resolve) => {
+            const hasExcelPages = flights.some(f => parseInt(f['Pagina Bitacora a Replicar']) > 0);
+            const nextPage = (currentMaxPage || 0) + 1;
+
+            const modal = document.createElement('div');
+            modal.className = 'modal open';
+            modal.style.zIndex = "10002";
+            modal.innerHTML = `
+            <div class="modal-content" style="max-width:460px;">
+                <div class="modal-header">
+                    <h3>Páginas de Bitácora</h3>
+                </div>
+                <p style="color:#aaa;margin:0 0 1.5rem;">¿Cómo deseas asignar los números de página para los ${flights.length} vuelos importados?</p>
+                <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:1.75rem;">
+                    <label style="display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border:1px solid #333;border-radius:8px;cursor:pointer;transition:border-color .15s;" id="page-opt-auto-label">
+                        <input type="radio" name="page-mode" value="auto" style="margin-top:3px;flex-shrink:0;" checked>
+                        <span>
+                            <strong>Numeración automática</strong><br>
+                            <span style="color:#888;font-size:13px;">Asigna páginas consecutivas empezando en la ${nextPage} (siguiente a tu última página actual).</span>
+                        </span>
+                    </label>
+                    <label style="display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border:1px solid #333;border-radius:8px;cursor:pointer;transition:border-color .15s;${!hasExcelPages ? 'opacity:0.45;pointer-events:none;' : ''}" id="page-opt-excel-label">
+                        <input type="radio" name="page-mode" value="excel" style="margin-top:3px;flex-shrink:0;" ${!hasExcelPages ? 'disabled' : ''}>
+                        <span>
+                            <strong>Usar valores del Excel</strong><br>
+                            <span style="color:#888;font-size:13px;">${hasExcelPages ? 'Mantiene los números de página que vienen en el archivo.' : 'El Excel no contiene números de página.'}</span>
+                        </span>
+                    </label>
+                </div>
+                <div style="display:flex;gap:12px;justify-content:flex-end;padding-top:1rem;border-top:1px solid #333;">
+                    <button id="page-modal-cancel" class="prev-btn" style="padding:10px 20px;background:transparent;border:1px solid #444;">Cancelar importación</button>
+                    <button id="page-modal-confirm" class="submit-btn" style="padding:10px 24px;">Continuar</button>
+                </div>
+            </div>`;
+
+            document.body.appendChild(modal);
+            const cleanup = () => modal.remove();
+
+            modal.querySelectorAll('input[name="page-mode"]').forEach(radio => {
+                radio.addEventListener('change', () => {
+                    modal.querySelectorAll('label[id^="page-opt"]').forEach(l => l.style.borderColor = '#333');
+                    const checked = modal.querySelector('input[name="page-mode"]:checked');
+                    if (checked) checked.closest('label').style.borderColor = '#555';
+                });
+            });
+            modal.querySelector('input[name="page-mode"]:checked').closest('label').style.borderColor = '#555';
+
+            modal.querySelector('#page-modal-confirm').addEventListener('click', () => {
+                const mode = modal.querySelector('input[name="page-mode"]:checked')?.value || 'auto';
+                cleanup();
+                resolve(mode);
+            });
+            modal.querySelector('#page-modal-cancel').addEventListener('click', () => { cleanup(); resolve(null); });
         });
     }
 };
