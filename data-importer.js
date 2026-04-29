@@ -123,7 +123,7 @@ const dataImporter = {
                 const firstCellContent = row[0] ? row[0].toString().toLowerCase() : '';
                 if (totalKeywords.some(keyword => firstCellContent.includes(keyword))) { return null; }
 
-                const rawDate = row[0]; // capture raw before any parsing
+                const rawDate = { value: row[0], excelRow: headerRowIndex + 2 + rowIndex };
                 const newFlight = {
                     id: Date.now().toString() + (rowIndex * Math.random()).toString().slice(2)
                 };
@@ -251,11 +251,11 @@ const dataImporter = {
 
     showDateValidationModal: (flights, rawDates) => {
         return new Promise((resolve) => {
-            const parseWithFmt = (raw, fmt) => {
-                if (!raw && raw !== 0) return null;
-                if (typeof raw === 'number') return new Date(Date.UTC(1899, 11, 30 + raw));
-                const s = String(raw).trim();
-                const parts = s.split(/[\/\-\.]/);
+            // rawDates[i] = { value, excelRow }
+            const parseWithFmt = (val, fmt) => {
+                if (val == null || val === '') return null;
+                if (typeof val === 'number') return new Date(Date.UTC(1899, 11, 30 + val));
+                const parts = String(val).trim().split(/[\/\-\.]/);
                 if (parts.length !== 3) return null;
                 let [p1, p2, p3] = parts.map(p => parseInt(p, 10));
                 let year, month, day;
@@ -266,70 +266,68 @@ const dataImporter = {
                 return isNaN(d.getTime()) ? null : d;
             };
 
-            const fmtDate = d => d
-                ? d.toLocaleDateString('es-CL', { timeZone: 'UTC', day: '2-digit', month: 'short', year: 'numeric' })
-                : '<span style="color:#f44336;">Fecha inválida</span>';
+            const fmtDate = d => d ? d.toLocaleDateString('es-CL', { timeZone: 'UTC', day: '2-digit', month: 'short', year: 'numeric' }) : null;
 
-            // Pick 5 evenly-distributed samples that have a non-null raw date
+            // All pairs with a non-null raw value
             const validPairs = flights
-                .map((f, i) => ({ f, raw: rawDates[i] }))
-                .filter(x => x.raw != null && x.raw !== '');
-            const step = Math.max(1, Math.floor(validPairs.length / 5));
+                .map((f, i) => ({ f, rd: rawDates[i] }))
+                .filter(x => x.rd && x.rd.value != null && x.rd.value !== '');
+
+            // Pick 8 evenly-distributed samples
+            const step = Math.max(1, Math.floor(validPairs.length / 8));
             const samples = [];
-            for (let i = 0; i < validPairs.length && samples.length < 5; i += step) samples.push(validPairs[i]);
+            for (let i = 0; i < validPairs.length && samples.length < 8; i += step) samples.push(validPairs[i]);
 
-            // Auto-detect likely format from first sample
-            let detectedFmt = 'dmy';
-            if (samples.length > 0 && typeof samples[0].raw === 'string') {
-                const parts = samples[0].raw.split(/[\/\-\.]/);
-                if (parts.length === 3) {
-                    const [p1, p2] = parts.map(p => parseInt(p, 10));
-                    if (p2 > 12 && p1 <= 12) detectedFmt = 'mdy';
-                    else if (p1 > 31)         detectedFmt = 'ymd';
-                }
-            }
+            // Score each format on up to 30 samples and pick the best
+            const scoreFmt = fmt => validPairs.slice(0, 30).reduce((score, { rd }) => {
+                const d = parseWithFmt(rd.value, fmt);
+                const y = d ? d.getUTCFullYear() : 0;
+                return score + (d && y >= 1970 && y <= 2100 ? 1 : 0);
+            }, 0);
+            const scores = { dmy: scoreFmt('dmy'), mdy: scoreFmt('mdy'), ymd: scoreFmt('ymd') };
+            const detectedFmt = Object.keys(scores).reduce((a, b) => scores[a] >= scores[b] ? a : b);
 
-            const buildRows = fmt => samples.map(({ f, raw }, si) => {
-                const parsed = parseWithFmt(raw, fmt);
-                const ok = parsed && !isNaN(parsed.getTime());
-                const year = ok ? parsed.getUTCFullYear() : 0;
-                const sane = ok && year >= 1970 && year <= 2100;
-                const color = sane ? '#4caf50' : '#f44336';
-                return `<tr>
-                    <td style="padding:7px 10px;color:#666;font-size:12px;">Muestra ${si + 1}</td>
-                    <td style="padding:7px 10px;font-family:monospace;color:#ddd;">${raw}</td>
-                    <td style="padding:7px 10px;color:${color};">${sane ? fmtDate(parsed) : (ok ? `<span style="color:#f44336;">Año ${year} — revisa el formato</span>` : '<span style="color:#f44336;">Inválida</span>')}</td>
+            const buildRows = fmt => samples.map(({ f, rd }) => {
+                const d = parseWithFmt(rd.value, fmt);
+                const y = d ? d.getUTCFullYear() : 0;
+                const sane = d && y >= 1970 && y <= 2100;
+                const color = sane ? '#4caf50' : '#e57373';
+                const label = sane ? fmtDate(d) : (d ? `Año ${y} — revisa formato` : 'Inválida');
+                return `<tr style="border-bottom:1px solid #1a1a1a;">
+                    <td style="padding:7px 10px;color:#555;font-size:12px;">Fila ${rd.excelRow}</td>
+                    <td style="padding:7px 10px;font-family:monospace;color:#ccc;">${rd.value}</td>
+                    <td style="padding:7px 10px;color:${color};">${label}</td>
                 </tr>`;
             }).join('');
 
             const formats = [
-                { value: 'dmy', label: 'DD/MM/AA — Día / Mes / Año', hint: '(formato Chile y Europa)' },
-                { value: 'mdy', label: 'MM/DD/AA — Mes / Día / Año', hint: '(formato EE.UU.)' },
-                { value: 'ymd', label: 'AA/MM/DD — Año / Mes / Día', hint: '(formato ISO / Asia)' },
+                { value: 'dmy', label: 'DD/MM/AA', hint: 'Día / Mes / Año — Chile, Europa' },
+                { value: 'mdy', label: 'MM/DD/AA', hint: 'Mes / Día / Año — EE.UU.' },
+                { value: 'ymd', label: 'AA/MM/DD', hint: 'Año / Mes / Día — ISO' },
             ];
 
             const modal = document.createElement('div');
             modal.className = 'modal open';
             modal.style.zIndex = "10003";
             modal.innerHTML = `
-            <div class="modal-content" style="max-width:540px;">
+            <div class="modal-content" style="max-width:520px;overflow:hidden;">
                 <div class="modal-header"><h3>Formato de Fechas del Excel</h3></div>
-                <p style="color:#aaa;margin:0 0 1.25rem;">Selecciona el formato en que están escritas las fechas y verifica que las muestras se interpreten correctamente.</p>
+                <p style="color:#aaa;margin:0 0 1.25rem;">Selecciona el formato de las fechas y verifica que las muestras se vean correctas (en verde).</p>
                 <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:1.25rem;">
                     ${formats.map(fmt => `
-                    <label class="datefmt-opt" style="display:flex;align-items:center;gap:12px;padding:11px 14px;border:1px solid ${fmt.value === detectedFmt ? '#666' : '#333'};border-radius:8px;cursor:pointer;transition:border-color .15s;">
-                        <input type="radio" name="date-fmt" value="${fmt.value}" ${fmt.value === detectedFmt ? 'checked' : ''} style="flex-shrink:0;">
-                        <span style="min-width:0;flex:1;">
-                            <strong>${fmt.label}</strong>
-                            <span style="color:#666;font-size:12px;margin-left:6px;">${fmt.hint}</span>
+                    <label class="datefmt-opt" style="display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid ${fmt.value === detectedFmt ? '#666' : '#333'};border-radius:8px;cursor:pointer;overflow:hidden;">
+                        <input type="radio" name="date-fmt" value="${fmt.value}" ${fmt.value === detectedFmt ? 'checked' : ''} style="flex-shrink:0;margin:0;">
+                        <span style="flex:1;min-width:0;overflow:hidden;">
+                            <strong style="display:block;">${fmt.label}</strong>
+                            <span style="display:block;color:#666;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${fmt.hint}</span>
                         </span>
                     </label>`).join('')}
                 </div>
-                <p style="font-size:12px;color:#555;margin:0 0 6px;">Verificación con 5 muestras del archivo:</p>
+                <p style="font-size:12px;color:#555;margin:0 0 6px;">Muestra de 8 registros distribuidos del archivo:</p>
                 <table style="width:100%;border-collapse:collapse;margin-bottom:1.5rem;font-size:13px;">
                     <thead><tr style="border-bottom:1px solid #222;">
-                        <th style="text-align:left;padding:6px 10px;color:#555;font-weight:normal;">#</th>
-                        <th style="text-align:left;padding:6px 10px;color:#555;font-weight:normal;">Valor en el Excel</th>
+                        <th style="text-align:left;padding:6px 10px;color:#555;font-weight:normal;width:60px;">Fila</th>
+                        <th style="text-align:left;padding:6px 10px;color:#555;font-weight:normal;width:110px;">En el Excel</th>
                         <th style="text-align:left;padding:6px 10px;color:#555;font-weight:normal;">Se interpreta como</th>
                     </tr></thead>
                     <tbody id="datefmt-rows">${buildRows(detectedFmt)}</tbody>
@@ -353,19 +351,20 @@ const dataImporter = {
 
             modal.querySelector('#datefmt-confirm').addEventListener('click', () => {
                 const fmt = modal.querySelector('input[name="date-fmt"]:checked')?.value || 'dmy';
-                cleanup();
-                resolve(fmt);
+                cleanup(); resolve(fmt);
             });
             modal.querySelector('#datefmt-cancel').addEventListener('click', () => { cleanup(); resolve(null); });
         });
     },
 
     reparseFlightDates: (flights, rawDates, fmt) => {
+        // rawDates[i] = { value, excelRow }
         flights.forEach((f, i) => {
-            const raw = rawDates[i];
-            if (!raw && raw !== 0) { f['Fecha'] = null; return; }
-            if (typeof raw === 'number') { f['Fecha'] = new Date(Date.UTC(1899, 11, 30 + raw)); return; }
-            const parts = String(raw).trim().split(/[\/\-\.]/);
+            const rd = rawDates[i];
+            const val = rd ? rd.value : null;
+            if (val == null || val === '') { f['Fecha'] = null; return; }
+            if (typeof val === 'number') { f['Fecha'] = new Date(Date.UTC(1899, 11, 30 + val)); return; }
+            const parts = String(val).trim().split(/[\/\-\.]/);
             if (parts.length !== 3) { f['Fecha'] = null; return; }
             let [p1, p2, p3] = parts.map(p => parseInt(p, 10));
             let year, month, day;
