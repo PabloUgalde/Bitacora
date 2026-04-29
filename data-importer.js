@@ -310,17 +310,17 @@ const dataImporter = {
             modal.className = 'modal open';
             modal.style.zIndex = "10003";
             modal.innerHTML = `
-            <div class="modal-content" style="max-width:520px;overflow:hidden;">
+            <div class="modal-content" style="max-width:520px;">
                 <div class="modal-header"><h3>Formato de Fechas del Excel</h3></div>
                 <p style="color:#aaa;margin:0 0 1.25rem;">Selecciona el formato de las fechas y verifica que las muestras se vean correctas (en verde).</p>
                 <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:1.25rem;">
                     ${formats.map(fmt => `
-                    <label class="datefmt-opt" style="display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid ${fmt.value === detectedFmt ? '#666' : '#333'};border-radius:8px;cursor:pointer;overflow:hidden;">
-                        <input type="radio" name="date-fmt" value="${fmt.value}" ${fmt.value === detectedFmt ? 'checked' : ''} style="flex-shrink:0;margin:0;">
-                        <span style="flex:1;min-width:0;overflow:hidden;">
-                            <strong style="display:block;">${fmt.label}</strong>
-                            <span style="display:block;color:#666;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${fmt.hint}</span>
-                        </span>
+                    <label class="datefmt-opt" style="display:flex;align-items:center;gap:14px;padding:12px 16px;border:1px solid ${fmt.value === detectedFmt ? '#666' : '#333'};border-radius:8px;cursor:pointer;box-sizing:border-box;width:100%;">
+                        <input type="radio" name="date-fmt" value="${fmt.value}" ${fmt.value === detectedFmt ? 'checked' : ''} style="flex-shrink:0;margin:0;width:16px;height:16px;">
+                        <div style="flex:1;min-width:0;">
+                            <div style="color:#e0e0e0;font-weight:600;font-size:14px;">${fmt.label}</div>
+                            <div style="color:#666;font-size:12px;margin-top:2px;">${fmt.hint}</div>
+                        </div>
                     </label>`).join('')}
                 </div>
                 <p style="font-size:12px;color:#555;margin:0 0 6px;">Muestra de 8 registros distribuidos del archivo:</p>
@@ -505,19 +505,19 @@ const dataImporter = {
                 </div>
                 <p style="color:#aaa;margin:0 0 1.5rem;">¿Cómo deseas asignar los números de página para los ${flights.length} vuelos importados?</p>
                 <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:1.75rem;">
-                    <label style="display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border:1px solid #333;border-radius:8px;cursor:pointer;transition:border-color .15s;" id="page-opt-auto-label">
-                        <input type="radio" name="page-mode" value="auto" style="margin-top:3px;flex-shrink:0;" checked>
-                        <span style="min-width:0;flex:1;">
-                            <strong>Numeración automática</strong><br>
-                            <span style="color:#888;font-size:13px;">Asigna páginas consecutivas empezando en la ${nextPage} (siguiente a tu última página actual).</span>
-                        </span>
+                    <label style="display:flex;align-items:flex-start;gap:14px;padding:14px 16px;border:1px solid #555;border-radius:8px;cursor:pointer;box-sizing:border-box;width:100%;" id="page-opt-auto-label">
+                        <input type="radio" name="page-mode" value="auto" style="flex-shrink:0;margin-top:2px;width:16px;height:16px;" checked>
+                        <div style="flex:1;min-width:0;">
+                            <div style="color:#e0e0e0;font-weight:600;font-size:14px;">Numeración automática</div>
+                            <div style="color:#888;font-size:13px;margin-top:3px;">Asigna páginas consecutivas empezando en la ${nextPage} (siguiente a tu última página actual).</div>
+                        </div>
                     </label>
-                    <label style="display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border:1px solid #333;border-radius:8px;cursor:pointer;transition:border-color .15s;${!hasExcelPages ? 'opacity:0.45;pointer-events:none;' : ''}" id="page-opt-excel-label">
-                        <input type="radio" name="page-mode" value="excel" style="margin-top:3px;flex-shrink:0;" ${!hasExcelPages ? 'disabled' : ''}>
-                        <span style="min-width:0;flex:1;">
-                            <strong>Usar valores del Excel</strong><br>
-                            <span style="color:#888;font-size:13px;">${hasExcelPages ? 'Mantiene los números de página que vienen en el archivo.' : 'El Excel no contiene números de página.'}</span>
-                        </span>
+                    <label style="display:flex;align-items:flex-start;gap:14px;padding:14px 16px;border:1px solid #333;border-radius:8px;cursor:pointer;box-sizing:border-box;width:100%;${!hasExcelPages ? 'opacity:0.45;pointer-events:none;' : ''}" id="page-opt-excel-label">
+                        <input type="radio" name="page-mode" value="excel" style="flex-shrink:0;margin-top:2px;width:16px;height:16px;" ${!hasExcelPages ? 'disabled' : ''}>
+                        <div style="flex:1;min-width:0;">
+                            <div style="color:#e0e0e0;font-weight:600;font-size:14px;">Usar valores del Excel</div>
+                            <div style="color:#888;font-size:13px;margin-top:3px;">${hasExcelPages ? 'Mantiene los números de página que vienen en el archivo.' : 'El Excel no contiene números de página.'}</div>
+                        </div>
                     </label>
                 </div>
                 <div style="display:flex;gap:12px;justify-content:flex-end;padding-top:1rem;border-top:1px solid #333;">
