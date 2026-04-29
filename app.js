@@ -500,14 +500,11 @@ const app = {
                     const pageMode = await dataImporter.showPageNumberModal(result.data, currentMaxPage);
                     if (pageMode === null) { e.target.value = ''; return; }
                     if (pageMode === 'auto') {
-                        // Sort by date ascending so the oldest flight gets the lowest page number
-                        const sorted = [...result.data].sort((a, b) => {
-                            const da = a['Fecha'] instanceof Date ? a['Fecha'].getTime() : 0;
-                            const db = b['Fecha'] instanceof Date ? b['Fecha'].getTime() : 0;
-                            return da - db;
-                        });
-                        sorted.forEach((f, rank) => {
-                            f['Pagina Bitacora a Replicar'] = currentMaxPage + Math.floor(rank / 8) + 1;
+                        // result.data is reversed from Excel order; restore original row rank
+                        const n = result.data.length;
+                        result.data.forEach((f, i) => {
+                            const excelRank = n - 1 - i; // 0 = primera fila del Excel
+                            f['Pagina Bitacora a Replicar'] = currentMaxPage + Math.floor(excelRank / 8) + 1;
                         });
                     }
                     const dataStatus = document.getElementById('data-status');
