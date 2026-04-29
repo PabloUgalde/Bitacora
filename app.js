@@ -484,8 +484,15 @@ const app = {
             if (!file) return;
             const result = await dataImporter.processExcelFile(file);
             if (result.success) {
+                // Step 1: confirm date format and re-parse all dates
+                const dateFmt = await dataImporter.showDateValidationModal(result.data, result.rawDates);
+                if (dateFmt === null) { e.target.value = ''; return; }
+                dataImporter.reparseFlightDates(result.data, result.rawDates, dateFmt);
+
+                // Step 2: verify totals
                 const confirmed = await dataImporter.showValidationModal(result.data);
                 if (confirmed) {
+                    // Step 3: page numbering
                     const currentMaxPage = flightData.reduce((max, f) => {
                         const p = parseInt(f['Pagina Bitacora a Replicar']) || 0;
                         return p > max ? p : max;
@@ -493,11 +500,14 @@ const app = {
                     const pageMode = await dataImporter.showPageNumberModal(result.data, currentMaxPage);
                     if (pageMode === null) { e.target.value = ''; return; }
                     if (pageMode === 'auto') {
-                        // result.data is newest-first (reversed from Excel); assign pages so
-                        // the oldest Excel row gets the lowest new page number.
-                        const total = result.data.length;
-                        result.data.forEach((f, i) => {
-                            f['Pagina Bitacora a Replicar'] = currentMaxPage + (total - i);
+                        // Sort by date ascending so the oldest flight gets the lowest page number
+                        const sorted = [...result.data].sort((a, b) => {
+                            const da = a['Fecha'] instanceof Date ? a['Fecha'].getTime() : 0;
+                            const db = b['Fecha'] instanceof Date ? b['Fecha'].getTime() : 0;
+                            return da - db;
+                        });
+                        sorted.forEach((f, rank) => {
+                            f['Pagina Bitacora a Replicar'] = currentMaxPage + rank + 1;
                         });
                     }
                     const dataStatus = document.getElementById('data-status');

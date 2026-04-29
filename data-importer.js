@@ -46,37 +46,34 @@ const dataImporter = {
         dataStatus.className = 'status';
 
         // Helper function to parse date values from various formats
-        const parseDate = (dateInput) => {
+        const parseDate = (dateInput, fmt) => {
             if (!dateInput) return null;
             if (dateInput instanceof Date) return dateInput;
-            if (typeof dateInput === 'number') { // Excel serial date
-                // Excel's epoch is Jan 1, 1900. JS epoch is Jan 1, 1970.
-                // 25569 is the number of days between 1900-01-01 and 1970-01-01.
-                // Excel dates are 1-indexed, so 1 means Jan 1, 1900.
-                // Date.UTC(1899, 11, 30) is Dec 30, 1899, which is Excel day 0.
+            if (typeof dateInput === 'number') {
                 return new Date(Date.UTC(1899, 11, 30 + dateInput));
             }
             if (typeof dateInput !== 'string') return null;
 
             const separators = /[\/\-\.]/;
             const parts = dateInput.split(separators);
-
             if (parts.length !== 3) return null;
 
             let [p1, p2, p3] = parts.map(p => parseInt(p, 10));
             let year, month, day;
 
-            // Try to infer date format (YYYY-MM-DD, DD-MM-YYYY, MM-DD-YYYY)
-            if (p1 > 1000) { // YYYY-MM-DD
-                year = p1; month = p2 - 1; day = p3;
-            } else if (p3 > 1000) { // DD-MM-YYYY
-                day = p1; month = p2 - 1; year = p3;
-            } else if (p1 > 31) { // YY-MM-DD (2-digit year first)
-                year = p1 < 100 ? 2000 + p1 : p1; month = p2 - 1; day = p3;
-            } else if (p2 > 12 && p1 <= 12) { // MM-DD-YY: p2 > 12 can only be a day, so p1 is month
-                month = p1 - 1; day = p2; year = p3 < 100 ? 2000 + p3 : p3;
-            } else { // Assume DD-MM-YY or DD-MM-YYYY (if year is 2-digit, assume 20xx)
+            if (fmt === 'dmy') {
                 day = p1; month = p2 - 1; year = p3 < 100 ? 2000 + p3 : p3;
+            } else if (fmt === 'mdy') {
+                month = p1 - 1; day = p2; year = p3 < 100 ? 2000 + p3 : p3;
+            } else if (fmt === 'ymd') {
+                year = p1 < 100 ? 2000 + p1 : p1; month = p2 - 1; day = p3;
+            } else {
+                // auto-detect
+                if (p1 > 1000) { year = p1; month = p2 - 1; day = p3; }
+                else if (p3 > 1000) { day = p1; month = p2 - 1; year = p3; }
+                else if (p1 > 31) { year = p1 < 100 ? 2000 + p1 : p1; month = p2 - 1; day = p3; }
+                else if (p2 > 12 && p1 <= 12) { month = p1 - 1; day = p2; year = p3 < 100 ? 2000 + p3 : p3; }
+                else { day = p1; month = p2 - 1; year = p3 < 100 ? 2000 + p3 : p3; }
             }
 
             const date = new Date(Date.UTC(year, month, day));
@@ -121,13 +118,14 @@ const dataImporter = {
             const dataRows = sheetAsArray.slice(headerRowIndex + 1);
             const totalKeywords = ['total', 'subtotal', 'suma'];
 
-            let loadedFlights = dataRows.map((row, rowIndex) => {
+            let loadedEntries = dataRows.map((row, rowIndex) => {
                 if (!Array.isArray(row) || row.every(cell => cell === null)) return null;
                 const firstCellContent = row[0] ? row[0].toString().toLowerCase() : '';
                 if (totalKeywords.some(keyword => firstCellContent.includes(keyword))) { return null; }
 
+                const rawDate = row[0]; // capture raw before any parsing
                 const newFlight = {
-                    id: Date.now().toString() + (rowIndex * Math.random()).toString().slice(2) // <-- AÑADIR ID ÚNICO
+                    id: Date.now().toString() + (rowIndex * Math.random()).toString().slice(2)
                 };
 
                 // Populate newFlight object based on HEADERS and apply schema for type conversion
@@ -180,30 +178,25 @@ const dataImporter = {
                     return null; // Invalid flight if no duration
                 }
 
-                // Ensure Pagina Bitacora a Replicar has a default if null.
-                // Offset by existing flight count so new imports continúan la paginación
-                // desde donde quedó la bitácora, en vez de empezar siempre desde página 1.
-                if (newFlight["Pagina Bitacora a Replicar"] === null) {
-                    const existingCount = (typeof flightData !== 'undefined' && Array.isArray(flightData))
-                        ? flightData.filter(f => f && !f.es_saldo_inicial).length
-                        : 0;
-                    newFlight["Pagina Bitacora a Replicar"] = Math.floor((rowIndex + existingCount) / 8) + 1;
-                }
-                
+                // Leave Pagina Bitacora a Replicar as-is (null or from Excel); app.js handles assignment.
+
                 // Ensure 'es_saldo_inicial' is always a boolean, defaulting to false
                 if (typeof newFlight['es_saldo_inicial'] !== 'boolean') {
                     newFlight['es_saldo_inicial'] = false;
                 }
 
-                return newFlight; // Return the fully processed flight object
+                return { flight: newFlight, rawDate };
             }).filter(Boolean);
 
-            if (loadedFlights.length === 0) throw new Error("No se pudo procesar ninguna fila con datos válidos.");
-            
+            if (loadedEntries.length === 0) throw new Error("No se pudo procesar ninguna fila con datos válidos.");
+
+            const loadedFlights = loadedEntries.map(e => e.flight).reverse();
+            const rawDates     = loadedEntries.map(e => e.rawDate).reverse();
+
             dataStatus.textContent = `¡Éxito! Se procesaron ${loadedFlights.length} vuelos.`;
             dataStatus.className = 'status success';
-            
-            return { success: true, data: loadedFlights.reverse() };
+
+            return { success: true, data: loadedFlights, rawDates };
 
         } catch (error) {
             console.error("Error procesando el archivo Excel:", error);
@@ -254,6 +247,134 @@ const dataImporter = {
         const hm = s.match(/^(\d+):(\d{2})$/);
         if (hm) return parseInt(hm[1]) + parseInt(hm[2]) / 60;
         return parseFloat(s.replace(',', '.')) || 0;
+    },
+
+    showDateValidationModal: (flights, rawDates) => {
+        return new Promise((resolve) => {
+            const parseWithFmt = (raw, fmt) => {
+                if (!raw && raw !== 0) return null;
+                if (typeof raw === 'number') return new Date(Date.UTC(1899, 11, 30 + raw));
+                const s = String(raw).trim();
+                const parts = s.split(/[\/\-\.]/);
+                if (parts.length !== 3) return null;
+                let [p1, p2, p3] = parts.map(p => parseInt(p, 10));
+                let year, month, day;
+                if (fmt === 'dmy')      { day = p1; month = p2 - 1; year = p3 < 100 ? 2000 + p3 : p3; }
+                else if (fmt === 'mdy') { month = p1 - 1; day = p2; year = p3 < 100 ? 2000 + p3 : p3; }
+                else if (fmt === 'ymd') { year = p1 < 100 ? 2000 + p1 : p1; month = p2 - 1; day = p3; }
+                const d = new Date(Date.UTC(year, month, day));
+                return isNaN(d.getTime()) ? null : d;
+            };
+
+            const fmtDate = d => d
+                ? d.toLocaleDateString('es-CL', { timeZone: 'UTC', day: '2-digit', month: 'short', year: 'numeric' })
+                : '<span style="color:#f44336;">Fecha inválida</span>';
+
+            // Pick 5 evenly-distributed samples that have a non-null raw date
+            const validPairs = flights
+                .map((f, i) => ({ f, raw: rawDates[i] }))
+                .filter(x => x.raw != null && x.raw !== '');
+            const step = Math.max(1, Math.floor(validPairs.length / 5));
+            const samples = [];
+            for (let i = 0; i < validPairs.length && samples.length < 5; i += step) samples.push(validPairs[i]);
+
+            // Auto-detect likely format from first sample
+            let detectedFmt = 'dmy';
+            if (samples.length > 0 && typeof samples[0].raw === 'string') {
+                const parts = samples[0].raw.split(/[\/\-\.]/);
+                if (parts.length === 3) {
+                    const [p1, p2] = parts.map(p => parseInt(p, 10));
+                    if (p2 > 12 && p1 <= 12) detectedFmt = 'mdy';
+                    else if (p1 > 31)         detectedFmt = 'ymd';
+                }
+            }
+
+            const buildRows = fmt => samples.map(({ f, raw }, si) => {
+                const parsed = parseWithFmt(raw, fmt);
+                const ok = parsed && !isNaN(parsed.getTime());
+                const year = ok ? parsed.getUTCFullYear() : 0;
+                const sane = ok && year >= 1970 && year <= 2100;
+                const color = sane ? '#4caf50' : '#f44336';
+                return `<tr>
+                    <td style="padding:7px 10px;color:#666;font-size:12px;">Muestra ${si + 1}</td>
+                    <td style="padding:7px 10px;font-family:monospace;color:#ddd;">${raw}</td>
+                    <td style="padding:7px 10px;color:${color};">${sane ? fmtDate(parsed) : (ok ? `<span style="color:#f44336;">Año ${year} — revisa el formato</span>` : '<span style="color:#f44336;">Inválida</span>')}</td>
+                </tr>`;
+            }).join('');
+
+            const formats = [
+                { value: 'dmy', label: 'DD/MM/AA — Día / Mes / Año', hint: '(formato Chile y Europa)' },
+                { value: 'mdy', label: 'MM/DD/AA — Mes / Día / Año', hint: '(formato EE.UU.)' },
+                { value: 'ymd', label: 'AA/MM/DD — Año / Mes / Día', hint: '(formato ISO / Asia)' },
+            ];
+
+            const modal = document.createElement('div');
+            modal.className = 'modal open';
+            modal.style.zIndex = "10003";
+            modal.innerHTML = `
+            <div class="modal-content" style="max-width:540px;">
+                <div class="modal-header"><h3>Formato de Fechas del Excel</h3></div>
+                <p style="color:#aaa;margin:0 0 1.25rem;">Selecciona el formato en que están escritas las fechas y verifica que las muestras se interpreten correctamente.</p>
+                <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:1.25rem;">
+                    ${formats.map(fmt => `
+                    <label class="datefmt-opt" style="display:flex;align-items:center;gap:12px;padding:11px 14px;border:1px solid ${fmt.value === detectedFmt ? '#666' : '#333'};border-radius:8px;cursor:pointer;transition:border-color .15s;">
+                        <input type="radio" name="date-fmt" value="${fmt.value}" ${fmt.value === detectedFmt ? 'checked' : ''} style="flex-shrink:0;">
+                        <span style="min-width:0;flex:1;">
+                            <strong>${fmt.label}</strong>
+                            <span style="color:#666;font-size:12px;margin-left:6px;">${fmt.hint}</span>
+                        </span>
+                    </label>`).join('')}
+                </div>
+                <p style="font-size:12px;color:#555;margin:0 0 6px;">Verificación con 5 muestras del archivo:</p>
+                <table style="width:100%;border-collapse:collapse;margin-bottom:1.5rem;font-size:13px;">
+                    <thead><tr style="border-bottom:1px solid #222;">
+                        <th style="text-align:left;padding:6px 10px;color:#555;font-weight:normal;">#</th>
+                        <th style="text-align:left;padding:6px 10px;color:#555;font-weight:normal;">Valor en el Excel</th>
+                        <th style="text-align:left;padding:6px 10px;color:#555;font-weight:normal;">Se interpreta como</th>
+                    </tr></thead>
+                    <tbody id="datefmt-rows">${buildRows(detectedFmt)}</tbody>
+                </table>
+                <div style="display:flex;gap:12px;justify-content:flex-end;padding-top:1rem;border-top:1px solid #333;">
+                    <button id="datefmt-cancel" class="prev-btn" style="padding:10px 20px;background:transparent;border:1px solid #444;">Cancelar importación</button>
+                    <button id="datefmt-confirm" class="submit-btn" style="padding:10px 24px;">Confirmar y continuar</button>
+                </div>
+            </div>`;
+
+            document.body.appendChild(modal);
+            const cleanup = () => modal.remove();
+
+            modal.querySelectorAll('input[name="date-fmt"]').forEach(radio => {
+                radio.addEventListener('change', () => {
+                    modal.querySelectorAll('.datefmt-opt').forEach(l => l.style.borderColor = '#333');
+                    radio.closest('.datefmt-opt').style.borderColor = '#666';
+                    modal.querySelector('#datefmt-rows').innerHTML = buildRows(radio.value);
+                });
+            });
+
+            modal.querySelector('#datefmt-confirm').addEventListener('click', () => {
+                const fmt = modal.querySelector('input[name="date-fmt"]:checked')?.value || 'dmy';
+                cleanup();
+                resolve(fmt);
+            });
+            modal.querySelector('#datefmt-cancel').addEventListener('click', () => { cleanup(); resolve(null); });
+        });
+    },
+
+    reparseFlightDates: (flights, rawDates, fmt) => {
+        flights.forEach((f, i) => {
+            const raw = rawDates[i];
+            if (!raw && raw !== 0) { f['Fecha'] = null; return; }
+            if (typeof raw === 'number') { f['Fecha'] = new Date(Date.UTC(1899, 11, 30 + raw)); return; }
+            const parts = String(raw).trim().split(/[\/\-\.]/);
+            if (parts.length !== 3) { f['Fecha'] = null; return; }
+            let [p1, p2, p3] = parts.map(p => parseInt(p, 10));
+            let year, month, day;
+            if (fmt === 'dmy')      { day = p1; month = p2 - 1; year = p3 < 100 ? 2000 + p3 : p3; }
+            else if (fmt === 'mdy') { month = p1 - 1; day = p2; year = p3 < 100 ? 2000 + p3 : p3; }
+            else if (fmt === 'ymd') { year = p1 < 100 ? 2000 + p1 : p1; month = p2 - 1; day = p3; }
+            const d = new Date(Date.UTC(year, month, day));
+            f['Fecha'] = isNaN(d.getTime()) ? null : d;
+        });
     },
 
     showValidationModal: (flights) => {
@@ -387,14 +508,14 @@ const dataImporter = {
                 <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:1.75rem;">
                     <label style="display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border:1px solid #333;border-radius:8px;cursor:pointer;transition:border-color .15s;" id="page-opt-auto-label">
                         <input type="radio" name="page-mode" value="auto" style="margin-top:3px;flex-shrink:0;" checked>
-                        <span>
+                        <span style="min-width:0;flex:1;">
                             <strong>Numeración automática</strong><br>
                             <span style="color:#888;font-size:13px;">Asigna páginas consecutivas empezando en la ${nextPage} (siguiente a tu última página actual).</span>
                         </span>
                     </label>
                     <label style="display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border:1px solid #333;border-radius:8px;cursor:pointer;transition:border-color .15s;${!hasExcelPages ? 'opacity:0.45;pointer-events:none;' : ''}" id="page-opt-excel-label">
                         <input type="radio" name="page-mode" value="excel" style="margin-top:3px;flex-shrink:0;" ${!hasExcelPages ? 'disabled' : ''}>
-                        <span>
+                        <span style="min-width:0;flex:1;">
                             <strong>Usar valores del Excel</strong><br>
                             <span style="color:#888;font-size:13px;">${hasExcelPages ? 'Mantiene los números de página que vienen en el archivo.' : 'El Excel no contiene números de página.'}</span>
                         </span>
