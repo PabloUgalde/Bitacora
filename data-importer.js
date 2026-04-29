@@ -97,6 +97,8 @@ const dataImporter = {
             const workbook = XLSX.read(data);
             const worksheet = workbook.Sheets[workbook.SheetNames[0]];
             const sheetAsArray = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: null, raw: false });
+            // Read raw values separately so date cells come as Excel serial numbers (unambiguous)
+            const sheetRaw = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: null, raw: true });
 
             if (sheetAsArray.length < 2) throw new Error("El archivo Excel tiene menos de dos filas.");
 
@@ -112,9 +114,9 @@ const dataImporter = {
             if (headerRowIndex === -1) {
                 throw new Error("No se pudo identificar una fila de encabezados. La importación por posición requiere una fila de encabezado reconocible.");
             }
-            
+
             console.log(`Se asume que los datos comienzan después de la fila ${headerRowIndex + 1}.`);
-            
+
             const dataRows = sheetAsArray.slice(headerRowIndex + 1);
             const totalKeywords = ['total', 'subtotal', 'suma'];
 
@@ -123,7 +125,9 @@ const dataImporter = {
                 const firstCellContent = row[0] ? row[0].toString().toLowerCase() : '';
                 if (totalKeywords.some(keyword => firstCellContent.includes(keyword))) { return null; }
 
-                const rawDate = { value: row[0], excelRow: headerRowIndex + 2 + rowIndex };
+                // Use raw value for date: serial numbers are unambiguous; strings need format hint
+                const rawDateValue = sheetRaw[headerRowIndex + 1 + rowIndex]?.[0] ?? row[0];
+                const rawDate = { value: rawDateValue, excelRow: headerRowIndex + 2 + rowIndex };
                 const newFlight = {
                     id: Date.now().toString() + (rowIndex * Math.random()).toString().slice(2)
                 };
@@ -252,9 +256,12 @@ const dataImporter = {
     showDateValidationModal: (flights, rawDates) => {
         return new Promise((resolve) => {
             // rawDates[i] = { value, excelRow }
+            // value can be: number (Excel serial) → unambiguous, or string → needs format hint
+
+            const fromSerial = n => new Date(Date.UTC(1899, 11, 30 + n));
             const parseWithFmt = (val, fmt) => {
                 if (val == null || val === '') return null;
-                if (typeof val === 'number') return new Date(Date.UTC(1899, 11, 30 + val));
+                if (typeof val === 'number') return fromSerial(val);
                 const parts = String(val).trim().split(/[\/\-\.]/);
                 if (parts.length !== 3) return null;
                 let [p1, p2, p3] = parts.map(p => parseInt(p, 10));
@@ -265,10 +272,8 @@ const dataImporter = {
                 const d = new Date(Date.UTC(year, month, day));
                 return isNaN(d.getTime()) ? null : d;
             };
-
             const fmtDate = d => d ? d.toLocaleDateString('es-CL', { timeZone: 'UTC', day: '2-digit', month: 'short', year: 'numeric' }) : null;
 
-            // All pairs with a non-null raw value
             const validPairs = flights
                 .map((f, i) => ({ f, rd: rawDates[i] }))
                 .filter(x => x.rd && x.rd.value != null && x.rd.value !== '');
@@ -278,82 +283,123 @@ const dataImporter = {
             const samples = [];
             for (let i = 0; i < validPairs.length && samples.length < 8; i += step) samples.push(validPairs[i]);
 
-            // Score each format on up to 30 samples and pick the best
-            const scoreFmt = fmt => validPairs.slice(0, 30).reduce((score, { rd }) => {
-                const d = parseWithFmt(rd.value, fmt);
-                const y = d ? d.getUTCFullYear() : 0;
-                return score + (d && y >= 1970 && y <= 2100 ? 1 : 0);
-            }, 0);
-            const scores = { dmy: scoreFmt('dmy'), mdy: scoreFmt('mdy'), ymd: scoreFmt('ymd') };
-            const detectedFmt = Object.keys(scores).reduce((a, b) => scores[a] >= scores[b] ? a : b);
-
-            const buildRows = fmt => samples.map(({ f, rd }) => {
-                const d = parseWithFmt(rd.value, fmt);
-                const y = d ? d.getUTCFullYear() : 0;
-                const sane = d && y >= 1970 && y <= 2100;
-                const color = sane ? '#4caf50' : '#e57373';
-                const label = sane ? fmtDate(d) : (d ? `Año ${y} — revisa formato` : 'Inválida');
-                return `<tr style="border-bottom:1px solid #1a1a1a;">
-                    <td style="padding:7px 10px;color:#555;font-size:12px;">Fila ${rd.excelRow}</td>
-                    <td style="padding:7px 10px;font-family:monospace;color:#ccc;">${rd.value}</td>
-                    <td style="padding:7px 10px;color:${color};">${label}</td>
-                </tr>`;
-            }).join('');
-
-            const formats = [
-                { value: 'dmy', label: 'DD/MM/AA', hint: 'Día / Mes / Año — Chile, Europa' },
-                { value: 'mdy', label: 'MM/DD/AA', hint: 'Mes / Día / Año — EE.UU.' },
-                { value: 'ymd', label: 'AA/MM/DD', hint: 'Año / Mes / Día — ISO' },
-            ];
+            // Detect if dates are stored as Excel serial numbers (numeric)
+            const numericCount = validPairs.slice(0, 20).filter(x => typeof x.rd.value === 'number').length;
+            const isSerial = numericCount >= Math.min(validPairs.length, 20) * 0.7;
 
             const modal = document.createElement('div');
             modal.className = 'modal open';
             modal.style.zIndex = "10003";
-            modal.innerHTML = `
-            <div class="modal-content" style="max-width:520px;">
-                <div class="modal-header"><h3>Formato de Fechas del Excel</h3></div>
-                <p style="color:#aaa;margin:0 0 1.25rem;">Selecciona el formato de las fechas y verifica que las muestras se vean correctas (en verde).</p>
-                <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:1.25rem;">
-                    ${formats.map(fmt => `
-                    <label class="datefmt-opt" style="display:flex;align-items:center;gap:14px;padding:12px 16px;border:1px solid ${fmt.value === detectedFmt ? '#666' : '#333'};border-radius:8px;cursor:pointer;box-sizing:border-box;width:100%;">
-                        <input type="radio" name="date-fmt" value="${fmt.value}" ${fmt.value === detectedFmt ? 'checked' : ''} style="flex-shrink:0;margin:0;width:16px;height:16px;">
-                        <div style="flex:1;min-width:0;">
-                            <div style="color:#e0e0e0;font-weight:600;font-size:14px;">${fmt.label}</div>
-                            <div style="color:#666;font-size:12px;margin-top:2px;">${fmt.hint}</div>
-                        </div>
-                    </label>`).join('')}
-                </div>
-                <p style="font-size:12px;color:#555;margin:0 0 6px;">Muestra de 8 registros distribuidos del archivo:</p>
-                <table style="width:100%;border-collapse:collapse;margin-bottom:1.5rem;font-size:13px;">
-                    <thead><tr style="border-bottom:1px solid #222;">
-                        <th style="text-align:left;padding:6px 10px;color:#555;font-weight:normal;width:60px;">Fila</th>
-                        <th style="text-align:left;padding:6px 10px;color:#555;font-weight:normal;width:110px;">En el Excel</th>
-                        <th style="text-align:left;padding:6px 10px;color:#555;font-weight:normal;">Se interpreta como</th>
-                    </tr></thead>
-                    <tbody id="datefmt-rows">${buildRows(detectedFmt)}</tbody>
-                </table>
-                <div style="display:flex;gap:12px;justify-content:flex-end;padding-top:1rem;border-top:1px solid #333;">
-                    <button id="datefmt-cancel" class="prev-btn" style="padding:10px 20px;background:transparent;border:1px solid #444;">Cancelar importación</button>
-                    <button id="datefmt-confirm" class="submit-btn" style="padding:10px 24px;">Confirmar y continuar</button>
-                </div>
-            </div>`;
 
-            document.body.appendChild(modal);
-            const cleanup = () => modal.remove();
+            if (isSerial) {
+                // Dates are serial numbers — unambiguous, no format selector needed
+                const buildSerial = () => samples.map(({ rd }) => {
+                    const d = typeof rd.value === 'number' ? fromSerial(rd.value) : parseWithFmt(rd.value, 'dmy');
+                    const y = d ? d.getUTCFullYear() : 0;
+                    const sane = d && y >= 1970 && y <= 2100;
+                    return `<tr style="border-bottom:1px solid #1a1a1a;">
+                        <td style="padding:7px 10px;color:#555;font-size:12px;">Fila ${rd.excelRow}</td>
+                        <td style="padding:7px 10px;color:${sane ? '#4caf50' : '#e57373'};">${sane ? fmtDate(d) : 'Fecha inválida'}</td>
+                    </tr>`;
+                }).join('');
 
-            modal.querySelectorAll('input[name="date-fmt"]').forEach(radio => {
-                radio.addEventListener('change', () => {
-                    modal.querySelectorAll('.datefmt-opt').forEach(l => l.style.borderColor = '#333');
-                    radio.closest('.datefmt-opt').style.borderColor = '#666';
-                    modal.querySelector('#datefmt-rows').innerHTML = buildRows(radio.value);
+                modal.innerHTML = `
+                <div class="modal-content" style="max-width:460px;">
+                    <div class="modal-header"><h3>Verificar Fechas</h3></div>
+                    <p style="color:#aaa;margin:0 0 0.5rem;">Las fechas están almacenadas como valores numéricos en el Excel — se leen directamente sin ambigüedad de formato.</p>
+                    <p style="color:#555;font-size:12px;margin:0 0 1rem;">Confirma que las fechas a continuación se vean correctas:</p>
+                    <table style="width:100%;border-collapse:collapse;margin-bottom:1.5rem;font-size:13px;">
+                        <thead><tr style="border-bottom:1px solid #222;">
+                            <th style="text-align:left;padding:6px 10px;color:#555;font-weight:normal;">Fila en Excel</th>
+                            <th style="text-align:left;padding:6px 10px;color:#555;font-weight:normal;">Fecha interpretada</th>
+                        </tr></thead>
+                        <tbody>${buildSerial()}</tbody>
+                    </table>
+                    <div style="display:flex;gap:12px;justify-content:flex-end;padding-top:1rem;border-top:1px solid #333;">
+                        <button id="datefmt-cancel" class="prev-btn" style="padding:10px 20px;background:transparent;border:1px solid #444;">Cancelar importación</button>
+                        <button id="datefmt-confirm" class="submit-btn" style="padding:10px 24px;">Las fechas son correctas — continuar</button>
+                    </div>
+                </div>`;
+
+                document.body.appendChild(modal);
+                const cleanup = () => modal.remove();
+                modal.querySelector('#datefmt-confirm').addEventListener('click', () => { cleanup(); resolve('serial'); });
+                modal.querySelector('#datefmt-cancel').addEventListener('click', () => { cleanup(); resolve(null); });
+
+            } else {
+                // Dates are stored as text — need format selector
+                const scoreFmt = fmt => validPairs.slice(0, 30).reduce((score, { rd }) => {
+                    const d = parseWithFmt(rd.value, fmt);
+                    const y = d ? d.getUTCFullYear() : 0;
+                    return score + (d && y >= 1970 && y <= 2100 ? 1 : 0);
+                }, 0);
+                const scores = { dmy: scoreFmt('dmy'), mdy: scoreFmt('mdy'), ymd: scoreFmt('ymd') };
+                const detectedFmt = Object.keys(scores).reduce((a, b) => scores[a] >= scores[b] ? a : b);
+
+                const buildRows = fmt => samples.map(({ rd }) => {
+                    const d = parseWithFmt(rd.value, fmt);
+                    const y = d ? d.getUTCFullYear() : 0;
+                    const sane = d && y >= 1970 && y <= 2100;
+                    const color = sane ? '#4caf50' : '#e57373';
+                    const label = sane ? fmtDate(d) : (d ? `Año ${y} — revisa formato` : 'Inválida');
+                    return `<tr style="border-bottom:1px solid #1a1a1a;">
+                        <td style="padding:7px 10px;color:#555;font-size:12px;">Fila ${rd.excelRow}</td>
+                        <td style="padding:7px 10px;font-family:monospace;color:#ccc;">${rd.value}</td>
+                        <td style="padding:7px 10px;color:${color};">${label}</td>
+                    </tr>`;
+                }).join('');
+
+                const formats = [
+                    { value: 'dmy', label: 'DD/MM/AA', hint: 'Día / Mes / Año — Chile, Europa' },
+                    { value: 'mdy', label: 'MM/DD/AA', hint: 'Mes / Día / Año — EE.UU.' },
+                    { value: 'ymd', label: 'AA/MM/DD', hint: 'Año / Mes / Día — ISO' },
+                ];
+
+                modal.innerHTML = `
+                <div class="modal-content" style="max-width:520px;">
+                    <div class="modal-header"><h3>Formato de Fechas del Excel</h3></div>
+                    <p style="color:#aaa;margin:0 0 1.25rem;">Las fechas están guardadas como texto. Indica el formato y verifica que las muestras queden correctas (en verde).</p>
+                    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:1.25rem;">
+                        ${formats.map(fmt => `
+                        <label class="datefmt-opt" style="display:flex;align-items:center;gap:14px;padding:12px 16px;border:1px solid ${fmt.value === detectedFmt ? '#666' : '#333'};border-radius:8px;cursor:pointer;box-sizing:border-box;width:100%;">
+                            <input type="radio" name="date-fmt" value="${fmt.value}" ${fmt.value === detectedFmt ? 'checked' : ''} style="flex-shrink:0;margin:0;width:16px;height:16px;">
+                            <div style="flex:1;min-width:0;">
+                                <div style="color:#e0e0e0;font-weight:600;font-size:14px;">${fmt.label}</div>
+                                <div style="color:#666;font-size:12px;margin-top:2px;">${fmt.hint}</div>
+                            </div>
+                        </label>`).join('')}
+                    </div>
+                    <p style="font-size:12px;color:#555;margin:0 0 6px;">Muestra de 8 registros del archivo:</p>
+                    <table style="width:100%;border-collapse:collapse;margin-bottom:1.5rem;font-size:13px;">
+                        <thead><tr style="border-bottom:1px solid #222;">
+                            <th style="text-align:left;padding:6px 10px;color:#555;font-weight:normal;width:60px;">Fila</th>
+                            <th style="text-align:left;padding:6px 10px;color:#555;font-weight:normal;width:110px;">En el Excel</th>
+                            <th style="text-align:left;padding:6px 10px;color:#555;font-weight:normal;">Se interpreta como</th>
+                        </tr></thead>
+                        <tbody id="datefmt-rows">${buildRows(detectedFmt)}</tbody>
+                    </table>
+                    <div style="display:flex;gap:12px;justify-content:flex-end;padding-top:1rem;border-top:1px solid #333;">
+                        <button id="datefmt-cancel" class="prev-btn" style="padding:10px 20px;background:transparent;border:1px solid #444;">Cancelar importación</button>
+                        <button id="datefmt-confirm" class="submit-btn" style="padding:10px 24px;">Confirmar y continuar</button>
+                    </div>
+                </div>`;
+
+                document.body.appendChild(modal);
+                const cleanup = () => modal.remove();
+
+                modal.querySelectorAll('input[name="date-fmt"]').forEach(radio => {
+                    radio.addEventListener('change', () => {
+                        modal.querySelectorAll('.datefmt-opt').forEach(l => l.style.borderColor = '#333');
+                        radio.closest('.datefmt-opt').style.borderColor = '#666';
+                        modal.querySelector('#datefmt-rows').innerHTML = buildRows(radio.value);
+                    });
                 });
-            });
-
-            modal.querySelector('#datefmt-confirm').addEventListener('click', () => {
-                const fmt = modal.querySelector('input[name="date-fmt"]:checked')?.value || 'dmy';
-                cleanup(); resolve(fmt);
-            });
-            modal.querySelector('#datefmt-cancel').addEventListener('click', () => { cleanup(); resolve(null); });
+                modal.querySelector('#datefmt-confirm').addEventListener('click', () => {
+                    const fmt = modal.querySelector('input[name="date-fmt"]:checked')?.value || 'dmy';
+                    cleanup(); resolve(fmt);
+                });
+                modal.querySelector('#datefmt-cancel').addEventListener('click', () => { cleanup(); resolve(null); });
+            }
         });
     },
 
