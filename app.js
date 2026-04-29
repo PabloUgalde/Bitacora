@@ -507,7 +507,7 @@ const app = {
                             return da - db;
                         });
                         sorted.forEach((f, rank) => {
-                            f['Pagina Bitacora a Replicar'] = currentMaxPage + rank + 1;
+                            f['Pagina Bitacora a Replicar'] = currentMaxPage + Math.floor(rank / 8) + 1;
                         });
                     }
                     const dataStatus = document.getElementById('data-status');
