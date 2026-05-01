@@ -113,6 +113,10 @@ const ui = {
             // Permitimos minutos > 59 para que 0:75 sea 1.25
             return hours + (minutes / 60);
         }
+        // "03" → 0.3, "07" → 0.7 (atajo: 0 seguido de dígitos sin punto)
+        if (/^0\d+$/.test(strVal)) {
+            return parseFloat('0.' + strVal.slice(1)) || 0;
+        }
         return parseFloat(strVal.replace(',', '.')) || 0;
     },
 
