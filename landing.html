@@ -237,6 +237,8 @@ nav{
   display:block;
 }
 .hstat-lab{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);margin-top:4px;letter-spacing:1px;text-transform:uppercase;}
+.hstat-demo-badge{font-family:'Share Tech Mono',monospace;font-size:8px;color:rgba(212,175,55,0.5);letter-spacing:1.5px;margin-top:3px;}
+.hstat-demo{opacity:.85;}
 
 /* ─── SECTION COMMONS ─── */
 .sec{padding:100px 56px;}
@@ -257,8 +259,20 @@ nav{
 /* ─── INSTRUMENT BAND ─── */
 .instrument-band{
   background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border);
-  padding:28px 56px;overflow:hidden;
+  padding:0 56px 28px;overflow:hidden;
 }
+.ib-header{
+  max-width:1140px;margin:0 auto;
+  padding:18px 0 20px;
+  display:flex;align-items:center;gap:16px;
+  border-bottom:1px solid var(--border);margin-bottom:0;
+}
+.ib-demo-tag{
+  font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;
+  color:#000;background:var(--gold);border-radius:3px;padding:3px 10px;
+  text-transform:uppercase;flex-shrink:0;
+}
+.ib-desc{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:1px;}
 .ib-inner{
   max-width:1140px;margin:0 auto;
   display:flex;gap:0;align-items:stretch;
@@ -613,19 +627,25 @@ footer{
       <span class="hstat-val" data-target="14">0</span>
       <div class="hstat-lab">Días Pro gratis</div>
     </div>
-    <div class="hstat">
+    <div class="hstat hstat-demo">
       <span class="hstat-val" data-target="539">0</span>
-      <div class="hstat-lab">Hrs registradas (ejemplo)</div>
+      <div class="hstat-lab">Horas registradas</div>
+      <div class="hstat-demo-badge">EJEMPLO</div>
     </div>
-    <div class="hstat">
+    <div class="hstat hstat-demo">
       <span class="hstat-val" data-target="1221">0</span>
-      <div class="hstat-lab">Aterrizajes (ejemplo)</div>
+      <div class="hstat-lab">Aterrizajes</div>
+      <div class="hstat-demo-badge">EJEMPLO</div>
     </div>
   </div>
 </section>
 
 <!-- INSTRUMENT BAND -->
 <div class="instrument-band reveal">
+  <div class="ib-header">
+    <span class="ib-demo-tag">Ejemplo</span>
+    <span class="ib-desc">Así se ve tu perfil Pro después de registrar tus vuelos — todos los datos son tuyos, en tiempo real</span>
+  </div>
   <div class="ib-inner">
     <div class="inst">
       <div class="inst-label">Horas Totales</div>
