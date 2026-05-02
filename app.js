@@ -497,7 +497,21 @@ const app = {
                         const p = parseInt(f['Pagina Bitacora a Replicar']) || 0;
                         return p > max ? p : max;
                     }, 0);
-                    const pageMode = await dataImporter.showPageNumberModal(result.data, currentMaxPage);
+
+                    // Detectar si algún vuelo importado es anterior al más antiguo existente
+                    const existingDated = flightData.filter(f =>
+                        !f.es_saldo_inicial && f.Fecha instanceof Date && !isNaN(f.Fecha.getTime())
+                    );
+                    const oldestExistingDate = existingDated.reduce(
+                        (min, f) => (!min || f.Fecha < min) ? f.Fecha : min, null
+                    );
+                    const hasOlderFlights = oldestExistingDate !== null && result.data.some(f => {
+                        const d = f.Fecha instanceof Date ? f.Fecha : new Date(f['Fecha']);
+                        return !isNaN(d) && d < oldestExistingDate;
+                    });
+                    const existingCount = existingDated.length;
+
+                    const pageMode = await dataImporter.showPageNumberModal(result.data, currentMaxPage, hasOlderFlights, existingCount);
                     if (pageMode === null) { e.target.value = ''; return; }
                     if (pageMode === 'auto') {
                         // result.data is reversed from Excel order; restore original row rank
@@ -506,6 +520,30 @@ const app = {
                             const excelRank = n - 1 - i; // 0 = primera fila del Excel
                             f['Pagina Bitacora a Replicar'] = currentMaxPage + Math.floor(excelRank / 8) + 1;
                         });
+                    } else if (pageMode === 'insert_start') {
+                        // Asignar páginas 1..N a los importados en orden cronológico
+                        const sorted = [...result.data].sort((a, b) => {
+                            const aTime = a.Fecha instanceof Date ? a.Fecha.getTime() : 0;
+                            const bTime = b.Fecha instanceof Date ? b.Fecha.getTime() : 0;
+                            return aTime - bTime;
+                        });
+                        sorted.forEach((f, i) => {
+                            f['Pagina Bitacora a Replicar'] = Math.floor(i / 8) + 1;
+                        });
+                        const importedMaxPage = Math.floor((result.data.length - 1) / 8) + 1;
+
+                        // Correr las páginas de los vuelos ya guardados
+                        const dataStatus = document.getElementById('data-status');
+                        dataStatus.textContent = 'Renumerando páginas existentes...';
+                        dataStatus.className = 'status info';
+                        const renumbered = await api.renumberExistingFlights(importedMaxPage);
+                        if (!renumbered) {
+                            ui.showNotification('Error al renumerar los vuelos existentes. Importación cancelada.', 'error');
+                            dataStatus.textContent = 'Error al renumerar páginas.';
+                            dataStatus.className = 'status error';
+                            e.target.value = '';
+                            return;
+                        }
                     }
                     const dataStatus = document.getElementById('data-status');
                     dataStatus.textContent = 'Iniciando importación...';

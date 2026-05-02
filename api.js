@@ -228,6 +228,46 @@ const api = {
         return true;
     },
 
+    renumberExistingFlights: async (shift) => {
+        const userId = api._getUserId();
+        if (!userId) return false;
+
+        const toUpdate = flightData.filter(f =>
+            !f.es_saldo_inicial && parseInt(f['Pagina Bitacora a Replicar']) > 0
+        );
+
+        if (!navigator.onLine) {
+            toUpdate.forEach(f => {
+                f['Pagina Bitacora a Replicar'] = parseInt(f['Pagina Bitacora a Replicar']) + shift;
+            });
+            api.saveFlightsToLocalStorage();
+            return true;
+        }
+
+        const chunkSize = 20;
+        for (let i = 0; i < toUpdate.length; i += chunkSize) {
+            const chunk = toUpdate.slice(i, i + chunkSize);
+            const results = await Promise.all(chunk.map(f => {
+                const newPage = parseInt(f['Pagina Bitacora a Replicar']) + shift;
+                return supabaseClient
+                    .from('flights')
+                    .update({ pagina_bitacora: newPage })
+                    .eq('id', f.id)
+                    .eq('user_id', userId);
+            }));
+            if (results.some(r => r.error)) {
+                console.error('Error renumerando páginas:', results.find(r => r.error).error);
+                return false;
+            }
+            chunk.forEach(f => {
+                f['Pagina Bitacora a Replicar'] = parseInt(f['Pagina Bitacora a Replicar']) + shift;
+            });
+        }
+
+        api.saveFlightsToLocalStorage();
+        return true;
+    },
+
     updateFlight: async (flightId, flightDataToUpdate) => {
         const index = flightData.findIndex(f => f && f.id === flightId);
         if (index === -1) return false;

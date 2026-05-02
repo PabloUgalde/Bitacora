@@ -536,10 +536,11 @@ const dataImporter = {
         });
     },
 
-    showPageNumberModal: (flights, currentMaxPage) => {
+    showPageNumberModal: (flights, currentMaxPage, hasOlderFlights, existingCount) => {
         return new Promise((resolve) => {
             const hasExcelPages = flights.some(f => parseInt(f['Pagina Bitacora a Replicar']) > 0);
             const nextPage = (currentMaxPage || 0) + 1;
+            const importedMaxPage = Math.floor((flights.length - 1) / 8) + 1;
 
             const modal = document.createElement('div');
             modal.className = 'modal open';
@@ -549,6 +550,7 @@ const dataImporter = {
                 <div class="modal-header">
                     <h3>Páginas de Bitácora</h3>
                 </div>
+                ${hasOlderFlights ? `<p style="color:#f0a500;font-size:13px;margin:0 0 1rem;padding:10px 12px;background:rgba(240,165,0,0.1);border-radius:6px;border-left:3px solid #f0a500;">Los vuelos importados tienen fechas anteriores a tus registros actuales.</p>` : ''}
                 <p style="color:#aaa;margin:0 0 1.5rem;">¿Cómo deseas asignar los números de página para los ${flights.length} vuelos importados?</p>
                 <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:1.75rem;">
                     <label style="display:flex;align-items:flex-start;gap:14px;padding:14px 16px;border:1px solid #555;border-radius:8px;cursor:pointer;box-sizing:border-box;width:100%;" id="page-opt-auto-label">
@@ -565,6 +567,13 @@ const dataImporter = {
                             <div style="color:#888;font-size:13px;margin-top:3px;">${hasExcelPages ? 'Mantiene los números de página que vienen en el archivo.' : 'El Excel no contiene números de página.'}</div>
                         </div>
                     </label>
+                    ${hasOlderFlights ? `<label style="display:flex;align-items:flex-start;gap:14px;padding:14px 16px;border:1px solid #333;border-radius:8px;cursor:pointer;box-sizing:border-box;width:100%;" id="page-opt-insert-label">
+                        <input type="radio" name="page-mode" value="insert_start" style="flex-shrink:0;margin-top:2px;width:16px;height:16px;">
+                        <div style="flex:1;min-width:0;">
+                            <div style="color:#e0e0e0;font-weight:600;font-size:14px;">Renumerar desde el inicio</div>
+                            <div style="color:#888;font-size:13px;margin-top:3px;">Los ${flights.length} vuelos importados reciben páginas 1–${importedMaxPage} (orden cronológico). Tus ${existingCount} vuelo${existingCount !== 1 ? 's' : ''} actual${existingCount !== 1 ? 'es' : ''} se renumeran para quedar después.</div>
+                        </div>
+                    </label>` : ''}
                 </div>
                 <div style="display:flex;gap:12px;justify-content:flex-end;padding-top:1rem;border-top:1px solid #333;">
                     <button id="page-modal-cancel" class="prev-btn" style="padding:10px 20px;background:transparent;border:1px solid #444;">Cancelar importación</button>

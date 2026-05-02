@@ -16,7 +16,7 @@ App PWA de bitácora de vuelo para pilotos chilenos. Producción: **https://bita
 | Archivo | Rol |
 |---------|-----|
 | `index.html` | App shell (772 líneas, carga 15+ scripts en orden específico) |
-| `landing.html` | Página pública + formularios de login/registro |
+| `landing.html` | Landing page pública (v2 HUD). CTAs apuntan a `index.html?auth=1`. Sin formularios inline — el auth vive en la app. |
 | `app.js` | Entry point: inicializa módulos, event listeners, registra SW |
 | `state.js` | Estado global: `flightData[]`, `userProfile`, `logbookState` |
 | `auth.js` | Supabase Auth: login, registro, recuperación de contraseña |
@@ -71,9 +71,24 @@ SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, RESEND_API_KEY
 - Campos y comentarios en español (domain language = DGAC)
 - Claves de Supabase son publicables (seguridad vía RLS + JWT)
 
+## Landing page (v2 HUD)
+
+`landing.html` fue rediseñada completamente. Características clave:
+
+- **Estética:** dark aviation HUD — paleta gold `#D4AF37`, fondo `#070809`, scanlines CSS
+- **Tipografías:** Space Grotesk (cuerpo), Barlow Condensed (títulos grandes), Share Tech Mono (datos HUD)
+- **HUD flotante:** paneles ALT/IAS/HDG en lateral derecho + barra VS izquierda, animados con scroll via `lerp()` en `requestAnimationFrame`
+- **Radar hero:** anillos SVG + sweep giratorio como fondo animado
+- **Banda de instrumentos:** datos de ejemplo explícitamente etiquetados con badge "EJEMPLO" y texto explicativo. No son datos reales de plataforma.
+- **Mockups inline:** dashboard y resúmenes renderizados como HTML/SVG — sin imágenes externas
+- **Pricing toggle:** vista mensual / anual con dos grids intercambiables (`grid-monthly` / `grid-annual`)
+- **Auth:** todos los CTAs → `index.html?auth=1`. Redirect automático si hay sesión activa en `localStorage` (`sb-rdnniehpsdforkfngwrf-auth-token`)
+- **Sin dependencias externas de JS** — todo vanilla, sin Chart.js ni librerías en el landing
+
 ## Estado actual del proyecto
 ✅ Completamente funcional en producción  
 ✅ Auth, CRUD vuelos, offline, dashboard, logbook, resúmenes, licencias, pagos, PWA, importador Excel/CSV, impresión  
+✅ Landing v2 HUD desplegada  
 ⚠️ Área de desarrollo activa: `data-importer.js`, validaciones de ingreso (`app.js`)  
 ❌ Sin tests, sin linter, sin TypeScript
 
