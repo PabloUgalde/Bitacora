@@ -552,7 +552,7 @@ footer{
     <a href="#precios">PRECIOS</a>
     <a href="#faq">FAQ</a>
   </div>
-  <a href="#" class="nav-cta">Comenzar gratis</a>
+  <a href="index.html?auth=1" class="nav-cta">Comenzar gratis</a>
 </nav>
 
 <!-- FLOATING HUD PANELS -->
@@ -614,7 +614,7 @@ footer{
   </h1>
   <p class="hero-sub">Registra, gestiona y analiza tus vuelos desde cualquier dispositivo. Diseñada para pilotos que no tienen tiempo que perder.</p>
   <div class="hero-btns">
-    <a href="#" class="btn-p">Comenzar gratis →</a>
+    <a href="index.html?auth=1" class="btn-p">Comenzar gratis →</a>
     <a href="#funciones" class="btn-s">Ver funciones</a>
   </div>
   <div class="hero-stats">
@@ -1084,7 +1084,7 @@ footer{
           <li class="off">Exportar Excel/CSV</li>
           <li class="off">Reportes PDF</li>
         </ul>
-        <a href="#" class="pbtn free">Comenzar gratis</a>
+        <a href="index.html?auth=1" class="pbtn free">Comenzar gratis</a>
       </div>
 
       <!-- PRO MENSUAL — destacado -->
@@ -1106,7 +1106,7 @@ footer{
           <li>Reportes PDF profesionales</li>
           <li>Soporte directo</li>
         </ul>
-        <a href="#" class="pbtn pro">Probar 14 días gratis →</a>
+        <a href="index.html?auth=1" class="pbtn pro">Probar 14 días gratis →</a>
       </div>
 
       <!-- PRO ANUAL -->
@@ -1124,7 +1124,7 @@ footer{
           <li>Prioridad en soporte</li>
           <li>Acceso a nuevas funciones</li>
         </ul>
-        <a href="#" class="pbtn free">Suscribir anual →</a>
+        <a href="index.html?auth=1" class="pbtn free">Suscribir anual →</a>
       </div>
 
     </div>
@@ -1147,7 +1147,7 @@ footer{
           <li class="off">Exportar Excel/CSV</li>
           <li class="off">Reportes PDF</li>
         </ul>
-        <a href="#" class="pbtn free">Comenzar gratis</a>
+        <a href="index.html?auth=1" class="pbtn free">Comenzar gratis</a>
       </div>
 
       <!-- PRO MENSUAL — secundario -->
@@ -1164,7 +1164,7 @@ footer{
           <li>Reportes PDF profesionales</li>
           <li>Soporte directo</li>
         </ul>
-        <a href="#" class="pbtn free">Suscribir mensual</a>
+        <a href="index.html?auth=1" class="pbtn free">Suscribir mensual</a>
       </div>
 
       <!-- PRO ANUAL — destacado -->
@@ -1183,7 +1183,7 @@ footer{
           <li>Prioridad en soporte</li>
           <li>Acceso a nuevas funciones</li>
         </ul>
-        <a href="#" class="pbtn pro">Probar 14 días gratis →</a>
+        <a href="index.html?auth=1" class="pbtn pro">Probar 14 días gratis →</a>
       </div>
 
     </div>
@@ -1268,7 +1268,7 @@ footer{
   <h2 class="cta-title reveal">¿LISTO PARA<br><span>DESPEGAR?</span></h2>
   <p class="cta-sub reveal">Crea tu cuenta gratis y prueba el plan Pro por 14 días sin tarjeta de crédito.</p>
   <div class="reveal" style="display:flex;gap:14px;justify-content:center;">
-    <a href="#" class="btn-p" style="font-size:16px;padding:18px 48px;">Comenzar gratis →</a>
+    <a href="index.html?auth=1" class="btn-p" style="font-size:16px;padding:18px 48px;">Comenzar gratis →</a>
     <a href="#precios" class="btn-s" style="font-size:16px;padding:18px 48px;">Ver planes</a>
   </div>
 </section>
@@ -1284,6 +1284,17 @@ footer{
 </footer>
 
 <script>
+/* ─── SESSION REDIRECT ─── */
+(function() {
+  try {
+    const stored = localStorage.getItem('sb-rdnniehpsdforkfngwrf-auth-token');
+    if (stored) {
+      const session = JSON.parse(stored);
+      if (session?.access_token) window.location.replace('index.html');
+    }
+  } catch(e) {}
+})();
+
 /* ─── PRICING TOGGLE ─── */
 function setPricing(mode) {
   const btns = document.querySelectorAll('.toggle-btn');
