@@ -677,7 +677,7 @@ Responde ÚNICAMENTE con el JSON array. Sin texto adicional, sin markdown.`;
             }
             ui.showNotification(`${this.flights.length} vuelo(s) importados`, 'success');
             this.close();
-            await api.loadFlights();
+            await api.loadInitialFlights();
             if (typeof render !== 'undefined') render.dashboard();
         } catch (e) {
             ui.showNotification('Error: ' + e.message, 'error');

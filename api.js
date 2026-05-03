@@ -59,7 +59,7 @@ const api = {
             observaciones:         flight['Observaciones'] || null,
             pagina_bitacora:       parseInt(flight['Pagina Bitacora a Replicar']) || null,
         };
-        if (flight.id) row.id = flight.id;
+        row.id = flight.id || crypto.randomUUID();
         return row;
     },
 
