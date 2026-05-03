@@ -26,8 +26,7 @@ const api = {
         const fecha = fechaDate && !isNaN(fechaDate)
             ? `${fechaDate.getUTCFullYear()}-${String(fechaDate.getUTCMonth()+1).padStart(2,'0')}-${String(fechaDate.getUTCDate()).padStart(2,'0')}`
             : null;
-        return {
-            id:                    flight.id,
+        const row = {
             user_id:               userId,
             fecha,
             aeronave_marca_modelo: flight['Aeronave Marca y Modelo'] || null,
@@ -60,6 +59,8 @@ const api = {
             observaciones:         flight['Observaciones'] || null,
             pagina_bitacora:       parseInt(flight['Pagina Bitacora a Replicar']) || null,
         };
+        if (flight.id) row.id = flight.id;
+        return row;
     },
 
     // Convierte una fila de Supabase al formato de objeto de vuelo que usa la app
