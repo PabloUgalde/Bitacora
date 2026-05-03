@@ -644,6 +644,13 @@
                                     <p id="data-status" class="status"></p>
                                 </div>
                             </div>
+                            <div class="config-section">
+                                <h4>📷 Escanear bitácora física</h4>
+                                <p>Sube una foto de tu bitácora en papel y la IA extraerá los vuelos automáticamente para que los revises antes de importar.</p>
+                                <div style="display:flex; flex-direction:column; gap:0.75rem; margin-top:1rem;">
+                                    <button type="button" class="settings-btn-primary" onclick="logbookScanner.open()">📷 Escanear con IA</button>
+                                </div>
+                            </div>
                             <div class="config-section" style="grid-column: 1 / -1; border-top: 1px solid #2a2a2a; padding-top: 1.5rem; margin-top: 0.5rem;">
                                 <h4 style="color:#e57373;">Zona de peligro</h4>
                                 <p>Elimina permanentemente todos tus vuelos de la base de datos. Esta acción no se puede deshacer.</p>
@@ -659,6 +666,117 @@
             </div>
         </div> <!-- CIERRE DE VIEW-SETTINGS -->
     </main> <!-- CIERRE DE MAIN -->
+
+    <!-- Lente de zoom para foto del escáner -->
+    <div id="sc-photo-lens"></div>
+
+    <!-- MODAL ESCÁNER BITÁCORA FÍSICA -->
+    <div id="scanner-modal" class="modal" style="display:none; align-items:flex-start; padding-top:3vh; overflow:hidden;">
+        <div class="modal-content" style="max-width:96vw;width:1200px;height:91vh;max-height:91vh;display:flex;flex-direction:column;overflow:hidden;">
+            <div class="modal-header">
+                <h3>📷 Escanear Bitácora Física</h3>
+                <span class="close-button" onclick="logbookScanner.close()">×</span>
+            </div>
+
+            <!-- Step: Subir fotos -->
+            <div id="sc-step-upload" class="sc-step" style="overflow-y:auto;padding:.5rem 0">
+                <p style="color:#aaa;margin-bottom:1.25rem;font-size:.9rem">Sube una o varias fotos de tu bitácora. La IA procesará cada página y podrás revisar antes de importar.</p>
+                <div class="form-group">
+                    <label>Fotos de la bitácora</label>
+                    <div id="sc-dropzone" class="sc-dropzone"
+                         onclick="document.getElementById('scanner-file').click()"
+                         ondragover="event.preventDefault();this.classList.add('sc-dropzone-active')"
+                         ondragleave="this.classList.remove('sc-dropzone-active')"
+                         ondrop="event.preventDefault();this.classList.remove('sc-dropzone-active');
+                                 const fi=document.getElementById('scanner-file');
+                                 const dT=new DataTransfer();
+                                 Array.from(event.dataTransfer.files).forEach(f=>dT.items.add(f));
+                                 fi.files=dT.files; logbookScanner._onFilesSelect();">
+                        <div style="font-size:2rem;margin-bottom:.4rem">📷</div>
+                        <div id="sc-dropzone-label">Haz clic o arrastra imágenes aquí</div>
+                        <small style="color:#666;margin-top:.3rem;display:block">JPG, PNG, WEBP · Puedes seleccionar varias a la vez</small>
+                    </div>
+                    <input type="file" id="scanner-file" accept="image/*" multiple style="display:none" onchange="logbookScanner._onFilesSelect()">
+                </div>
+                <!-- Grilla de miniaturas -->
+                <div id="sc-photo-grid" class="sc-photo-grid"></div>
+                <div class="navigation-buttons" style="margin-top:1.25rem">
+                    <button type="button" class="prev-btn" onclick="logbookScanner.close()">Cancelar</button>
+                    <button type="button" class="next-btn" onclick="logbookScanner.scan()">🔍 Analizar con IA</button>
+                </div>
+            </div>
+
+            <!-- Step: Procesando -->
+            <div id="sc-step-loading" class="sc-step" style="display:none;text-align:center;padding:3.5rem 1rem">
+                <div style="width:48px;height:48px;border:4px solid #333;border-top-color:#D4AF37;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 1.5rem"></div>
+                <p id="sc-loading-msg" style="font-size:1.05rem;margin-bottom:.4rem">Analizando…</p>
+                <p id="sc-loading-sub" style="color:#666;font-size:.85rem"></p>
+            </div>
+
+            <!-- Step: Revisión por página -->
+            <div id="sc-step-review" class="sc-step" style="display:none;flex-direction:column;flex:1;min-height:0;overflow:hidden">
+                <!-- Barra de navegación de páginas -->
+                <div style="flex-shrink:0;display:flex;align-items:center;gap:.5rem;padding:.35rem 0 .45rem;border-bottom:1px solid #1e1e1e;margin-bottom:.4rem">
+                    <button class="sc-nav-btn" id="sc-prev-page" onclick="logbookScanner.prevPage()">◀</button>
+                    <span id="sc-page-nav" style="font-size:.9rem;font-weight:600;min-width:70px;text-align:center"></span>
+                    <button class="sc-nav-btn" id="sc-next-page" onclick="logbookScanner.nextPage()">▶</button>
+                    <div style="width:1px;height:18px;background:#333;margin:0 .1rem"></div>
+                    <button class="sc-rot-btn" id="sc-rot-left"  title="Girar izquierda">↺</button>
+                    <button class="sc-rot-btn" id="sc-rot-right" title="Girar derecha">↻</button>
+                    <div style="width:1px;height:18px;background:#333;margin:0 .1rem"></div>
+                    <button class="settings-btn-secondary" style="padding:.2rem .65rem;font-size:.8rem"
+                        onclick="const p=document.getElementById('sc-photo-panel');const shown=p.style.display!=='none';p.style.display=shown?'none':'block';this.textContent=shown?'📷 Ver foto':'📷 Ocultar foto'">
+                        📷 Ver foto
+                    </button>
+                    <button id="sc-rescan-btn" class="settings-btn-secondary" style="padding:.2rem .65rem;font-size:.8rem;margin-left:.3rem" onclick="logbookScanner.rescanCurrent()">
+                        ↺ Re-escanear
+                    </button>
+                </div>
+
+                <!-- Foto de referencia -->
+                <div id="sc-photo-panel" style="display:none;flex-shrink:0;max-height:155px;overflow:hidden;margin-bottom:.5rem;text-align:center;background:#0a0a0a;border-radius:6px;padding:.4rem;border:1px solid #1e1e1e">
+                    <img id="sc-photo" src="" alt="" style="max-height:140px;max-width:100%;object-fit:contain;cursor:crosshair;border-radius:3px" onclick="window.open(this.src,'_blank')">
+                    <div style="color:#444;font-size:.7rem;margin-top:.25rem">Cursor = zoom · Clic = pantalla completa</div>
+                </div>
+
+                <!-- Advertencias -->
+                <div id="sc-warn-panel" style="display:none;flex-shrink:0;margin-bottom:.5rem"></div>
+                <!-- Tabla -->
+                <div id="sc-table" style="overflow:auto;flex:1;border:1px solid #222;border-radius:6px;min-height:120px"></div>
+                <!-- Acciones -->
+                <div class="navigation-buttons" style="flex-shrink:0;margin-top:.45rem;padding-top:.75rem;border-top-color:#252525;border-top-width:1px">
+                    <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
+                        <button class="prev-btn" onclick="logbookScanner._step('upload')">← Volver</button>
+                        <div id="sc-summary" style="font-size:.85rem"></div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap">
+                        <button id="sc-consolidate-btn" class="next-btn" style="display:none" onclick="logbookScanner.consolidate()">Consolidar →</button>
+                        <button class="settings-btn-secondary" onclick="logbookScanner.downloadExcel()">⬇ Descargar Excel</button>
+                        <button id="sc-import-btn" class="next-btn" onclick="logbookScanner.importAll()">✓ Importar a Supabase</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step: Consolidado (todas las páginas) -->
+            <div id="sc-step-consolidate" class="sc-step" style="display:none;flex-direction:column;flex:1;min-height:0;overflow:hidden">
+                <div style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:.4rem 0 .6rem;border-bottom:1px solid #1e1e1e;margin-bottom:.5rem;flex-wrap:wrap;gap:.5rem">
+                    <div>
+                        <strong>Vista consolidada</strong>
+                        <span style="color:#888;font-size:.85rem;margin-left:.75rem">Ordenada por número de página · Lista para importar</span>
+                    </div>
+                    <div id="sc-cons-summary" style="font-size:.88rem"></div>
+                </div>
+                <div id="sc-cons-table" style="overflow:auto;flex:1;border:1px solid #222;border-radius:6px;min-height:120px"></div>
+                <div class="navigation-buttons" style="margin-top:.6rem;padding-top:.6rem;border-top:1px solid #252525;flex-shrink:0">
+                    <button class="prev-btn" onclick="logbookScanner.backToReview()">← Revisar por foto</button>
+                    <div style="display:flex;gap:.6rem">
+                        <button class="prev-btn" onclick="logbookScanner.downloadExcel()">⬇ Descargar Excel</button>
+                        <button class="next-btn" onclick="logbookScanner.importAll()">✓ Importar a Supabase</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- MODAL RESTAURAR -->
     <div id="restore-modal" class="modal">
@@ -759,6 +877,7 @@
     <script src="saldo-inicial.js"></script>
     <script src="add-flight-modal.js"></script>
     <script src="mi-cuenta.js"></script>
+    <script src="logbook-scanner.js"></script>
     <script src="app.js"></script>
 <datalist id="datalist-aeronave"></datalist>
 <datalist id="datalist-matricula"></datalist>

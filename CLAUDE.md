@@ -34,10 +34,11 @@ App PWA de bitácora de vuelo para pilotos chilenos. Producción: **https://bita
 | `mi-cuenta.js` | Configuración de cuenta, cambio de contraseña, eliminación |
 | `onboarding.js` | Flujo de bienvenida para nuevos usuarios |
 | `time-utils.js` | Parseo y formateo de fechas/horas |
-| `supabase/functions/` | Edge Functions: `create-checkout`, `flow-webhook`, `flow-return`, `delete-account` |
+| `logbook-scanner.js` | Escáner IA de bitácora física: multi-foto, Gemini Vision, revisión editable, consolidación |
+| `supabase/functions/` | Edge Functions: `create-checkout`, `flow-webhook`, `flow-return`, `delete-account`, `gemini-ocr` |
 
 **Orden de carga de scripts (crítico):**
-`state.js → auth.js → api.js → licenses-system.js → plan.js → ui.js → ui-render.js → summary-renderer.js → report-generator.js → add-flight-modal.js → saldo-inicial.js → data-importer.js → onboarding.js → profile-validator.js → anotaciones.js → mi-cuenta.js → backup-manager.js → time-utils.js → app.js`
+`state.js → auth.js → api.js → licenses-system.js → plan.js → ui.js → ui-render.js → summary-renderer.js → report-generator.js → add-flight-modal.js → saldo-inicial.js → data-importer.js → onboarding.js → profile-validator.js → anotaciones.js → mi-cuenta.js → backup-manager.js → time-utils.js → logbook-scanner.js → app.js`
 
 ## Base de datos (Supabase)
 
@@ -63,6 +64,7 @@ App PWA de bitácora de vuelo para pilotos chilenos. Producción: **https://bita
 ```
 FLOW_API_KEY, FLOW_SECRET, FLOW_ENV (production/sandbox)
 SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, RESEND_API_KEY
+GEMINI_API_KEY   ← usado por la Edge Function gemini-ocr (nunca expuesto al cliente)
 ```
 
 ## Patrones de código
@@ -85,18 +87,57 @@ SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, RESEND_API_KEY
 - **Auth:** todos los CTAs → `index.html?auth=1`. Redirect automático si hay sesión activa en `localStorage` (`sb-rdnniehpsdforkfngwrf-auth-token`)
 - **Sin dependencias externas de JS** — todo vanilla, sin Chart.js ni librerías en el landing
 
+## Escáner IA de bitácora física (`logbook-scanner.js`)
+
+Módulo para digitalizar páginas físicas de bitácora mediante visión IA.
+
+**Flujo:** Upload multi-foto → compresión automática si >3.5MB → Edge Function `gemini-ocr` (proxy JWT) → Gemini Vision → revisión/edición por foto → consolidación ordenada por número de página → descarga Excel o importación directa.
+
+**API:** Google Gemini `gemini-3.1-flash-lite-preview`, llamado vía Edge Function `gemini-ocr` (Supabase). El cliente envía JWT de Supabase; la key de Gemini vive en `GEMINI_API_KEY` (secreto de Supabase) y nunca llega al browser. Usar solo modelos Gemini con visión — Gemma (texto puro) rechaza imágenes.
+
+**Parámetros clave del modelo:**
+- `temperature: 0.1`, `response_mime_type: 'application/json'`
+- `thinkingConfig` eliminado — no soportado por modelos lite
+
+**Estado interno:** `_pages[]` (una entrada por foto con `{ file, photoURL, _displayURL, rotation, mime, flights, processed, _error }`). `_mode: 'page' | 'all'` controla si se opera sobre una página o el consolidado.
+
+**Validaciones:** tipo avión suma vs duración, diurno+nocturno vs duración. Los roles (PIC/SIC/Solo/Instrucción) NO se validan en suma — son concurrentes en aviación.
+
+**Rotación de imagen:** `_applyRotation(page)` genera `_displayURL` via canvas (imagen real rotada, no CSS transform). Se actualiza tanto el thumbnail como la foto principal. La URL rotada se cachea en `page._displayURL`.
+
+**Rate limit:** `_scanPage()` detecta el mensaje "retry in Xs" de Gemini y hace countdown visible + reintento automático. Botón "↻ Reintentar" por foto en caso de error persistente.
+
+**Re-escanear:** botón `↺` en thumbnail de cada foto (visible siempre, no solo en errores) y botón `↺ Re-escanear` en barra de navegación de la vista de revisión. Permite volver a analizar fotos con resultados insatisfactorios sin reiniciar el flujo completo. Usa `rescanCurrent()` o `_retryPage()`.
+
+**Detección de formato de tiempo:** el prompt detecta automáticamente si la bitácora usa formato decimal (H.h: `1|5=1.5`) o HH:MM (`1:30→1.5`) verificando contra el TOTAL PAGINA. Campos de conteo entero (Aterrizajes Dia/Noche, NO) se leen sin conversión.
+
+**Independencia de filas:** el prompt instruye explícitamente a leer cada fila de forma independiente sin inferir valores de filas adyacentes (crítico para bitácoras con múltiples aeronaves similares).
+
+**Timeout client-side:** AbortController de 90s — evita que el fetch quede colgado indefinidamente si el modelo no responde.
+
+**Número de página:** Gemini lee el número impreso en la foto. Fallback: calcula continuando desde el máximo existente en `flightData`.
+
+**Totales:** integrados como `<tfoot>` sticky en la misma tabla (no sección separada).
+
+**Importación:** usa `api.saveFlightsBatch()` — mismo pipeline que el importador Excel.
+
+Ver `ai-map.md` para detalles de integración IA.
+
 ## Estado actual del proyecto
 ✅ Completamente funcional en producción  
 ✅ Auth, CRUD vuelos, offline, dashboard, logbook, resúmenes, licencias, pagos, PWA, importador Excel/CSV, impresión  
 ✅ Landing v2 HUD desplegada  
-⚠️ Área de desarrollo activa: `data-importer.js`, validaciones de ingreso (`app.js`)  
+✅ Escáner IA de bitácora física (funcional, pendiente prueba completa post rate-limit)  
+⚠️ Área de desarrollo activa: `logbook-scanner.js`, `data-importer.js`  
 ❌ Sin tests, sin linter, sin TypeScript
 
 ## Archivos de mayor complejidad
 - `data-importer.js` (35KB) — parseo de fechas Excel, validación de esquema
 - `api.js` (28KB) — offline queue, CRUD completo
 - `app.js` (45KB) — inicialización y event listeners de toda la app
-- `index.html` (772 líneas) — shell + carga de scripts
+- `logbook-scanner.js` (~600 líneas) — escáner IA multi-foto, revisión editable, consolidación, retry
+- `index.html` (~800 líneas) — shell + carga de scripts
+- `supabase/functions/gemini-ocr/index.ts` — proxy JWT para Gemini, CORS multi-origen
 
 ## No hay build step
 Sin `package.json`. Los archivos se despliegan tal cual. Para desplegar: subir archivos al hosting (Supabase static / Cloudflare Pages). Edge functions: `supabase functions deploy <nombre>`.

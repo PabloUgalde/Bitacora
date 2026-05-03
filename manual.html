@@ -307,6 +307,11 @@
                 <a class="toc-link sub" href="#importar-template">Template de importación</a>
                 <a class="toc-link sub" href="#importar-verificar">Verificación de totales</a>
                 <a class="toc-link sub" href="#importar-progreso">Barra de progreso</a>
+                <a class="toc-link" href="#scanner">Escanear bitácora física (IA)</a>
+                <a class="toc-link sub" href="#scanner-flujo">Flujo de escaneo</a>
+                <a class="toc-link sub" href="#scanner-rescan">Re-escanear una foto</a>
+                <a class="toc-link sub" href="#scanner-consolidar">Consolidar e importar</a>
+                <a class="toc-link sub" href="#scanner-tips">Consejos para mejores resultados</a>
             </div>
             <div class="toc-section">
                 <div class="toc-section-title">Funciones Principales</div>
@@ -952,6 +957,112 @@
             </div>
         </section>
 
+        <!-- ─────────────────── SCANNER IA ─────────────────── -->
+        <section class="section" id="scanner">
+            <h2><span class="icon">📷</span> Escanear bitácora física con IA</h2>
+            <p>El escáner IA te permite digitalizar páginas de tu bitácora física tomando fotos con el celular o subiendo imágenes desde tu computador. La inteligencia artificial lee cada fila de la tabla, convierte los tiempos al formato correcto y genera una lista de vuelos lista para importar.</p>
+
+            <div class="callout ok">
+                <span class="callout-icon">✓</span>
+                <span>Puedes subir varias fotos a la vez (una por página de bitácora) y revisarlas individualmente antes de importar. No necesitas editar nada si la lectura fue correcta.</span>
+            </div>
+
+            <div class="callout info">
+                <span class="callout-icon">💡</span>
+                <span>El escáner requiere conexión a internet. Las imágenes se envían de forma segura a través de tu sesión — nunca se almacenan ni se comparten.</span>
+            </div>
+
+            <h3 id="scanner-flujo">Flujo de escaneo</h3>
+            <div class="steps">
+                <div class="step">
+                    <div class="step-num">1</div>
+                    <div class="step-body">
+                        <h4>Sube las fotos</h4>
+                        <p>Abre el escáner desde <strong>Bitácora → Escanear Bitácora Física</strong>. Arrastra las imágenes o haz clic para seleccionarlas. Puedes subir varias fotos a la vez — una por página de bitácora.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">2</div>
+                    <div class="step-body">
+                        <h4>El sistema analiza cada foto</h4>
+                        <p>La IA procesa las fotos una a una. El progreso se muestra en pantalla. Cada foto puede tardar entre 10 y 30 segundos según la complejidad de la página.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">3</div>
+                    <div class="step-body">
+                        <h4>Revisa y edita los resultados</h4>
+                        <p>Una vez procesadas, puedes navegar entre las fotos con los botones <strong>◀ ▶</strong>. Para cada foto verás la imagen original junto a la tabla con los vuelos detectados. Haz clic en cualquier celda para corregir valores manualmente.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">4</div>
+                    <div class="step-body">
+                        <h4>Consolida e importa</h4>
+                        <p>Cuando todas las fotos estén revisadas, haz clic en <strong>Consolidar →</strong> para unir todos los vuelos ordenados por número de página. Desde ahí puedes descargar un Excel o importar directamente a Supabase.</p>
+                    </div>
+                </div>
+            </div>
+
+            <h3 id="scanner-rescan">Re-escanear una foto</h3>
+            <p>Si el resultado de una foto no es satisfactorio, puedes volver a analizarla sin reiniciar el proceso completo. Hay dos formas de hacerlo:</p>
+            <ul>
+                <li><strong>Botón ↺ en el thumbnail lateral</strong> — aparece junto al estado de cada foto (tanto en fotos con error como en fotos ya procesadas). Haz clic para re-escanear esa foto específica.</li>
+                <li><strong>Botón ↺ Re-escanear en la barra superior</strong> — actúa sobre la foto que estás viendo en ese momento en la vista de revisión.</li>
+            </ul>
+
+            <div class="callout info">
+                <span class="callout-icon">💡</span>
+                <span>Re-escanear puede dar un resultado diferente al anterior, especialmente en páginas con letra manuscrita difícil de leer. Si el resultado sigue siendo incorrecto, puedes editar las celdas manualmente.</span>
+            </div>
+
+            <h3>Rotación de imagen</h3>
+            <p>Si una foto quedó rotada, usa los botones <strong>↺ ↻</strong> de la barra superior para girarla 90° a la izquierda o derecha. La rotación se aplica a la imagen que se envía al modelo, mejorando la precisión del análisis.</p>
+
+            <h3 id="scanner-consolidar">Consolidar e importar</h3>
+            <p>Al hacer clic en <strong>Consolidar →</strong>, todos los vuelos de todas las fotos se unen en una sola lista ordenada por número de página de bitácora. Desde la vista consolidada puedes:</p>
+            <ul>
+                <li><strong>⬇ Descargar Excel</strong> — genera un archivo .xlsx con todos los vuelos.</li>
+                <li><strong>✓ Importar a Supabase</strong> — guarda todos los vuelos directamente en tu bitácora digital.</li>
+                <li><strong>← Revisar por foto</strong> — vuelve a la vista individual para corregir alguna foto antes de importar.</li>
+            </ul>
+
+            <div class="callout warn">
+                <span class="callout-icon">⚠</span>
+                <span>Revisa los vuelos antes de importar. La IA puede cometer errores en campos numéricos o letras manuscritas difíciles. Las celdas con advertencias se marcan en amarillo — presta especial atención a esas filas.</span>
+            </div>
+
+            <h3 id="scanner-tips">Consejos para mejores resultados</h3>
+            <ul>
+                <li><strong>Buena iluminación:</strong> fotografía la bitácora en un lugar bien iluminado, sin sombras sobre la tabla.</li>
+                <li><strong>Encuadre recto:</strong> mantén la cámara paralela a la página. Las fotos tomadas en ángulo reducen la precisión.</li>
+                <li><strong>Alta resolución:</strong> usa la cámara principal del celular, no la frontal. El sistema comprime automáticamente si la imagen es demasiado grande.</li>
+                <li><strong>Una página por foto:</strong> no incluyas dos páginas en la misma foto.</li>
+                <li><strong>El sello no importa:</strong> si el timbre del aeroclub cubre parte de la tabla, el modelo lo ignorará y leerá lo que sea visible alrededor.</li>
+            </ul>
+
+            <h3>Formatos de tiempo soportados</h3>
+            <p>La IA detecta automáticamente el formato de tiempo que usa tu bitácora:</p>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>Formato</th><th>Ejemplo en la bitácora</th><th>Resultado</th></tr></thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Decimal (H.h)</strong></td>
+                            <td>Columna dividida: <code>1 | 5</code></td>
+                            <td>1.5 horas</td>
+                        </tr>
+                        <tr>
+                            <td><strong>HH:MM</strong></td>
+                            <td><code>1:30</code></td>
+                            <td>1.5 horas</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p>El formato se determina automáticamente comparando los valores con el total de página impreso. No necesitas configurar nada.</p>
+        </section>
+
         <hr class="divider">
 
         <!-- ─────────────────── 9. CONFIG PERSONAL ─────────────────── -->
@@ -1110,6 +1221,7 @@
                         <li>Resumen por página</li>
                         <li>Gestión de licencias</li>
                         <li>Importar datos desde Excel</li>
+                        <li>Escanear bitácora física (IA)</li>
                     </ul>
                 </div>
                 <div class="plan-card pro-card">
