@@ -682,7 +682,7 @@ Responde ÚNICAMENTE con el JSON array. Sin texto adicional, sin markdown.`;
         } catch (e) {
             ui.showNotification('Error: ' + e.message, 'error');
         } finally {
-            btn.disabled = false; btn.textContent = 'Importar a Supabase';
+            btn.disabled = false; btn.textContent = '✓ Importar vuelos';
         }
     }
 };
