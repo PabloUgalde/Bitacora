@@ -140,6 +140,10 @@ const auth = {
 
     // ── Nueva contraseña (después de link de recuperación) ────────
     updatePassword: async (newPassword) => {
+        if (!newPassword || newPassword.length < 6) {
+            auth._showError('La contraseña debe tener al menos 6 caracteres.');
+            return false;
+        }
         auth._setLoading(true, 'Actualizando contraseña...');
         const { error } = await supabaseClient.auth.updateUser({ password: newPassword });
         auth._setLoading(false);
@@ -228,6 +232,8 @@ const auth = {
             'Unable to validate email address':    'El email ingresado no es válido.',
             'Email rate limit exceeded':           'Demasiados intentos. Espera unos minutos.',
             'over_email_send_rate_limit':          'Demasiados intentos. Espera unos minutos.',
+            'context canceled':                    'Error del servidor al guardar la contraseña. Por favor intenta de nuevo.',
+            'new transaction':                     'Error del servidor al guardar la contraseña. Por favor intenta de nuevo.',
         };
         for (const [key, val] of Object.entries(map)) {
             if (msg.includes(key)) return val;
