@@ -34,16 +34,20 @@ const ui = {
     populateAircraftTypes: () => {
         const container = document.getElementById('tipoAvion');
         container.innerHTML = '';
-        container.style.cssText = 'display:grid; grid-template-columns: 1fr 1fr; gap: 0 1rem; padding:0.5rem 0.75rem; border:1px solid var(--border-color,#444); border-radius:8px; margin-top:0.25rem;';
-        AIRCRAFT_TYPE_HEADERS.forEach(type => {
-            const label = document.createElement('label');
-            label.style.cssText = 'display:flex; align-items:center; gap:0.5rem; cursor:pointer; font-size:14px; font-weight:normal; white-space:nowrap; padding:0.3rem 0; margin:0; justify-content: flex-start;';
+        container.style.cssText = '';
+        const displayOrder = ['Monomotor','Multimotor','Turbo Helice','Turbo Jet','LSA','Ultraliviano','Helicoptero','Planeador'];
+        displayOrder.forEach(type => {
             const cb = document.createElement('input');
             cb.type = 'checkbox';
             cb.value = type;
             cb.name = 'tipoAvion';
-            label.appendChild(cb);
-            label.appendChild(document.createTextNode(type));
+            cb.id = `tipoAvion-${type.replace(/ /g, '-')}`;
+            cb.className = 'aircraft-type-cb';
+            const label = document.createElement('label');
+            label.htmlFor = cb.id;
+            label.className = 'aircraft-type-btn';
+            label.textContent = type;
+            container.appendChild(cb);
             container.appendChild(label);
         });
     },

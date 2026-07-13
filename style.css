@@ -259,9 +259,11 @@ input[type="checkbox"] { width: auto; }
 input:focus, select:focus, textarea:focus { border-color: var(--primary-color); outline: none; box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2); }
 input:disabled, select:disabled { background-color: #333; cursor: not-allowed; opacity: 0.5; }
 input.error, select.error { border-color: var(--accent-color-red); }
-.aircraft-type-checkboxes { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1rem; padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: 8px; background: var(--surface-color); margin-top: 0.25rem; }
-.aircraft-type-checkboxes label { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 14px; font-weight: normal; color: var(--text-primary); white-space: nowrap; padding: 0.25rem 0; justify-content: flex-start; }
-.aircraft-type-checkboxes.error { border-color: var(--accent-color-red); }
+.aircraft-type-checkboxes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 0.25rem; }
+.aircraft-type-cb { display: none; }
+.aircraft-type-btn { display: block; text-align: center; padding: 10px 4px; font-size: 13px; font-weight: 600; color: var(--text-muted-color); background: #2a2a2a; border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; transition: color 0.15s, border-color 0.15s, background 0.15s; user-select: none; -webkit-tap-highlight-color: transparent; }
+.aircraft-type-cb:checked + .aircraft-type-btn { color: var(--primary-color); border-color: var(--primary-color); background: rgba(212, 175, 55, 0.12); }
+.aircraft-type-checkboxes.error .aircraft-type-btn { border-color: var(--accent-color-red); }
 .navigation-buttons { display: flex; justify-content: space-between; margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1.5rem; }
 .navigation-buttons button, .submit-btn { padding: 0.8rem 1.5rem; border: none; border-radius: 6px; cursor: pointer; font-size: 1rem; font-weight: 600; transition: all 0.2s; }
 .next-btn { background-color: var(--primary-color); color: #000; margin-left: auto; }
