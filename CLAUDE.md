@@ -9,7 +9,7 @@ App PWA de bitácora de vuelo para pilotos chilenos. Producción: **https://bita
 - **Email:** Resend (`noreply@bitacoradevuelo.cl`)
 - **Librería gráficos:** Chart.js (CDN)
 - **Excel/CSV:** SheetJS (CDN)
-- **PWA:** Service Worker `sw.js` (cache v2.27), `manifest.json`
+- **PWA:** Service Worker `sw.js` (cache v2.28), `manifest.json`
 
 ## Estructura de archivos clave
 
@@ -44,8 +44,14 @@ App PWA de bitácora de vuelo para pilotos chilenos. Producción: **https://bita
 
 **Tablas principales:**
 - `profiles` — metadata usuario: `full_name`, `plan`, `plan_expires_at`, `trial_used`, `licenses` (JSONB)
-- `flights` — logbook (31 columnas): `fecha`, `aeronave_marca_modelo`, `matricula`, `duracion_total`, tipos de aeronave (LSA/Monomotor/etc.), aterrizajes (día/noche), condiciones (IFR/Diurno/Nocturno), tipos de tiempo (Solo/PIC/SIC/Instrucción), `observaciones`, `pagina_bitacora`, `es_saldo_inicial`
+- `flights` — logbook (31 columnas): `fecha`, `aeronave_marca_modelo`, `matricula`, `duracion_total`, tipos de aeronave (LSA/Monomotor/etc.), aterrizajes (día/noche), condiciones (IFR/Diurno/Nocturno), tipos de tiempo (Solo/PIC/SIC/Instrucción), `observaciones`, `pagina_bitacora`, `es_saldo_inicial`, `deleted_at` (papelera/soft-delete — ver `supabase/soft-delete-flights.sql`)
 - `anotaciones` — notas libres por vuelo
+
+**Papelera (soft-delete) y protecciones anti-pérdida de datos:**
+- `deleteFlight`/`deleteAllFlights` marcan `deleted_at` en vez de DELETE físico; UI de papelera en Configuración → Zona de peligro (restaurar / vaciar). Purga automática client-side a los 30 días. Fallback a DELETE físico si la columna no existe aún.
+- "Eliminar todos los vuelos" exige escribir ELIMINAR y descarga respaldo CSV automático antes de ejecutar. "Eliminar cuenta" también descarga respaldo (pero su borrado es físico, por privacidad).
+- `loadInitialFlights` compara la nube con el caché local: si la nube devuelve 0 (o < 50% con 10+ vuelos locales), muestra modal de discrepancia ofreciendo descargar la copia local en CSV antes de sobrescribir el caché. La nube SIEMPRE es la fuente de verdad — nunca se re-sube el caché local automáticamente.
+- Saldo inicial: se guarda (upsert) ANTES de eliminar el anterior — nunca borrar-antes-de-escribir.
 
 **Supabase project:** `rdnniehpsdforkfngwrf.supabase.co`
 
@@ -128,8 +134,28 @@ Ver `ai-map.md` para detalles de integración IA.
 ✅ Auth, CRUD vuelos, offline, dashboard, logbook, resúmenes, licencias, pagos, PWA, importador Excel/CSV, impresión  
 ✅ Landing v2 HUD desplegada  
 ✅ Escáner IA de bitácora física (funcional, pendiente prueba completa post rate-limit)  
+✅ Auditoría de integridad de datos aplicada (jul 2026): cola offline por usuario, sync con upsert idempotente, SW app shell completo (v2.28), renovación Pro extiende vencimiento, guard de trial  
+✅ Protecciones anti-pérdida (jul 2026): papelera soft-delete 30 días, auto-backup CSV pre-borrado, confirmación escrita en borrado masivo, guard de discrepancia nube/caché, saldo inicial upsert-primero  
 ⚠️ Área de desarrollo activa: `logbook-scanner.js`, `data-importer.js`  
 ❌ Sin tests, sin linter, sin TypeScript
+
+## Pendientes de la auditoría (jul 2026) — analizar y resolver en próxima sesión
+
+Detectados en la revisión de integridad pero NO modificados (requieren decisión o pruebas):
+
+1. **`wx-proxy` es un proxy abierto** (`supabase/functions/wx-proxy/index.ts`): CORS `*`, sin autenticación. El endpoint `/wx-proxy/gemini` permite a cualquiera consumir `GEMINI_API_KEY` (también expone AVWX y REDEMET). Sirve a herramientas-vuelo — no romper ese consumidor. Opciones: validar header `Origin` contra lista blanca, rate limit, o mover el endpoint Gemini a función autenticada.
+2. **"Eliminar cuenta" no elimina la cuenta de Auth**: `miCuenta.deleteAccount()` usa la ruta cliente (`api.deleteUserAccountAndData`) que borra vuelos y perfil, pero el usuario de Supabase Auth sigue existiendo. La Edge Function `delete-account` sí lo elimina pero está sin usar por un problema de CORS anotado en `mi-cuenta.js`. Retomar: diagnosticar el CORS y cablear la función (con fallback cliente).
+3. **Importación parcial duplica vuelos**: si un lote falla a mitad de una importación Excel/escáner, reintentar re-importa los lotes ya insertados (cada parseo genera ids nuevos). Solución propuesta: dedupe por fecha+matrícula+duración antes de insertar, o ids deterministas por contenido.
+4. **Sin control de concurrencia multi-dispositivo**: ediciones son "last write wins" a nivel de fila completa; una cola offline vieja de un dispositivo puede pisar ediciones más recientes de otro. Evaluar `updated_at` + comparación antes de escribir.
+5. ✅ RESUELTO (13-jul-2026): RLS verificado vía Management API — `flights`, `profiles`, `anotaciones` y `aircraft` tienen RLS habilitado con política `ALL` restringida a `auth.uid()`. **PERO se detectó un hueco nuevo → ver punto 13.**
+6. **`gemini-ocr` acepta body arbitrario**: cualquier usuario autenticado puede usarla como proxy Gemini genérico (modelo pinneado, pero sin límite de tamaño ni forma del payload). Considerar validar estructura del body y limitar tamaño.
+7. **`time-utils.js` está vacío (0 bytes)** y no se carga en `index.html` — eliminar el archivo o implementar lo planeado.
+8. **XSS con datos propios**: varios render usan `innerHTML` con valores del usuario sin escapar (ej. sugerencias de observaciones en `app.js`, tablas del logbook). Riesgo bajo (self-XSS), pero conviene una función `escapeHtml` común.
+9. **Multi-tab**: dos pestañas escribiendo `localStorage` (`flightLogData`, cola pending) pueden pisarse entre sí. Evaluar `storage` event o BroadcastChannel para invalidar estado.
+10. **Deploy pendiente de Edge Functions corregidas**: `supabase functions deploy flow-webhook create-checkout` (cambios de renovación y trial aplicados en el código, aún sin desplegar).
+11. ✅ RESUELTO (13-jul-2026): `supabase/soft-delete-flights.sql` ejecutado en producción vía Management API (columna `deleted_at` + índice `flights_user_deleted_idx` verificados). La papelera está activa.
+12. **Backups de Supabase según plan**: confirmar si el proyecto está en plan Free (sin backups automáticos) o Pro (diarios, 7 días). Si es Free, evaluar upgrade o un dump programado (`pg_dump` vía GitHub Action / cron) como respaldo de toda la base.
+13. ✅ RESUELTO (13-jul-2026): privilegios de columna aplicados en producción (`supabase/protect-plan-columns.sql`). El rol `authenticated` solo puede INSERT/UPDATE las columnas de perfil que escribe `api.saveProfile()`; `plan`, `plan_expires_at` y `trial_used` quedan escribibles solo por service role y postgres (dashboard). Verificado: UPDATE de `plan` como authenticated → `permission denied`; columnas normales y DELETE de cuenta propia siguen funcionando. Si en el futuro `saveProfile` escribe una columna nueva, hay que agregarla al GRANT o el guardado de perfil fallará con 42501.
 
 ## Archivos de mayor complejidad
 - `data-importer.js` (35KB) — parseo de fechas Excel, validación de esquema

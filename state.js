@@ -42,8 +42,10 @@ const calculateTotals = (data, headers) => headers.reduce((totals, header) => { 
 const formatHours = (val) => {
     if (val === 0 || val === null || val === undefined) return "";
     if (userProfile.hoursFormat === 'hhmm') {
-        const h = Math.floor(val);
-        const m = Math.round((val % 1) * 60);
+        // Redondear en minutos totales: evita resultados como "1:60" (ej: 1.999 hrs)
+        const totalMin = Math.round(val * 60);
+        const h = Math.floor(totalMin / 60);
+        const m = totalMin % 60;
         return `${h}:${String(m).padStart(2, '0')}`;
     }
     // Muestra hasta 2 decimales, eliminando ceros al final, pero siempre al menos 1

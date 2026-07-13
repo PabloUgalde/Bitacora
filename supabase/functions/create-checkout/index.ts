@@ -62,11 +62,17 @@ serve(async (req) => {
     if (plan === 'trial') {
       const { data: profile } = await supabase
         .from('profiles')
-        .select('trial_used')
+        .select('trial_used, plan, plan_expires_at')
         .eq('id', user.id)
         .maybeSingle()
 
       if (profile?.trial_used) throw new Error('El período de prueba ya fue utilizado')
+
+      // No acortar un plan Pro pagado vigente con los 14 días del trial
+      if (profile?.plan === 'pro' && profile?.plan_expires_at &&
+          new Date(profile.plan_expires_at) > new Date()) {
+        throw new Error('Ya tienes un plan Pro activo')
+      }
 
       const expiresAt = new Date()
       expiresAt.setDate(expiresAt.getDate() + 14)

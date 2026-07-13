@@ -107,17 +107,26 @@ const api = {
 
     // ── Carga inicial ─────────────────────────────────────────────
     loadInitialFlights: async () => {
-        // Limpiar caché si el usuario cambió
-        const cachedProfile = localStorage.getItem('flightLogUserProfile');
-        if (cachedProfile) {
-            const cached = JSON.parse(cachedProfile);
-            const cachedEmail = cached?.personal?.['profile-email'];
-            if (cachedEmail && currentUser?.email && cachedEmail !== currentUser.email) {
-                console.log('Usuario diferente detectado — limpiando caché local');
-                localStorage.removeItem('flightLogUserProfile');
-                localStorage.removeItem('flightLogData');
+        // Limpiar caché si el usuario cambió. Se compara por user.id (fiable);
+        // el chequeo por email se mantiene para cachés antiguas sin ownerId.
+        const currentUserId = api._getUserId();
+        const cachedOwnerId = localStorage.getItem('flightLogOwnerId');
+        let userChanged = !!(currentUserId && cachedOwnerId && cachedOwnerId !== currentUserId);
+        if (!userChanged) {
+            const cachedProfile = localStorage.getItem('flightLogUserProfile');
+            if (cachedProfile) {
+                const cached = JSON.parse(cachedProfile);
+                const cachedEmail = cached?.personal?.['profile-email'];
+                userChanged = !!(cachedEmail && currentUser?.email && cachedEmail !== currentUser.email);
             }
         }
+        if (userChanged) {
+            console.log('Usuario diferente detectado — limpiando caché local');
+            localStorage.removeItem('flightLogUserProfile');
+            localStorage.removeItem('flightLogData');
+            localStorage.removeItem('flightLogFrequentValues');
+        }
+        if (currentUserId) localStorage.setItem('flightLogOwnerId', currentUserId);
         const defaultProfile = {
             personal: {}, licenses: {}, dashboardCards: [],
             userRole: 'student', dataSource: 'supabase'
@@ -136,23 +145,44 @@ const api = {
         try {
             console.log("Cargando vuelos desde Supabase...");
             // Traer todos los vuelos paginando de a 1000
-            let allRows = [];
-            let offset = 0;
-            const limit = 1000;
-            while (true) {
-                const { data, error } = await supabaseClient
-                    .from('flights')
-                    .select('*')
-                    .eq('user_id', userId)
-                    .order('fecha', { ascending: false })
-                    .order('pagina_bitacora', { ascending: false })
-                    .range(offset, offset + limit - 1);
+            const fetchAll = async (filterDeleted) => {
+                let rows = [];
+                let offset = 0;
+                const limit = 1000;
+                while (true) {
+                    let query = supabaseClient
+                        .from('flights')
+                        .select('*')
+                        .eq('user_id', userId)
+                        .order('fecha', { ascending: false })
+                        .order('pagina_bitacora', { ascending: false })
+                        .range(offset, offset + limit - 1);
+                    if (filterDeleted) query = query.is('deleted_at', null);
+                    const { data, error } = await query;
+                    if (error) throw error;
+                    rows = rows.concat(data);
+                    if (data.length < limit) break;
+                    offset += limit;
+                }
+                return rows;
+            };
 
-                if (error) throw error;
-                allRows = allRows.concat(data);
-                if (data.length < limit) break;
-                offset += limit;
+            let allRows;
+            try {
+                allRows = await fetchAll(true); // excluir papelera
+            } catch (err) {
+                // La columna deleted_at aún no existe: cargar sin filtro
+                if (api._isMissingDeletedAt(err)) allRows = await fetchAll(false);
+                else throw err;
             }
+
+            // Purga definitiva de la papelera (>30 días), en segundo plano
+            api.purgeOldTrash();
+
+            // Guard anti-sobrescritura: si la nube devuelve muchos menos vuelos
+            // que el caché local, avisar antes de pisar el caché. La nube sigue
+            // siendo la fuente de verdad — nunca se re-sube el caché local.
+            await api._warnCloudDiscrepancy(allRows.length);
 
             flightData = allRows.map(row => api._rowToFlight(row));
             _sortFlightData(flightData);
@@ -207,6 +237,9 @@ const api = {
 
         // Convertimos el lote de objetos al formato de tabla de Supabase
         const rows = flightsData.map(f => api._flightToRow(f, userId));
+        // Propagar el id generado al objeto local: sin esto, los vuelos recién
+        // importados no se pueden editar/borrar hasta recargar desde la nube.
+        rows.forEach((row, i) => { flightsData[i].id = row.id; });
 
         if (navigator.onLine) {
             try {
@@ -240,8 +273,10 @@ const api = {
         if (!navigator.onLine) {
             toUpdate.forEach(f => {
                 f['Pagina Bitacora a Replicar'] = parseInt(f['Pagina Bitacora a Replicar']) + shift;
+                api._queuePending({ op: 'update', flight: f });
             });
             api.saveFlightsToLocalStorage();
+            app.updateOfflineBar();
             return true;
         }
 
@@ -282,6 +317,25 @@ const api = {
 
         const userId = api._getUserId();
 
+        // Si este vuelo ya tiene un save/update pendiente en la cola offline,
+        // actualizar ese item en vez de tocar la nube: evita que la versión
+        // antigua en cola sobrescriba esta edición al sincronizar.
+        if (userId) {
+            const queue = api._getPendingQueue();
+            const qIdx = queue.findIndex(i =>
+                (i.op === 'save' || i.op === 'update') && i.flight && i.flight.id === flightId
+            );
+            if (qIdx !== -1) {
+                queue[qIdx].flight = updatedFlight;
+                api._savePendingQueue(queue);
+                flightData[index] = updatedFlight;
+                api.saveFlightsToLocalStorage();
+                if (navigator.onLine) await api.syncPendingFlights();
+                app.updateOfflineBar();
+                return true;
+            }
+        }
+
         if (userId) {
             let savedToCloud = false;
             if (navigator.onLine) {
@@ -315,12 +369,21 @@ const api = {
 
         const userId = api._getUserId();
 
+        // Descartar saves/updates pendientes de este vuelo: si quedaran en cola,
+        // la sincronización lo re-insertaría después de borrado ("resurrección").
+        if (userId) {
+            const queue = api._getPendingQueue();
+            const remaining = queue.filter(i =>
+                !((i.op === 'save' || i.op === 'update') && i.flight && i.flight.id === flightId)
+            );
+            if (remaining.length !== queue.length) api._savePendingQueue(remaining);
+        }
+
         if (userId) {
             let deletedFromCloud = false;
             if (navigator.onLine) {
                 try {
-                    const { error } = await supabaseClient.from('flights').delete()
-                        .eq('id', flightId).eq('user_id', userId);
+                    const error = await api._softDeleteRow(flightId, userId);
                     if (!error) deletedFromCloud = true;
                     else console.error("Error Supabase al eliminar:", error);
                 } catch (e) { console.warn("Red caída al eliminar:", e); }
@@ -349,6 +412,13 @@ const api = {
         }
 
         try {
+            // 0. Respaldo automático: última copia de los vuelos antes de
+            //    eliminar la cuenta (borrado físico, sin papelera).
+            if (flightData.length > 0) {
+                try { api.exportToCSV(flightData, 'cuenta-eliminada'); }
+                catch (e) { console.warn('No se pudo generar el respaldo CSV:', e); }
+            }
+
             // 1. Eliminar todos los vuelos del usuario en Supabase
             const { error: deleteFlightsError } = await supabaseClient
                 .from('flights')
@@ -388,8 +458,20 @@ const api = {
             return false;
         }
         try {
-            const { error } = await supabaseClient.from('flights').delete().eq('user_id', userId);
-            if (error) throw error;
+            // Respaldo automático antes del borrado masivo
+            if (flightData.length > 0) {
+                try { api.exportToCSV(flightData, 'pre-borrado'); }
+                catch (e) { console.warn('No se pudo generar el respaldo CSV:', e); }
+            }
+            // Mover todo a la papelera (restaurable 30 días);
+            // fallback a DELETE físico si la columna deleted_at no existe.
+            const { error } = await supabaseClient.from('flights')
+                .update({ deleted_at: new Date().toISOString() })
+                .eq('user_id', userId).is('deleted_at', null);
+            if (error && api._isMissingDeletedAt(error)) {
+                const res = await supabaseClient.from('flights').delete().eq('user_id', userId);
+                if (res.error) throw res.error;
+            } else if (error) throw error;
             flightData.length = 0;
             api.saveFlightsToLocalStorage();
             return true;
@@ -398,6 +480,139 @@ const api = {
             ui.showNotification(`Error al eliminar: ${error.message}`, "error");
             return false;
         }
+    },
+
+    // ── Papelera (soft-delete) ────────────────────────────────────
+    // Requiere la columna flights.deleted_at (ver supabase/soft-delete-flights.sql).
+    // Mientras la columna no exista, todo hace fallback al comportamiento anterior
+    // (DELETE físico / carga sin filtro), así el orden de deploy no rompe nada.
+
+    _isMissingDeletedAt: (error) => {
+        const msg = error?.message || '';
+        return msg.includes('deleted_at') &&
+            (msg.includes('does not exist') || msg.includes('schema cache'));
+    },
+
+    // Mueve una fila a la papelera; fallback a DELETE físico si no hay columna.
+    // Devuelve el error de Supabase o null.
+    _softDeleteRow: async (flightId, userId) => {
+        const { error } = await supabaseClient.from('flights')
+            .update({ deleted_at: new Date().toISOString() })
+            .eq('id', flightId).eq('user_id', userId);
+        if (error && api._isMissingDeletedAt(error)) {
+            const res = await supabaseClient.from('flights').delete()
+                .eq('id', flightId).eq('user_id', userId);
+            return res.error || null;
+        }
+        return error || null;
+    },
+
+    listDeletedFlights: async () => {
+        const userId = api._getUserId();
+        if (!userId || !navigator.onLine) return [];
+        const { data, error } = await supabaseClient.from('flights')
+            .select('*').eq('user_id', userId)
+            .not('deleted_at', 'is', null)
+            .order('deleted_at', { ascending: false });
+        if (error) {
+            if (!api._isMissingDeletedAt(error)) console.error('Error listando papelera:', error);
+            return [];
+        }
+        return data || [];
+    },
+
+    restoreFlight: async (flightId) => {
+        const userId = api._getUserId();
+        if (!userId) return false;
+        const { error } = await supabaseClient.from('flights')
+            .update({ deleted_at: null })
+            .eq('id', flightId).eq('user_id', userId);
+        if (error) { console.error('Error restaurando vuelo:', error); return false; }
+        await api.loadInitialFlights();
+        return true;
+    },
+
+    emptyTrash: async () => {
+        const userId = api._getUserId();
+        if (!userId) return false;
+        const { error } = await supabaseClient.from('flights').delete()
+            .eq('user_id', userId).not('deleted_at', 'is', null);
+        if (error) { console.error('Error vaciando papelera:', error); return false; }
+        return true;
+    },
+
+    // Purga definitiva de vuelos con más de 30 días en la papelera.
+    // Fire-and-forget desde loadInitialFlights.
+    purgeOldTrash: () => {
+        const userId = api._getUserId();
+        if (!userId || !navigator.onLine) return;
+        const cutoff = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
+        supabaseClient.from('flights').delete()
+            .eq('user_id', userId).not('deleted_at', 'is', null).lt('deleted_at', cutoff)
+            .then(({ error }) => {
+                if (error && !api._isMissingDeletedAt(error)) console.warn('Error purgando papelera:', error);
+            });
+    },
+
+    // ── Guard de discrepancia nube vs caché local ─────────────────
+    // La nube es la fuente de verdad, pero si devuelve significativamente menos
+    // vuelos que el caché local (0, o menos de la mitad en bitácoras de 10+),
+    // se avisa al usuario ANTES de sobrescribir el caché y se le ofrece
+    // descargar su copia local en CSV. Nunca se re-sube el caché a la nube
+    // (podría resucitar vuelos borrados legítimamente en otro dispositivo).
+    _warnCloudDiscrepancy: (cloudCount) => {
+        let cachedFlights = [];
+        try {
+            cachedFlights = (JSON.parse(localStorage.getItem('flightLogData') || '[]') || []).filter(Boolean);
+        } catch { return Promise.resolve(); }
+
+        const userId = api._getUserId();
+        // Los vuelos en cola offline aún no están en la nube: no son discrepancia
+        const pendingSaves = api._getPendingQueue()
+            .filter(i => i.op === 'save' && (!i.userId || i.userId === userId)).length;
+        const localCount = cachedFlights.length - pendingSaves;
+
+        const significant = localCount > 0 &&
+            (cloudCount === 0 || (localCount >= 10 && cloudCount < localCount / 2));
+        if (!significant) return Promise.resolve();
+
+        return new Promise((resolve) => {
+            const modal = document.createElement('div');
+            modal.className = 'modal open';
+            modal.style.zIndex = '10005';
+            modal.innerHTML = `
+            <div class="modal-content" style="max-width:480px;">
+                <div class="modal-header"><h3>⚠️ Diferencia entre tus datos locales y la nube</h3></div>
+                <p style="color:#aaa;margin:0 0 0.75rem;">
+                    Tu copia local tiene <strong style="color:#fff;">${localCount} vuelo(s)</strong>,
+                    pero la base de datos devolvió <strong style="color:#e57373;">${cloudCount}</strong>.
+                </p>
+                <p style="color:#888;font-size:13px;margin:0 0 0.75rem;">
+                    Esto puede ser normal (eliminaste vuelos desde otro dispositivo) o indicar un
+                    problema con tu cuenta o el servidor. La aplicación continuará con los datos
+                    de la nube, que son el registro oficial.
+                </p>
+                <p style="color:#888;font-size:13px;margin:0 0 1rem;">
+                    Si crees que es un error, descarga ahora tu copia local como respaldo —
+                    después de continuar, la copia local se reemplaza por los datos de la nube.
+                </p>
+                <div style="display:flex;gap:12px;justify-content:flex-end;flex-wrap:wrap;padding-top:1rem;border-top:1px solid #333;">
+                    <button id="disc-continue" class="prev-btn" style="padding:10px 20px;background:transparent;border:1px solid #444;">Continuar con la nube</button>
+                    <button id="disc-backup" class="submit-btn" style="padding:10px 24px;">Descargar copia local (CSV) y continuar</button>
+                </div>
+            </div>`;
+            document.body.appendChild(modal);
+            modal.querySelector('#disc-backup').addEventListener('click', () => {
+                try { api.exportToCSV(cachedFlights, 'copia-local'); }
+                catch (e) { console.error('Error exportando copia local:', e); }
+                modal.remove();
+                resolve();
+            });
+            modal.querySelector('#disc-continue').addEventListener('click', () => {
+                modal.remove();
+                resolve();
+            });
+        });
     },
 
     // ── Cola offline ──────────────────────────────────────────────
@@ -412,7 +627,9 @@ const api = {
 
     _queuePending: (item) => {
         const queue = api._getPendingQueue();
-        queue.push(item);
+        // Etiquetar con el usuario dueño: si otra cuenta inicia sesión en este
+        // dispositivo, sus items no deben sincronizarse bajo el nuevo usuario.
+        queue.push({ ...item, userId: api._getUserId() });
         api._savePendingQueue(queue);
     },
 
@@ -423,23 +640,27 @@ const api = {
         const userId = api._getUserId();
         if (!userId || !navigator.onLine) return;
 
-        ui.showNotification(`Sincronizando ${queue.length} vuelo(s) pendiente(s)...`, 'info');
+        // Solo sincronizar items de este usuario. Items de otra cuenta quedan
+        // en cola hasta que esa cuenta vuelva a iniciar sesión en el dispositivo.
+        const mine   = queue.filter(item => !item.userId || item.userId === userId);
+        const others = queue.filter(item => item.userId && item.userId !== userId);
+        if (mine.length === 0) return;
+
+        ui.showNotification(`Sincronizando ${mine.length} vuelo(s) pendiente(s)...`, 'info');
 
         const failed = [];
-        for (const item of queue) {
+        for (const item of mine) {
             try {
-                if (item.op === 'save') {
+                if (item.op === 'save' || item.op === 'update') {
+                    // upsert: idempotente ante reintentos (si el insert original sí
+                    // llegó a la nube no falla por duplicado) y crea la fila si un
+                    // update quedó huérfano porque el save nunca se concretó.
                     const row = api._flightToRow(item.flight, userId);
-                    const { error } = await supabaseClient.from('flights').insert([row]);
-                    if (error) throw error;
-                } else if (item.op === 'update') {
-                    const row = api._flightToRow(item.flight, userId);
-                    const { error } = await supabaseClient.from('flights').update(row)
-                        .eq('id', item.flight.id).eq('user_id', userId);
+                    const { error } = await supabaseClient.from('flights')
+                        .upsert([row], { onConflict: 'id' });
                     if (error) throw error;
                 } else if (item.op === 'delete') {
-                    const { error } = await supabaseClient.from('flights').delete()
-                        .eq('id', item.flightId).eq('user_id', userId);
+                    const error = await api._softDeleteRow(item.flightId, userId);
                     if (error) throw error;
                 }
             } catch (e) {
@@ -447,11 +668,11 @@ const api = {
             }
         }
 
-        api._savePendingQueue(failed);
+        api._savePendingQueue([...failed, ...others]);
         if (failed.length === 0) {
-            ui.showNotification(`✓ ${queue.length} vuelo(s) sincronizado(s) correctamente.`, 'success');
+            ui.showNotification(`✓ ${mine.length} vuelo(s) sincronizado(s) correctamente.`, 'success');
         } else {
-            ui.showNotification(`${queue.length - failed.length} sincronizados, ${failed.length} con error. Se reintentará.`, 'error');
+            ui.showNotification(`${mine.length - failed.length} sincronizados, ${failed.length} con error. Se reintentará.`, 'error');
         }
     },
 
@@ -552,6 +773,7 @@ const api = {
                         licenses:          (data.licencias && Object.keys(data.licencias).length ? data.licencias : local?.licenses) || {},
                         plan:              data.plan || 'lite',
                         planExpiresAt:     data.plan_expires_at || null,
+                        trial_used:        !!data.trial_used,
                         personal: {
                             'profile-pais':       data.pais || local?.personal?.['profile-pais'] || 'CL',
                             'profile-nombre':     data.full_name || local?.personal?.['profile-nombre'] || '',
@@ -593,8 +815,8 @@ const api = {
             exportHeaders.forEach(header => {
                 let value = flight[header];
                 if (header === 'Fecha') {
-                    const date = new Date(value);
-                    value = !isNaN(date.getTime())
+                    const date = value ? new Date(value) : null;
+                    value = date && !isNaN(date.getTime())
                         ? `${date.getUTCFullYear()}-${String(date.getUTCMonth()+1).padStart(2,'0')}-${String(date.getUTCDate()).padStart(2,'0')}`
                         : '';
                 }
@@ -616,16 +838,18 @@ const api = {
         XLSX.writeFile(workbook, 'Template_Bitacora_de_Vuelo.xlsx');
     },
 
-    // Exportación CSV (para backup)
-    exportToCSV: () => {
-        if (flightData.length === 0) { alert("No hay vuelos para exportar."); return; }
+    // Exportación CSV (para backup). Acepta un array de vuelos opcional
+    // (respaldo automático pre-borrado, copia local ante discrepancias, etc.)
+    exportToCSV: (data, filenameSuffix) => {
+        const flights = Array.isArray(data) ? data : flightData;
+        if (flights.length === 0) { alert("No hay vuelos para exportar."); return; }
         const rows = [HEADERS.join(',')];
-        [...flightData].filter(Boolean).reverse().forEach(flight => {
+        [...flights].filter(Boolean).reverse().forEach(flight => {
             const row = HEADERS.map(header => {
                 let value = flight[header];
                 if (header === 'Fecha') {
-                    const date = new Date(value);
-                    value = !isNaN(date.getTime())
+                    const date = value ? new Date(value) : null;
+                    value = date && !isNaN(date.getTime())
                         ? `${date.getUTCFullYear()}-${String(date.getUTCMonth()+1).padStart(2,'0')}-${String(date.getUTCDate()).padStart(2,'0')}`
                         : '';
                 }
@@ -640,7 +864,8 @@ const api = {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `Bitacora_Backup_${new Date().toISOString().split('T')[0]}.csv`;
+        const suffix = filenameSuffix ? `${filenameSuffix}_` : '';
+        a.download = `Bitacora_Backup_${suffix}${new Date().toISOString().split('T')[0]}.csv`;
         a.click();
         URL.revokeObjectURL(url);
     },

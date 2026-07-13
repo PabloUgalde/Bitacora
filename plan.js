@@ -56,6 +56,11 @@ const plan = {
             originalShowView(viewId);
         };
 
+        // Registrar los interceptores una sola vez: apply() puede llamarse varias
+        // veces por sesión y estos listeners se acumulaban sin poder removerse.
+        if (plan._gateListenersBound) return;
+        plan._gateListenersBound = true;
+
         document.getElementById('download-excel-btn')?.addEventListener('click', (e) => {
             if (!plan.isPro()) { e.stopImmediatePropagation(); plan.showUpgradeScreen(); }
         }, true);

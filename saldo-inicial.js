@@ -397,11 +397,9 @@ const saldoInicial = {
         if (!fecha) { ui.showNotification('La fecha de corte es obligatoria.', 'error'); saldoInicial.goToStep(0); return; }
         if (!total || total <= 0) { ui.showNotification('Las horas totales deben ser mayores a 0.', 'error'); saldoInicial.goToStep(1); return; }
 
+        // El saldo anterior se elimina DESPUÉS de guardar el nuevo con éxito:
+        // borrar primero dejaba al usuario sin saldo si el upsert fallaba.
         const existing = saldoInicial._getExisting();
-        if (existing) {
-            await api.deleteFlight(existing.id);
-            flightData = flightData.filter(f => f.id !== existing.id);
-        }
 
         const aeronave = document.getElementById('si-aeronave')?.value || 'SALDO INICIAL';
         const matricula = document.getElementById('si-matricula')?.value || '—';
@@ -455,6 +453,13 @@ const saldoInicial = {
             return;
         }
 
+        // Nuevo saldo ya persistido: retirar el anterior. Si tenía el mismo id
+        // determinista, el propio upsert lo reemplazó; solo hay que borrar
+        // filas legacy con otro id.
+        if (existing && existing.id !== flightObj.id) {
+            await api.deleteFlight(existing.id);
+        }
+        flightData = flightData.filter(f => f.id !== flightObj.id);
         flightData.unshift(flightObj);
         document.getElementById('saldo-inicial-overlay').remove();
         saldoInicial._updateStatus();

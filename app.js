@@ -29,6 +29,10 @@ const app = {
         // Sincronizar pendientes si hay señal al abrir (ej: se guardaron offline y se reabrió con conexión)
         if (navigator.onLine && api._getPendingQueue().length > 0) {
             await api.syncPendingFlights();
+            // Recargar desde la nube: la carga inicial se hizo antes de sincronizar,
+            // por lo que los vuelos recién subidos no estaban en flightData.
+            await api.loadInitialFlights();
+            render.dashboard();
             app.updateOfflineBar();
         }
         anotaciones.injectStyles();
@@ -459,25 +463,38 @@ const app = {
             modal.className = 'modal open';
             modal.style.zIndex = "10001";
             modal.innerHTML = `
-            <div class="modal-content" style="max-width:420px;">
+            <div class="modal-content" style="max-width:440px;">
                 <div class="modal-header"><h3>¿Eliminar todos los vuelos?</h3></div>
-                <p style="color:#aaa;margin:0 0 1.5rem;">Esta acción eliminará <strong style="color:#fff;">todos tus vuelos</strong> de la base de datos de forma permanente. No se puede deshacer.</p>
+                <p style="color:#aaa;margin:0 0 0.75rem;">Esta acción moverá <strong style="color:#fff;">todos tus vuelos</strong> a la papelera. Podrás restaurarlos durante <strong style="color:#fff;">30 días</strong>; después se eliminarán definitivamente.</p>
+                <p style="color:#888;font-size:13px;margin:0 0 1rem;">Antes de eliminar se descargará automáticamente un respaldo CSV de tu bitácora.</p>
+                <p style="color:#aaa;font-size:13px;margin:0 0 0.5rem;">Para confirmar, escribe <strong style="color:#e57373;">ELIMINAR</strong>:</p>
+                <input type="text" id="del-all-input" autocomplete="off" autocapitalize="characters" style="width:100%;padding:10px 12px;background:#111;border:1px solid #333;border-radius:6px;color:#fff;font-size:14px;box-sizing:border-box;margin-bottom:1rem;">
                 <div style="display:flex;gap:12px;justify-content:flex-end;padding-top:1rem;border-top:1px solid #333;">
                     <button id="del-all-cancel" class="prev-btn" style="padding:10px 20px;background:transparent;border:1px solid #444;">Cancelar</button>
-                    <button id="del-all-confirm" style="padding:10px 24px;background:#c62828;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px;">Eliminar todo</button>
+                    <button id="del-all-confirm" disabled style="padding:10px 24px;background:#c62828;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px;opacity:0.4;">Eliminar todo</button>
                 </div>
             </div>`;
             document.body.appendChild(modal);
+            const input = modal.querySelector('#del-all-input');
+            const confirmBtn = modal.querySelector('#del-all-confirm');
+            input.addEventListener('input', () => {
+                const ok = input.value.trim().toUpperCase() === 'ELIMINAR';
+                confirmBtn.disabled = !ok;
+                confirmBtn.style.opacity = ok ? '1' : '0.4';
+            });
             modal.querySelector('#del-all-cancel').addEventListener('click', () => modal.remove());
-            modal.querySelector('#del-all-confirm').addEventListener('click', async () => {
+            confirmBtn.addEventListener('click', async () => {
+                if (confirmBtn.disabled) return;
                 modal.remove();
                 const ok = await api.deleteAllFlights();
                 if (ok) {
-                    ui.showNotification("Todos los vuelos han sido eliminados.", "success");
+                    ui.showNotification("Vuelos movidos a la papelera. Puedes restaurarlos durante 30 días.", "success");
                     render.dashboard();
                 }
             });
         });
+
+        document.getElementById('open-trash-btn')?.addEventListener('click', () => app.showTrashModal());
 
         document.getElementById('excel-file-input')?.addEventListener('change', async (e) => {
             const file = e.target.files[0];
@@ -669,6 +686,81 @@ const app = {
 
     openFilterModal: () => { document.getElementById('filter-modal').classList.add('open'); },
     closeFilterModal: () => { document.getElementById('filter-modal').classList.remove('open'); },
+
+    // ── Papelera de vuelos (soft-delete, retención 30 días) ──────
+    showTrashModal: async () => {
+        const modal = document.createElement('div');
+        modal.className = 'modal open';
+        modal.style.zIndex = "10001";
+        modal.innerHTML = `
+        <div class="modal-content" style="max-width:580px;">
+            <div class="modal-header">
+                <h3>🗑 Papelera de vuelos</h3>
+                <span class="close-button" style="cursor:pointer;">×</span>
+            </div>
+            <p style="color:#888;font-size:13px;margin:0 0 1rem;">Los vuelos eliminados se conservan aquí durante <strong style="color:#aaa;">30 días</strong> antes de borrarse definitivamente.</p>
+            <div id="trash-list" style="max-height:50vh;overflow:auto;">Cargando…</div>
+            <div style="display:flex;justify-content:flex-end;gap:12px;padding-top:1rem;border-top:1px solid #333;margin-top:1rem;">
+                <button id="trash-empty-btn" class="settings-btn-danger" style="display:none;padding:8px 16px;">Vaciar papelera</button>
+            </div>
+        </div>`;
+        document.body.appendChild(modal);
+        modal.querySelector('.close-button').addEventListener('click', () => modal.remove());
+
+        const renderList = async () => {
+            const listEl = modal.querySelector('#trash-list');
+            const emptyBtn = modal.querySelector('#trash-empty-btn');
+            const rows = await api.listDeletedFlights();
+            if (!rows.length) {
+                listEl.innerHTML = '<p style="color:#666;padding:1rem 0;">La papelera está vacía.</p>';
+                emptyBtn.style.display = 'none';
+                return;
+            }
+            emptyBtn.style.display = '';
+            listEl.innerHTML = rows.map(r => {
+                const fecha = r.fecha ? r.fecha.split('-').reverse().join('/') : '—';
+                const borrado = r.deleted_at ? new Date(r.deleted_at).toLocaleDateString('es-CL') : '';
+                const ruta = [r.desde, r.hasta].filter(Boolean).join('–');
+                return `
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 6px;border-bottom:1px solid #222;font-size:13px;">
+                    <div style="color:#ccc;min-width:0;">
+                        ${fecha} · ${r.aeronave_marca_modelo || ''} ${r.matricula_aeronave || ''} · ${ruta} · ${r.duracion_total || 0} hrs
+                        <div style="color:#666;font-size:11px;">Eliminado el ${borrado}</div>
+                    </div>
+                    <button data-restore="${r.id}" class="settings-btn-secondary" style="padding:6px 12px;font-size:12px;flex-shrink:0;">Restaurar</button>
+                </div>`;
+            }).join('');
+            listEl.querySelectorAll('[data-restore]').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    btn.disabled = true;
+                    btn.textContent = 'Restaurando…';
+                    const ok = await api.restoreFlight(btn.dataset.restore);
+                    if (ok) {
+                        ui.showNotification('Vuelo restaurado.', 'success');
+                        render.dashboard();
+                        await renderList();
+                    } else {
+                        ui.showNotification('No se pudo restaurar el vuelo.', 'error');
+                        btn.disabled = false;
+                        btn.textContent = 'Restaurar';
+                    }
+                });
+            });
+        };
+
+        modal.querySelector('#trash-empty-btn').addEventListener('click', async () => {
+            if (!confirm('¿Vaciar la papelera? Los vuelos se eliminarán definitivamente y NO podrán restaurarse.')) return;
+            const ok = await api.emptyTrash();
+            if (ok) {
+                ui.showNotification('Papelera vaciada.', 'success');
+                await renderList();
+            } else {
+                ui.showNotification('Error al vaciar la papelera.', 'error');
+            }
+        });
+
+        await renderList();
+    },
 
     toggleColGroup: (labelEl, childrenId) => {
         // preventDefault evita que el click en el label marque/desmarque el checkbox del grupo dos veces

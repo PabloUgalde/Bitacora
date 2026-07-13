@@ -156,9 +156,20 @@ serve(async (req) => {
       return new Response('OK', { status: 200 })
     }
 
-    // Calcular expiración
+    // Leer perfil actual (para extender vencimiento vigente y para el email)
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('full_name, email, plan, plan_expires_at')
+      .eq('id', userId)
+      .maybeSingle()
+
+    // Calcular expiración: si el plan Pro sigue vigente, la renovación se suma
+    // al vencimiento actual (pagar antes de tiempo no debe perder días).
     const now = new Date()
-    const expiresAt = new Date()
+    const currentExpiry = profile?.plan === 'pro' && profile?.plan_expires_at
+      ? new Date(profile.plan_expires_at) : null
+    const base = currentExpiry && currentExpiry > now ? currentExpiry : now
+    const expiresAt = new Date(base)
     if (plan === 'annual') {
       expiresAt.setFullYear(expiresAt.getFullYear() + 1)
     } else {
@@ -176,13 +187,6 @@ serve(async (req) => {
     }
 
     console.log(`✅ Plan Pro activado para ${userId} hasta ${expiresAt.toISOString()}`)
-
-    // Enviar email de confirmación
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('full_name, email')
-      .eq('id', userId)
-      .maybeSingle()
 
     const email = profile?.email || payment.payer
     if (email) {

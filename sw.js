@@ -1,7 +1,9 @@
-const CACHE_NAME = 'flight-log-cache-v2.27';
+const CACHE_NAME = 'flight-log-cache-v2.28';
 
 const APP_SHELL_FILES = [
+    './',
     './index.html',
+    './manifest.json',
     './style.css',
     './custom-styles.css',
     './mobile.css',
@@ -17,6 +19,14 @@ const APP_SHELL_FILES = [
     './report-generator.js',
     './data-importer.js',
     './backup-manager.js',
+    './plan.js',
+    './licenses-system.js',
+    './add-flight-modal.js',
+    './saldo-inicial.js',
+    './onboarding.js',
+    './anotaciones.js',
+    './mi-cuenta.js',
+    './logbook-scanner.js',
     './logo-avion.png',
     './logo-avion-osc.png',
     './icon-192.png',
@@ -51,6 +61,8 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
+    // Solo cachear GET; POST/PUT deben ir siempre a la red
+    if (e.request.method !== 'GET') return;
     // No interceptar peticiones a Supabase ni CDNs externos
     if (e.request.url.includes('supabase.co') ||
         e.request.url.includes('cdn.jsdelivr.net') ||
