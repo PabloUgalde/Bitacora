@@ -69,6 +69,17 @@ const app = {
             navigator.serviceWorker.register('./sw.js')
                 .then((reg) => console.log('Service Worker Registrado. Scope:', reg.scope))
                 .catch(error => console.error('Error al registrar Service Worker:', error));
+
+            // Cuando un SW nuevo toma control, el HTML ya cargado puede quedar
+            // desincronizado con el JS recién actualizado (ej: nav con un botón
+            // que el JS viejo no reconoce). Recargar una vez garantiza que HTML
+            // y JS siempre correspondan a la misma versión tras cada deploy.
+            let swRefreshing = false;
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (swRefreshing) return;
+                swRefreshing = true;
+                window.location.reload();
+            });
         }
     },
 
