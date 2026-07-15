@@ -1,0 +1,2124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>
+// ── Guard Pro: estas herramientas requieren sesión de Bitácora y plan Pro ──
+(async function () {
+    const SB_URL = "https://rdnniehpsdforkfngwrf.supabase.co";
+    const SB_KEY = "sb_publishable_iavyVSmxuwncUjdCM9e9kw_5c4QC-b5";
+    const raw = localStorage.getItem("sb-rdnniehpsdforkfngwrf-auth-token");
+    let token = null;
+    try { token = raw ? JSON.parse(raw).access_token : null; } catch {}
+    if (!token) { window.location.replace("index.html?auth=1"); return; }
+    try {
+        const res = await fetch(SB_URL + "/rest/v1/profiles?select=plan,plan_expires_at", {
+            headers: { apikey: SB_KEY, Authorization: "Bearer " + token }
+        });
+        if (!res.ok) return; // token raro: dejar pasar, wx-proxy igual valida server-side
+        const rows = await res.json();
+        const p = Array.isArray(rows) ? rows[0] : null; // RLS: solo el perfil propio
+        const isPro = p && p.plan === "pro" && (!p.plan_expires_at || new Date(p.plan_expires_at) > new Date());
+        if (!isPro) window.location.replace("index.html?upgrade=envuelo");
+    } catch (e) {
+        // Sin red no bloqueamos (CX-3 funciona offline); el server valida lo que cuesta plata.
+        console.warn("guard plan:", e);
+    }
+})();
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="user-scalable=no, minimum-scale=1, width=device-width">
+<title>ASA :: CX-3</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;background:#0a0a0a;}
+body{display:flex;justify-content:center;align-items:flex-start;padding:8px;font-family:'Arial Narrow',Arial,sans-serif;}
+
+/* ── DEVICE SHELL ── */
+#dev{
+  width:320px;
+  background:linear-gradient(175deg,#2a2a2a,#181818);
+  border-radius:20px;
+  border:2.5px solid #0a0a0a;
+  box-shadow:0 0 0 1px #4a4a4a inset, 0 12px 40px rgba(0,0,0,0.95);
+  padding:12px 10px 14px;
+  user-select:none;
+}
+
+/* ── BRAND ── */
+.brand{display:flex;justify-content:space-between;align-items:center;padding:0 2px;margin-bottom:9px;}
+.brand-l{color:#ccc;font-size:12px;font-weight:bold;letter-spacing:3px;}
+.brand-r{color:#555;font-size:8px;letter-spacing:2px;}
+
+/* ══════════════════════════════════
+   LCD — AMBER HUD THEME
+══════════════════════════════════ */
+#lcd{
+  background:#0c0c00;
+  border-radius:6px;
+  border:3px solid #050500;
+  box-shadow:0 0 0 1px #2a2800 inset, inset 0 3px 12px rgba(0,0,0,0.7), 0 0 18px rgba(212,175,55,0.07);
+  margin-bottom:8px;
+  overflow:hidden;
+  position:relative;
+}
+#lcd::before{
+  content:'';position:absolute;inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(212,175,55,0.018) 3px,rgba(212,175,55,0.018) 4px);
+  pointer-events:none;z-index:0;
+}
+#lcd>*{position:relative;z-index:1;}
+
+/* Status bar */
+#lcd-bar{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:4px 8px;
+  background:rgba(0,0,0,0.35);
+  border-bottom:1px solid rgba(212,175,55,0.15);
+}
+.lb-left{font-size:10px;font-weight:bold;color:#D4AF37;letter-spacing:1px;}
+.lb-mid{font-size:10px;font-weight:bold;color:#D4AF37;letter-spacing:1px;}
+.lb-right{font-size:10px;font-weight:bold;color:#6a5a18;letter-spacing:1px;}
+
+/* Content area */
+#lcd-body{padding:0;}
+
+/* ── CLOCK SCREEN ── */
+#scr-clock{display:none;}
+#scr-clock.active{display:block;}
+.clk-display{text-align:center;padding:14px 10px 8px;}
+.clk-time{font-size:38px;font-weight:bold;color:#ffe066;font-family:'Courier New',monospace;letter-spacing:2px;}
+.clk-time.running{color:#ffe066;}
+.clk-time.stopped{color:#c8a030;}
+.clk-time.input{color:#aad4ff;}
+
+/* ── CALC SCREEN ── */
+#scr-calc{display:none;flex-direction:column;height:100%;}
+#scr-calc.active{display:flex;}
+.cx-tape{
+  flex:1;
+  overflow-y:auto;
+  padding:4px 8px 2px;
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-end;
+  scrollbar-width:none;
+}
+.cx-tape::-webkit-scrollbar{display:none;}
+.cx-tape-row{
+  font-size:10px;
+  color:#806820;
+  font-family:'Courier New',monospace;
+  line-height:1.6;
+  flex-shrink:0;
+  display:flex;
+  justify-content:flex-end;
+  align-items:baseline;
+  overflow:hidden;
+}
+.cx-tape-row.cx-tape-recent{color:#b09040;}
+.tape-e{
+  flex:1;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  text-align:right;
+}
+.tape-r{
+  flex-shrink:0;
+  white-space:nowrap;
+  color:#ffe066;
+}
+.cx-tape-row.cx-tape-recent .tape-r{color:#ffe880;}
+.cx-expr-bar{border-top:1px solid rgba(212,175,55,0.15);padding:3px 8px 0;}
+.cx-hint{font-size:9px;color:#5a4010;font-family:'Courier New',monospace;text-align:right;letter-spacing:2px;min-height:11px;line-height:1.2;}
+.cx-expr{font-size:14px;color:#b09040;font-family:'Courier New',monospace;text-align:right;min-height:18px;word-break:break-all;line-height:1.3;}
+.cx-val{text-align:right;padding:2px 8px 6px;}
+.cx-num{font-size:38px;font-weight:bold;color:#ffe066;font-family:'Courier New',monospace;letter-spacing:1px;}
+.cx-unit{font-size:12px;color:#a08020;margin-left:4px;}
+
+/* ── FUNCTION SCREEN ── */
+#scr-func{display:none;}
+#scr-func.active{display:block;}
+
+/* Each field row — amber HUD LCD */
+.frow{
+  display:flex;align-items:center;
+  padding:4px 6px;
+  border-bottom:1px solid rgba(212,175,55,0.1);
+  cursor:pointer;
+  min-height:27px;
+  background:transparent;
+}
+.frow:last-child{border-bottom:none;}
+
+/* Active input row */
+.frow.active{background:rgba(212,175,55,0.14);border-radius:3px;margin:1px 2px;padding:3px 4px;}
+.frow.active .frow-lbl{color:#ffe880;}
+.frow.active .frow-val{color:#fff5aa;}
+.frow.active .frow-unit{color:#c8a030;}
+
+/* Normal rows */
+.frow-lbl{font-size:13px;font-weight:bold;color:#D4AF37;flex:1;letter-spacing:0.2px;}
+.frow-val{font-size:14px;font-weight:bold;color:#ffe066;text-align:right;font-family:'Courier New',monospace;min-width:54px;}
+.frow-unit{font-size:10px;color:#8a7020;margin-left:4px;min-width:36px;text-align:right;font-weight:bold;}
+
+/* Icon */
+.frow-icon{width:16px;height:16px;border-radius:50%;margin-right:5px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:normal;flex-shrink:0;background:transparent;}
+.frow-icon.inp{color:#00bfff;}
+.frow-icon.out{color:#D4AF37;}
+.frow.active .frow-icon{color:#00d8ff;}
+
+/* Carry-over suggestion from previous module (⊙ global icon) */
+.frow.carry .frow-val{color:#8ab8d8;}
+.frow.carry .frow-icon{color:#4a82a8;}
+.frow.active.carry .frow-val{color:#aad4ff;}
+.frow.active.carry .frow-icon{color:#7ab0e8;}
+
+/* ── LCD FIXED HEIGHT ── */
+#lcd{height:340px;}
+#lcd-body{height:314px;overflow-y:auto;-webkit-overflow-scrolling:touch;scroll-behavior:smooth;}
+
+/* ── PLAN SCREEN ── */
+#scr-plan{display:none;}
+#scr-plan.active{display:block;}
+.plan-hdr{display:grid;grid-template-columns:18px 1fr 1fr 1fr;padding:2px 6px;font-size:8px;color:#806820;letter-spacing:1px;border-bottom:1px solid rgba(212,175,55,0.12);}
+.plan-row{display:grid;grid-template-columns:18px 1fr 1fr 1fr;padding:5px 6px;border-bottom:1px solid rgba(212,175,55,0.08);cursor:pointer;align-items:center;min-height:34px;}
+.plan-row.active{background:rgba(212,175,55,0.14);border-radius:3px;margin:1px 2px;padding:5px 4px;}
+.plan-lbl{font-size:9px;font-weight:bold;color:#D4AF37;}
+.plan-row.active .plan-lbl{color:#ffe880;}
+.plan-cell{font-size:12px;font-family:'Courier New',monospace;font-weight:bold;color:#ffe066;}
+.plan-cell.active-field{color:#aad4ff;}
+.plan-cell.computed{color:#D4AF37;}
+.plan-tot{padding:4px 8px;border-top:1px solid rgba(212,175,55,0.2);display:flex;justify-content:space-between;font-size:10px;color:#D4AF37;}
+.plan-tot span:last-child{font-family:'Courier New',monospace;font-weight:bold;}
+
+/* ── MENU SCREEN ── */
+#scr-menu{display:none;}
+#scr-menu.active{display:block;}
+.mnu-item{display:flex;justify-content:space-between;align-items:center;
+           padding:3px 10px;font-size:13px;color:#c8a030;cursor:pointer;height:25px;
+           border-bottom:1px solid rgba(212,175,55,0.08);}
+.mnu-item:last-child{border-bottom:none;}
+.mnu-item.sel{background:rgba(212,175,55,0.18);color:#ffe880;border-radius:3px;margin:0 2px;
+              padding:2px 8px;border-bottom:none;}
+.mnu-item .arr{font-size:10px;color:#6a5010;flex-shrink:0;}
+.mnu-item.sel .arr{color:#D4AF37;}
+.mnu-more{text-align:center;font-size:9px;color:#6a5010;height:10px;line-height:10px;
+           background:rgba(0,0,0,0.2);}
+
+/* ── CX-3 KEYPAD ── */
+.kp-wrap{margin-top:6px;}
+.cx3-kp{display:grid;grid-template-columns:repeat(5,1fr);gap:3px;}
+.cx3-btn{height:33px;border-radius:7px;border:none;cursor:pointer;font-weight:bold;
+         color:#c8c8c8;background:#282828;
+         border-top:1.5px solid #3c3c3c;border-bottom:1.5px solid #0a0a0a;
+         font-size:10px;display:flex;align-items:center;justify-content:center;
+         transition:transform 0.07s;line-height:1.2;text-align:center;
+         -webkit-tap-highlight-color:transparent;white-space:nowrap;}
+.cx3-btn:active{transform:translateY(1px);filter:brightness(0.72);}
+.cx3-btn.or{background:#ac5200;border-top-color:#c86418;border-bottom-color:#6e3000;color:#fff;}
+.cx3-btn.num{color:#e8c840;font-size:14px;}
+.cx3-btn.op{color:#D4AF37;font-size:16px;font-weight:bold;}
+.cx3-btn.nav{font-size:8.5px;color:#aaa;background:#1e1e1e;letter-spacing:0.3px;}
+.cx3-btn.arr{font-size:18px;color:#ccc;font-weight:normal;}
+.cx3-btn.sm{font-size:8px;line-height:1.15;}
+
+/* ── HOLD DIAGRAM SCREEN ── */
+#scr-hold-diag{display:none;}
+#scr-hold-diag.active{display:block;}
+
+/* status */
+.stat{display:flex;justify-content:space-between;align-items:center;margin-top:7px;padding:0 2px;}
+.batt{display:flex;align-items:center;gap:3px;}
+.bi{width:20px;height:10px;border:1.5px solid #555;border-radius:2px;padding:1.5px;position:relative;}
+.bi::after{content:'';position:absolute;right:-4px;top:2.5px;width:2.5px;height:5px;background:#555;border-radius:0 1px 1px 0;}
+.bf{width:65%;height:100%;background:#4a8a30;border-radius:1px;}
+.bl2{font-size:8px;color:#555;}
+.e6bl{font-size:8px;color:#444;letter-spacing:2px;}
+
+</style>
+</head>
+<body>
+<div id="dev">
+
+  <div class="brand">
+    <span class="brand-l">ASA</span>
+    <span class="brand-r">CX-3® FLIGHT COMPUTER</span>
+  </div>
+
+  <!-- ══ LCD ══ -->
+  <div id="lcd">
+    <div id="lcd-bar">
+      <span class="lb-left">E6-B</span>
+      <span class="lb-mid" id="lb-time">00:00Z</span>
+      <span class="lb-right">BATT</span>
+    </div>
+    <div id="lcd-body">
+
+      <!-- CLOCK -->
+      <div id="scr-clock">
+        <div class="clk-display">
+          <div class="clk-time" id="clk-disp">0:00:00</div>
+        </div>
+        <div id="clk-menu"></div>
+      </div>
+
+      <!-- CALC -->
+      <div id="scr-calc">
+        <div class="cx-tape" id="cx-tape"></div>
+        <div class="cx-expr-bar">
+          <div class="cx-hint" id="cx-hint"></div>
+          <div class="cx-expr" id="cx-expr">&nbsp;</div>
+        </div>
+        <div class="cx-val">
+          <span class="cx-num" id="cx-num">0</span><span class="cx-unit" id="cx-unit"></span>
+        </div>
+      </div>
+
+      <!-- FUNCTION -->
+      <div id="scr-func"></div>
+
+      <!-- MENU -->
+      <div id="scr-menu"></div>
+
+      <!-- PLAN (Trip Planner) -->
+      <div id="scr-plan"></div>
+
+      <!-- HOLD DIAGRAM -->
+      <div id="scr-hold-diag"></div>
+
+    </div>
+  </div>
+
+  <!-- ══ KEYPAD ══ -->
+  <div class="kp-wrap">
+
+    <!-- CX-3 style keypad: 7 rows × 5 cols -->
+    <div class="cx3-kp">
+      <!-- ROW 1: FLT PLAN ∧ TIMER CALC -->
+      <button class="cx3-btn nav" onclick="doFLT()">FLT</button>
+      <button class="cx3-btn nav" onclick="doPLAN()">PLAN</button>
+      <button class="cx3-btn arr" onclick="doUP()">∧</button>
+      <button class="cx3-btn nav" onclick="doClock()">TIMER</button>
+      <button class="cx3-btn nav" onclick="doCalc()">CALC</button>
+      <!-- ROW 2: BACK M ENTER W/B SET-UNIT -->
+      <button class="cx3-btn nav sm" onclick="doBACK()">BACK</button>
+      <button class="cx3-btn nav" onclick="doMem()">M</button>
+      <button class="cx3-btn or" onclick="doENTER()" style="font-size:9px;font-weight:bold;">ENTER</button>
+      <button class="cx3-btn nav sm" onclick="OF('WB')">W/B</button>
+      <button class="cx3-btn nav sm" onclick="setUnitGlobal()">SET<br>UNIT</button>
+      <!-- ROW 3: HOLD C/CE ∨ CONV-UNIT ÷ -->
+      <button class="cx3-btn nav sm" onclick="OF('HOLD')">HOLD</button>
+      <button class="cx3-btn nav sm" onclick="KCE()">C/CE</button>
+      <button class="cx3-btn arr" onclick="doDOWN()">∨</button>
+      <button class="cx3-btn nav sm" onclick="convUnit()">CONV<br>UNIT</button>
+      <button class="cx3-btn op" onclick="OP('÷')">÷</button>
+      <!-- ROW 4: C 7 8 9 × -->
+      <button class="cx3-btn nav" onclick="KC()">C</button>
+      <button class="cx3-btn num" onclick="N('7')">7</button>
+      <button class="cx3-btn num" onclick="N('8')">8</button>
+      <button class="cx3-btn num" onclick="N('9')">9</button>
+      <button class="cx3-btn op" onclick="OP('×')">×</button>
+      <!-- ROW 5: BKSP 4 5 6 − -->
+      <button class="cx3-btn nav sm" onclick="KB()">BKSP</button>
+      <button class="cx3-btn num" onclick="N('4')">4</button>
+      <button class="cx3-btn num" onclick="N('5')">5</button>
+      <button class="cx3-btn num" onclick="N('6')">6</button>
+      <button class="cx3-btn op" onclick="OP('−')">−</button>
+      <!-- ROW 6: : 1 2 3 + -->
+      <button class="cx3-btn nav" onclick="N(':')">:</button>
+      <button class="cx3-btn num" onclick="N('1')">1</button>
+      <button class="cx3-btn num" onclick="N('2')">2</button>
+      <button class="cx3-btn num" onclick="N('3')">3</button>
+      <button class="cx3-btn op" onclick="OP('+')">+</button>
+      <!-- ROW 7: ± . 0 √ = -->
+      <button class="cx3-btn nav" onclick="N('±')">±</button>
+      <button class="cx3-btn num" onclick="N('.')">.</button>
+      <button class="cx3-btn num" onclick="N('0')">0</button>
+      <button class="cx3-btn nav" onclick="TR('sqrt')">√</button>
+      <button class="cx3-btn or" style="font-size:18px;" onclick="EQ()">=</button>
+    </div><!-- /cx3-kp -->
+
+  </div><!-- /kp-wrap -->
+
+  <div class="stat">
+    <div class="batt"><div class="bi"><div class="bf"></div></div><span class="bl2">BATT</span></div>
+    <span class="e6bl">E6-B</span>
+  </div>
+
+</div><!-- /dev -->
+
+<script>
+'use strict';
+// ═══════════════════════════════════════
+//  GLOBAL STATE
+// ═══════════════════════════════════════
+var mode = 'menu';   // menu | calc | clock | func
+var cS = {d:'0',expr:'',first:null,op:null,fresh:true,mem:0};
+var fnId=null, fnData={}, fnIdx=0;
+var timerOn=false, timerStart=0, timerMs=0;
+var timerIdx=0;       // 0=Start/Stop, 1=Restart, 2=Reset
+var timerCountMs=0;   // countdown duration in ms (0 = stopwatch)
+var timerInput='';    // digits being typed for countdown (up to 6)
+var mIdx=0;
+var carryStore={};  // id → {val, unit} — last known value per field across modules
+var fnCarry={};     // id → true — fields showing a carry suggestion (not yet confirmed)
+var fnUser={};      // id → true — fields typed/confirmed by the user (vs. solved by calc)
+var fnUserOrder=[]; // ids in entry order — el más antiguo cede si el usuario escribe sobre un campo calculado
+var globalUnitPref={};  // sorted-units-key → preferred unit (set by SET UNIT button)
+var PLAN_MAX=5;
+var planLegs=[];
+var planLegIdx=0;
+var planField=0;   // 0=departure, 1=ete
+var planInput='';
+
+// ─────────────────────────────
+//  FLT MENU
+// ─────────────────────────────
+var MENU_ITEMS=[
+  {lbl:'Time / Speed / Distance', fn:'TSD'},
+  {lbl:'Fuel & Endurance',        fn:'FUEL'},
+  {lbl:'Heading & Wind Corr',     fn:'WIND'},
+  {lbl:'Wind Component (Rnwy)',   fn:'WINDCOMP'},
+  {lbl:'Compass Heading',         fn:'COMPASS'},
+  {lbl:'To / From (Reciprocal)',  fn:'TOFROM'},
+  {lbl:'Altitude / TAS / Mach',   fn:'ALT'},
+  {lbl:'Airspeed (All Modes)',    fn:'AIRSPEED'},
+  {lbl:'Cloud Base',              fn:'CLOUD'},
+  {lbl:'Standard Atmosphere',     fn:'STDATM'},
+  {lbl:'Glide',                   fn:'GLIDE'},
+  {lbl:'Climb & Descent',         fn:'CLIMB'},
+  {lbl:'Holding Pattern',         fn:'HOLD'},
+  {lbl:'Weight & Balance',        fn:'WB'},
+  {lbl:'Coords DMS ↔ Decimal',  fn:'COORD'},
+];
+var MENU_VIS=11;
+
+function renderMenu(){
+  var el=document.getElementById('scr-menu');
+  el.innerHTML='';
+  var start=Math.max(0,Math.min(mIdx-Math.floor(MENU_VIS/2),MENU_ITEMS.length-MENU_VIS));
+  start=Math.max(0,start);
+  if(start>0){var m=document.createElement('div');m.className='mnu-more';m.textContent='∧';el.appendChild(m);}
+  var end=Math.min(start+MENU_VIS,MENU_ITEMS.length);
+  for(var i=start;i<end;i++){
+    var item=MENU_ITEMS[i];
+    var d=document.createElement('div');
+    d.className='mnu-item'+(i===mIdx?' sel':'');
+    d.innerHTML='<span>'+item.lbl+'</span><span class="arr">›</span>';
+    (function(idx){d.onclick=function(){mIdx=idx;OF(MENU_ITEMS[idx].fn);};})(i);
+    el.appendChild(d);
+  }
+  if(end<MENU_ITEMS.length){var m2=document.createElement('div');m2.className='mnu-more';m2.textContent='∨';el.appendChild(m2);}
+}
+
+function doFLT(){
+  mode='menu';
+  document.querySelector('.lb-left').textContent='FLT';
+  showScr('scr-menu');
+  renderMenu();
+}
+function doUP(){
+  if(mode==='calc'){
+    var t=document.getElementById('cx-tape');
+    if(t)t.scrollTop=Math.max(0,t.scrollTop-18);
+    return;
+  }
+  if(mode==='menu'){mIdx=Math.max(0,mIdx-1);renderMenu();}
+  else if(mode==='clock'){timerIdx=(timerIdx+2)%3;renderTimer();}
+  else if(mode==='func'){
+    clearCarryAtCurrent();
+    var n=FNS[fnId].fields.length;
+    fnIdx=(fnIdx-1+n)%n;renderFn();
+  } else if(mode==='plan'){
+    planInput='';
+    if(planLegIdx===0&&planField===0){planLegIdx=PLAN_MAX-1;planField=1;}
+    else if(planLegIdx===0&&planField===1){planField=0;}
+    else{planLegIdx--;planField=1;}
+    renderPlan();
+  }
+}
+function doDOWN(){
+  if(mode==='calc'){
+    var t=document.getElementById('cx-tape');
+    if(t)t.scrollTop=t.scrollTop+18;
+    return;
+  }
+  if(mode==='menu'){mIdx=Math.min(MENU_ITEMS.length-1,mIdx+1);renderMenu();}
+  else if(mode==='clock'){timerIdx=(timerIdx+1)%3;renderTimer();}
+  else if(mode==='func'){
+    clearCarryAtCurrent();
+    var n=FNS[fnId].fields.length;
+    fnIdx=(fnIdx+1)%n;renderFn();
+  } else if(mode==='plan'){
+    planInput='';
+    if(planLegIdx===PLAN_MAX-1&&planField===1){planLegIdx=0;planField=0;}
+    else if(planLegIdx===0&&planField===0){planField=1;}
+    else{planLegIdx++;planField=1;}
+    renderPlan();
+  }
+}
+function clearCarryAtCurrent(){
+  var def=FNS[fnId];
+  var f=def.fields[fnIdx];
+  if(f&&fnCarry[f.id]){
+    fnData[f.id]='';
+    delete fnCarry[f.id];
+    runFnCalc();
+  }
+}
+// Solver-aware calc: los campos que NO tipeó/confirmó el usuario (ni son
+// carry/toggle/out) fueron derivados por el solver — se limpian antes de
+// recalcular para que el solver resuelva SIEMPRE desde los datos del usuario.
+// Sin esto, tras el primer cálculo era imposible editar un campo: C lo
+// re-rellenaba al instante y escribir anexaba dígitos al valor calculado.
+function runFnCalc(){
+  var def=FNS[fnId]; if(!def)return;
+  def.fields.forEach(function(f){
+    if(f.out||f.toggle)return;
+    if(fnData[f.id]&&!fnUser[f.id]&&!fnCarry[f.id])fnData[f.id]='';
+  });
+  def.calc(fnData);
+}
+function markUser(fid){
+  fnUser[fid]=true;
+  var i=fnUserOrder.indexOf(fid);
+  if(i>=0)fnUserOrder.splice(i,1);
+  fnUserOrder.push(fid);
+}
+function unmarkUser(fid){
+  delete fnUser[fid];
+  var i=fnUserOrder.indexOf(fid);
+  if(i>=0)fnUserOrder.splice(i,1);
+}
+function doENTER(){
+  if(mode==='menu'){OF(MENU_ITEMS[mIdx].fn);}
+  else if(mode==='clock'){execTimer();}
+  else if(mode==='plan'){execPlanField();}
+  else{EQ();}
+}
+function holdDiagBack(){
+  mode='func';
+  document.querySelector('.lb-left').textContent=FNS[fnId].title.replace(/ \/ /g,'/').slice(0,10);
+  document.getElementById('lcd-body').scrollTop=0;
+  showScr('scr-func');
+  renderFn();
+}
+function doBACK(){
+  if(mode==='hold-diag'){holdDiagBack();}
+  else if(mode==='func'||mode==='calc'||mode==='clock'||mode==='plan'){doFLT();}
+}
+function doMem(){
+  if(mode==='func'){
+    var def=FNS[fnId];
+    var inF=def.fields.filter(function(f){return!f.out;});
+    if(fnIdx<inF.length){var v=pf(fnData[inF[fnIdx].id]);if(ok(v))cS.mem=v;}
+  } else {
+    if((!cS.fullExpr)&&cS.mem!==0){cS.fullExpr=fmt(cS.mem);rCalc();}
+    else{var v=safeEvalExpr(cS.fullExpr||'');cS.mem=v!==null?v:pf(cS.d);}
+  }
+}
+
+// ═══════════════════════════════════════
+//  CLOCK / TIMER
+// ═══════════════════════════════════════
+function z(n){return String(n).padStart(2,'0');}
+function fmtTimer(ms){
+  var s=Math.floor(ms/1000),h=Math.floor(s/3600),m=Math.floor((s%3600)/60);
+  return h+':'+z(m)+':'+z(s%60);
+}
+function tick(){
+  var now=new Date();
+  document.getElementById('lb-time').textContent=z(now.getUTCHours())+':'+z(now.getUTCMinutes())+'Z';
+  if(timerOn) timerMs=Date.now()-timerStart;
+  if(mode==='clock') renderTimer();
+}
+setInterval(tick,500); tick();
+
+function doClock(){
+  mode='clock';
+  document.querySelector('.lb-left').textContent='TIMER';
+  showScr('scr-clock');
+  renderTimer();
+}
+
+function renderTimer(){
+  var disp=document.getElementById('clk-disp');
+  var elapsed=timerOn?Date.now()-timerStart:timerMs;
+  if(timerInput){
+    // Showing countdown input
+    var p=timerInput.padStart(6,'0');
+    disp.textContent=parseInt(p[0])+p[1]+':'+p[2]+p[3]+':'+p[4]+p[5];
+    disp.className='clk-time input';
+  } else if(timerCountMs>0){
+    var rem=Math.max(0,timerCountMs-elapsed);
+    disp.textContent=fmtTimer(rem);
+    disp.className='clk-time '+(timerOn?'running':'stopped');
+    if(timerOn&&rem===0){timerOn=false;timerMs=timerCountMs;}
+  } else {
+    disp.textContent=fmtTimer(elapsed);
+    disp.className='clk-time '+(timerOn?'running':'stopped');
+  }
+  var labels=[timerOn?'Stop':'Start','Restart','Reset'];
+  var menu=document.getElementById('clk-menu');
+  menu.innerHTML='';
+  labels.forEach(function(lbl,i){
+    var d=document.createElement('div');
+    d.className='mnu-item'+(i===timerIdx?' sel':'');
+    d.textContent=lbl;
+    (function(idx){d.onclick=function(){timerIdx=idx;execTimer();};})(i);
+    menu.appendChild(d);
+  });
+}
+
+function execTimer(){
+  if(timerInput){
+    // Confirm countdown input and start
+    var p=timerInput.padStart(6,'0');
+    timerCountMs=(parseInt(p.slice(0,2))*3600+parseInt(p.slice(2,4))*60+parseInt(p.slice(4,6)))*1000;
+    timerInput='';
+    timerMs=0; timerStart=Date.now(); timerOn=true;
+    renderTimer(); return;
+  }
+  if(timerIdx===0){
+    if(timerOn){timerMs=Date.now()-timerStart;timerOn=false;}
+    else{timerStart=Date.now()-timerMs;timerOn=true;}
+  } else if(timerIdx===1){
+    timerMs=0;timerCountMs=0;timerInput='';
+    timerStart=Date.now();timerOn=true;
+  } else {
+    timerOn=false;timerMs=0;timerCountMs=0;timerInput='';
+  }
+  renderTimer();
+}
+
+// ═══════════════════════════════════════
+//  SCREEN SWITCHER
+// ═══════════════════════════════════════
+function showScr(id){
+  ['scr-clock','scr-calc','scr-func','scr-menu','scr-plan','scr-hold-diag'].forEach(function(s){
+    document.getElementById(s).classList.remove('active');
+    document.getElementById(s).style.display='';
+  });
+  var el=document.getElementById(id);
+  el.classList.add('active');
+  el.style.display=(id==='scr-calc')?'flex':'block';
+}
+
+// ═══════════════════════════════════════
+//  CALCULATOR
+// ═══════════════════════════════════════
+function doCalc(){
+  mode='calc';
+  if(cS.fullExpr===undefined)cS.fullExpr='';
+  document.querySelector('.lb-left').textContent='CALC';
+  showScr('scr-calc'); rCalc();
+}
+var calcHist=[];
+var calcLastResult=null;
+var calcDisplay='0';  // big number — only updates on = or unary op
+function decToHMS(h){
+  var neg=h<0; h=Math.abs(h);
+  var hh=Math.floor(h);
+  var mm=Math.floor((h-hh)*60);
+  var ss=Math.round(((h-hh)*60-mm)*60);
+  if(ss===60){mm++;ss=0;} if(mm===60){hh++;mm=0;}
+  var p=function(n){return n<10?'0'+n:''+n;};
+  return (neg?'-':'')+hh+':'+p(mm)+':'+p(ss);
+}
+function safeEvalExpr(e){
+  var s=e.replace(/\u00d7/g,'*').replace(/\u00f7/g,'/').replace(/\u2212/g,'-');
+  // :MM or :MM:SS at start or after operator \u2192 0:MM
+  s=s.replace(/(^|[+\-*/(]):(\d)/g,'$10:$2');
+  // H:MM:SS \u2192 decimal hours (parseInt avoids octal strict-mode error)
+  s=s.replace(/(\d+):(\d+):(\d+)/g,function(_,h,m,sec){
+    return '('+parseInt(h,10)+'+'+parseInt(m,10)+'/60+'+parseInt(sec,10)+'/3600)';
+  });
+  // H:MM \u2192 decimal hours
+  s=s.replace(/(\d+):(\d+)/g,function(_,h,m){
+    return '('+parseInt(h,10)+'+'+parseInt(m,10)+'/60)';
+  });
+  s=s.replace(/[^0-9+\-*/().e ]/g,'');
+  if(!s.trim())return null;
+  try{var r=Function('"use strict";return('+s+')')();return isFinite(r)?r:null;}
+  catch(ex){return null;}
+}
+function rCalc(){
+  var tape=document.getElementById('cx-tape');
+  if(tape){
+    var atBottom=tape.scrollHeight-tape.scrollTop<=tape.clientHeight+4;
+    tape.innerHTML=calcHist.slice().reverse().map(function(h,i){
+      var cls='cx-tape-row'+(i===calcHist.length-1?' cx-tape-recent':'');
+      var MAX=22; var e=h.expr;
+      var eDisp=e.length>MAX?'…'+e.slice(e.length-MAX):e;
+      return '<div class="'+cls+'"><span class="tape-e">'+eDisp+'</span><span class="tape-r"> = '+h.result+'</span></div>';
+    }).join('');
+    if(atBottom||tape.scrollHeight<=tape.clientHeight)tape.scrollTop=tape.scrollHeight;
+  }
+  var curExpr=cS.fullExpr||'';
+  document.getElementById('cx-expr').textContent=curExpr||'\u00a0';
+  var hint=document.getElementById('cx-hint');
+  if(hint){
+    var colonCount=(curExpr.match(/:/g)||[]).length;
+    hint.textContent=colonCount>=2?'H : MM : SS':colonCount===1?'H : MM':'';
+  }
+  var d=calcDisplay;
+  document.getElementById('cx-num').textContent=d.length>13?parseFloat(d).toExponential(4):d;
+}
+function N(k){
+  if(mode==='hold-diag')return;
+  if(mode==='func'){fN(k);return;}
+  if(mode==='clock'){
+    if(k>='0'&&k<='9'&&timerInput.length<6){
+      if(timerOn){timerMs=Date.now()-timerStart;timerOn=false;}
+      timerInput+=k;renderTimer();
+    }
+    return;
+  }
+  if(mode==='plan'){
+    if(k>='0'&&k<='9'&&planInput.length<4){planInput+=k;renderPlan();}
+    return;
+  }
+  doCalc();
+  if(k==='±'){var fe=cS.fullExpr||'';cS.fullExpr=fe?'-('+fe+')':'';rCalc();return;}
+  if(k===':'){
+    var fe=cS.fullExpr||'';
+    var numToConvert=null;
+    if(/^-?[\d.]+$/.test(fe.trim())&&fe.trim()!==''){
+      numToConvert=parseFloat(fe);
+    } else if(!fe&&calcLastResult!==null){
+      numToConvert=calcLastResult;
+    }
+    if(numToConvert!==null&&isFinite(numToConvert)){
+      cS.fullExpr=decToHMS(numToConvert);rCalc();return;
+    }
+    cS.fullExpr=fe+':';rCalc();return;
+  }
+  cS.fullExpr=(cS.fullExpr||'')+k;
+  rCalc();
+}
+function OP(o){
+  if(mode==='func'){return;}
+  doCalc();
+  var fe=cS.fullExpr||'';
+  // Replace trailing operator instead of accumulating (e.g. × then + → +)
+  if(fe.length>0&&/[+\-*\/×÷−]$/.test(fe)){
+    cS.fullExpr=fe.slice(0,-1)+o;
+  } else {
+    cS.fullExpr=fe+o;
+  }
+  rCalc();
+}
+function EQ(){
+  if(mode==='func'){fNext();return;}
+  doCalc();
+  var expr=cS.fullExpr||'';
+  if(!expr)return;
+  var r=safeEvalExpr(expr);
+  if(r!==null){
+    var res=fmt(r);
+    // Don't add to tape if expr is just a bare number (already saved by TR/CV)
+    var bareNum=/^-?[\d.]+(?:e[+\-]?\d+)?$/.test(expr.trim());
+    if(!bareNum){
+      calcHist.unshift({expr:expr,result:res});
+      if(calcHist.length>50)calcHist.pop();
+    }
+    calcLastResult=r;
+    calcDisplay=res;
+    cS.fullExpr='';
+  }else{
+    document.getElementById('cx-expr').textContent='ERR';
+  }
+  rCalc();
+}
+function KC(){
+  if(mode==='func'){fClear();return;}
+  if(mode==='clock'){timerInput='';renderTimer();return;}
+  if(mode==='plan'){
+    if(planInput){planInput='';renderPlan();}
+    else if(planLegIdx===0&&planField===0){planLegs[0].dep='';renderPlan();}
+    else{planLegs[planLegIdx].ete='';renderPlan();}
+    return;
+  }
+  doCalc();
+  if(cS.fullExpr){cS.fullExpr='';}
+  else{var m=cS.mem;cS={d:'0',expr:'',first:null,op:null,fresh:true,mem:m,fullExpr:''};calcDisplay='0';calcLastResult=null;}
+  document.getElementById('cx-unit').textContent='';
+  rCalc();
+}
+function KCE(){
+  if(mode==='func'){
+    var def=FNS[fnId];
+    var fid=def.fields[fnIdx]&&def.fields[fnIdx].id;
+    var hasVal=fid&&(fnData[fid]||fnCarry[fid]);
+    if(hasVal){fClear();}else{fClearAll();}
+    return;
+  }
+  KC();
+}
+function fClearAll(){
+  var def=FNS[fnId];
+  fnData={};fnCarry={};fnUser={};fnUserOrder=[];
+  def.fields.forEach(function(f){if(f.toggle)fnData[f.id]=f.toggle[0];});
+  def.calc(fnData);renderFn();
+}
+function KB(){
+  if(mode==='func'){fBS();return;}
+  if(mode==='clock'){timerInput=timerInput.slice(0,-1);renderTimer();return;}
+  if(mode==='plan'){planInput=planInput.slice(0,-1);renderPlan();return;}
+  doCalc();
+  cS.fullExpr=(cS.fullExpr||'').slice(0,-1);
+  rCalc();
+}
+function calc(a,b,o){
+  if(o==='+')return a+b;if(o==='−')return a-b;if(o==='×')return a*b;
+  if(o==='÷')return b!==0?a/b:NaN;return b;
+}
+function fmt(n){
+  if(n===null||n===undefined||isNaN(n)||!isFinite(n))return 'ERR';
+  var s=parseFloat(n.toPrecision(12)).toString();
+  return s.length>14?n.toExponential(6):s;
+}
+function TR(fn){
+  doCalc();
+  var expr=cS.fullExpr||'';
+  var v=safeEvalExpr(expr);
+  if(v===null)v=0;
+  var d2r=Math.PI/180,r;
+  if(fn==='sin')r=Math.sin(v*d2r);else if(fn==='cos')r=Math.cos(v*d2r);
+  else if(fn==='tan')r=Math.tan(v*d2r);else if(fn==='sqrt')r=Math.sqrt(v);
+  else if(fn==='pct')r=v/100;else r=v;
+  var sym={sqrt:'√',sin:'sin',cos:'cos',tan:'tan',pct:'%'}[fn]||fn;
+  var label=sym+'('+(expr||'0')+')';
+  var res=fmt(r);
+  calcHist.unshift({expr:label,result:res});
+  if(calcHist.length>50)calcHist.pop();
+  calcLastResult=r;
+  calcDisplay=res;
+  cS.fullExpr=res;  // result available for chaining (e.g. √32 then ×2)
+  rCalc();
+}
+
+// ═══════════════════════════════════════
+//  UNIT CONVERSIONS (calculator)
+// ═══════════════════════════════════════
+var CVT={
+  'NM→KM':function(x){return x*1.852;},
+  'KM→NM':function(x){return x/1.852;},
+  'SM→NM':function(x){return x*0.868976;},
+  'NM→SM':function(x){return x*1.15078;},
+  'C→F':function(x){return x*1.8+32;},
+  'F→C':function(x){return(x-32)/1.8;},
+  'GAL→L':function(x){return x*3.78541;},
+  'L→GAL':function(x){return x/3.78541;},
+  'FT→M':function(x){return x*0.3048;},
+  'M→FT':function(x){return x/0.3048;},
+  'KT→MPH':function(x){return x*1.15078;},
+  'MPH→KT':function(x){return x*0.868976;},
+  'LB→KG':function(x){return x*0.453592;},
+  'KG→LB':function(x){return x*2.20462;},
+  'INHG→HPA':function(x){return x*33.8639;},
+  'HPA→INHG':function(x){return x/33.8639;},
+};
+function CV(from,to){
+  doCalc();
+  var expr=cS.fullExpr||'';
+  var v=safeEvalExpr(expr);
+  if(v===null){v=(calcLastResult!==null&&!expr)?calcLastResult:0;}
+  var key=from+'→'+to,fn=CVT[key];
+  if(!fn){key=to+'→'+from;fn=CVT[key];}
+  if(fn){
+    var res=fmt(fn(v));
+    calcHist.unshift({expr:(expr||'0')+' '+from+'→'+to,result:res});
+    if(calcHist.length>50)calcHist.pop();
+    calcLastResult=fn(v);
+    cS.fullExpr=res;
+    document.getElementById('cx-unit').textContent=to;rCalc();
+  }
+}
+
+// ═══════════════════════════════════════
+//  CONV UNIT — cycles unit for active field, converts stored value
+// ═══════════════════════════════════════
+// Universal conversion table between unit pairs
+var UC = {
+  // Length / altitude
+  'FT':   {'M':    function(x){return x*0.3048;},   'NM':function(x){return x/6076.12;}},
+  'M':    {'FT':   function(x){return x/0.3048;},   'NM':function(x){return x/1852;}},
+  // Pressure
+  'IN HG':{'HPA':  function(x){return x*33.8639;},  'MB':function(x){return x*33.8639;}},
+  'HPA':  {'IN HG':function(x){return x/33.8639;},  'MB':function(x){return x;}},
+  'MB':   {'IN HG':function(x){return x/33.8639;},  'HPA':function(x){return x;}},
+  // Temperature
+  '°F':   {'°C':   function(x){return(x-32)/1.8;}},
+  '°C':   {'°F':   function(x){return x*1.8+32;}},
+  // Volume
+  'US GAL':{'IMP GAL':function(x){return x*0.832674;},'LITERS':function(x){return x*3.78541;},'LBS':function(x){return x*6.0;}},
+  'IMP GAL':{'US GAL':function(x){return x/0.832674;},'LITERS':function(x){return x*4.54609;},'LBS':function(x){return x*7.20;}},
+  'LITERS': {'US GAL':function(x){return x/3.78541;},'IMP GAL':function(x){return x/4.54609;},'LBS':function(x){return x*1.5855;}},
+  // Weight
+  'LBS':  {'KGS':  function(x){return x*0.453592;}},
+  'KGS':  {'LBS':  function(x){return x/0.453592;}},
+  'LBS/HR':{'KGS/HR':function(x){return x*0.453592;}},
+  'KGS/HR':{'LBS/HR':function(x){return x/0.453592;}},
+  // Speed
+  'KTS':  {'MPH':  function(x){return x*1.15078;},  'KPH':function(x){return x*1.852;}},
+  'MPH':  {'KTS':  function(x){return x*0.868976;}, 'KPH':function(x){return x*1.60934;}},
+  'KPH':  {'KTS':  function(x){return x/1.852;},    'MPH':function(x){return x/1.60934;}},
+  // Flow
+  'US GPH':{'IMP GPH':function(x){return x*0.832674;},'LPH':function(x){return x*3.78541;},'PPH':function(x){return x*6.0;}},
+  'IMP GPH':{'US GPH':function(x){return x/0.832674;},'LPH':function(x){return x*4.54609;}},
+  'LPH':  {'US GPH':function(x){return x/3.78541;},'IMP GPH':function(x){return x/4.54609;}},
+  'PPH':  {'US GPH':function(x){return x/6.0;}},
+  // Distance
+  'NM':   {'SM':   function(x){return x*1.15078;},  'KM':function(x){return x*1.852;}},
+  'SM':   {'NM':   function(x){return x*0.868976;}, 'KM':function(x){return x*1.60934;}},
+  'KM':   {'NM':   function(x){return x/1.852;},    'SM':function(x){return x/1.60934;}},
+  // Duration
+  'HR':   {'MIN':  function(x){return x*60;}},
+  'MIN':  {'HR':   function(x){return x/60;}},
+  // Climb
+  'FPM':  {'M/MIN':function(x){return x*0.3048;}},
+  'M/MIN':{'FPM':  function(x){return x/0.3048;}},
+};
+
+function convUnit(){
+  if(mode!=='func')return;
+  var def=FNS[fnId]; if(!def)return;
+  // All fields (inputs + outputs) are cycled — active field index over all fields
+  var inF=def.fields.filter(function(f){return!f.out;});
+  if(fnIdx>=inF.length)return;
+  var field=inF[fnIdx];
+  if(!field.units||field.units.length<2)return;
+
+  var curUnit=field.unit;
+  var curIdx=field.units.indexOf(curUnit);
+  var nextIdx=(curIdx+1)%field.units.length;
+  var nextUnit=field.units[nextIdx];
+
+  // Convert stored value if present
+  if(isTimeUnit(curUnit)&&isTimeUnit(nextUnit)){
+    var hrs=timeToHr(fnData[field.id],curUnit);
+    if(isFinite(hrs)&&!isNaN(hrs))fnData[field.id]=hrToUnit(hrs,nextUnit);
+  } else {
+    var val=pf(fnData[field.id]);
+    if(ok(val)){
+      var convFn=UC[curUnit]&&UC[curUnit][nextUnit];
+      if(!convFn&&field.unitConv&&field.unitConv[curUnit]&&field.unitConv[curUnit][nextUnit]){
+        convFn=field.unitConv[curUnit][nextUnit];
+      }
+      if(convFn){
+        var converted=convFn(val);
+        if(Math.abs(converted)>=10) fnData[field.id]=fmt(Math.round(converted*100)/100);
+        else fnData[field.id]=fmt(Math.round(converted*1000)/1000);
+      }
+    }
+  }
+  field.unit=nextUnit;
+  runFnCalc();
+  renderFn();
+}
+
+// ═══════════════════════════════════════
+//  SET UNIT — cycles unit globally (affects all modules with same unit set)
+// ═══════════════════════════════════════
+function setUnitGlobal(){
+  if(mode!=='func')return;
+  var def=FNS[fnId]; if(!def)return;
+  var inF=def.fields.filter(function(f){return!f.out;});
+  if(fnIdx>=inF.length)return;
+  var field=inF[fnIdx];
+  if(!field.units||field.units.length<2)return;
+  var curUnit=field.unit;
+  var curIdx=field.units.indexOf(curUnit);
+  var nextIdx=(curIdx+1)%field.units.length;
+  var nextUnit=field.units[nextIdx];
+  // Convert stored value (same as convUnit)
+  if(isTimeUnit(curUnit)&&isTimeUnit(nextUnit)){
+    var hrs=timeToHr(fnData[field.id],curUnit);
+    if(isFinite(hrs)&&!isNaN(hrs))fnData[field.id]=hrToUnit(hrs,nextUnit);
+  } else {
+    var val=pf(fnData[field.id]);
+    if(ok(val)){
+      var convFn=(UC[curUnit]&&UC[curUnit][nextUnit])||(field.unitConv&&field.unitConv[curUnit]&&field.unitConv[curUnit][nextUnit]);
+      if(convFn){var cv=convFn(val);fnData[field.id]=fmt(Math.abs(cv)>=10?Math.round(cv*100)/100:Math.round(cv*1000)/1000);}
+    }
+  }
+  field.unit=nextUnit;
+  // Store global preference — keyed by sorted unit list so all fields with same options share it
+  var key=field.units.slice().sort().join('|');
+  globalUnitPref[key]=nextUnit;
+  runFnCalc();renderFn();
+}
+
+// ═══════════════════════════════════════
+//  FUNCTION DEFINITIONS
+//  Each field: {id, lbl, unit, units[], unitConv{}, out:bool}
+//  icon: 'inp' = orange ◈, 'out' = green ◉
+// ═══════════════════════════════════════
+var FNS={
+
+  // ── ALTITUDE / TAS / MACH ──
+  ALT:{
+    title:'ALT / TAS / MACH',
+    fields:[
+      {id:'ia',   lbl:'IAlt',  unit:'FT',   units:['FT','M'],
+        unitConv:{'FT':{'M':function(x){return x*0.3048;}},'M':{'FT':function(x){return x/0.3048;}}},
+        out:false},
+      {id:'baro', lbl:'Baro',  unit:'IN HG',units:['IN HG','HPA','MB'],
+        unitConv:{'IN HG':{'HPA':function(x){return x*33.8639;},'MB':function(x){return x*33.8639;}},'HPA':{'IN HG':function(x){return x/33.8639;},'MB':function(x){return x;}},'MB':{'IN HG':function(x){return x/33.8639;},'HPA':function(x){return x;}}},
+        out:false},
+      {id:'pa',   lbl:'PAlt',  unit:'FT',   units:['FT','M'], out:true},
+      {id:'oat',  lbl:'OAT',   unit:'°C',   units:['°C','°F'],
+        unitConv:{'°C':{'°F':function(x){return x*1.8+32;}},'°F':{'°C':function(x){return(x-32)/1.8;}}},
+        out:false},
+      {id:'da',   lbl:'DAlt',  unit:'FT',   units:['FT','M'], out:true},
+      {id:'cas',  lbl:'CAS',   unit:'KTS',  units:['KTS','MPH'],
+        unitConv:{'KTS':{'MPH':function(x){return x*1.15078;}},'MPH':{'KTS':function(x){return x*0.868976;}}},
+        out:false},
+      {id:'tas',  lbl:'TAS',   unit:'KTS',  units:['KTS','MPH'], out:true},
+      {id:'mach', lbl:'MACH',  unit:'',     units:[''], out:true},
+    ],
+    calc:function(f){
+      var ia=pf(f.ia),baro=pf(f.baro),oatRaw=pf(f.oat),cas=pf(f.cas);
+      var iaF=this.fields[0],baroField=this.fields[1],oatField=this.fields[3],casField=this.fields[5],tasField=this.fields[6];
+      var iaFt=iaF.unit==='M'?ia/0.3048:ia;
+      var baroInHg=(baroField.unit==='HPA'||baroField.unit==='MB')?baro/33.8639:baro;
+      var oatC=oatField.unit==='°F'?(oatRaw-32)/1.8:oatRaw;
+      if(ok(iaFt)&&ok(baro)){
+        var pa=Math.round(iaFt+(29.9215-baroInHg)*926.9231);
+        f.pa=fmt(this.fields[2].unit==='M'?Math.round(pa*0.3048):pa);
+        if(ok(oatC)){
+          var P=29.92126*Math.pow(1-6.8755856e-6*pa,5.2559);
+          var rho_ratio=(P/29.92126)*(288.15/(oatC+273.15));
+          var daFt=Math.floor(145442*(1-Math.pow(rho_ratio,0.235)));
+          f.da=fmt(this.fields[4].unit==='M'?Math.round(daFt*0.3048):daFt);
+          if(ok(cas)){
+            var casKt=casField.unit==='MPH'?cas*0.868976:cas;
+            var T=oatC+273.15;
+            var tasKt=casKt*Math.sqrt(T/288.15)/Math.sqrt(P/29.92126);
+            f.tas=fmt(Math.round(tasField.unit==='MPH'?tasKt*1.15078:tasKt));
+            f.mach=fmt(Math.round(tasKt/Math.sqrt(1.4*287.05*T)*514.444)/1000);
+          } else {f.tas='';f.mach='';}
+        } else {f.da='';f.tas='';f.mach='';}
+      } else {f.pa='';f.da='';f.tas='';f.mach='';}
+    }
+  },
+
+  // ── CLOUD BASE ──
+  CLOUD:{
+    title:'CLOUD BASE',
+    fields:[
+      {id:'oat', lbl:'OAT',    unit:'°C',  units:['°C','°F'],
+        unitConv:{'°C':{'°F':function(x){return x*1.8+32;}},'°F':{'°C':function(x){return(x-32)/1.8;}}},
+        out:false},
+      {id:'dp',  lbl:'Dew Pt', unit:'°C',  units:['°C','°F'],
+        unitConv:{'°C':{'°F':function(x){return x*1.8+32;}},'°F':{'°C':function(x){return(x-32)/1.8;}}},
+        out:false},
+      {id:'base',lbl:'Cld Base',unit:'FT', units:['FT','M'], out:true},
+    ],
+    calc:function(f){
+      var oatF=this.fields[0],dpF=this.fields[1];
+      var oatRaw=pf(f.oat),dpRaw=pf(f.dp);
+      var oatC=oatF.unit==='°F'?(oatRaw-32)/1.8:oatRaw;
+      var dpC=dpF.unit==='°F'?(dpRaw-32)/1.8:dpRaw;
+      if(ok(oatC)&&ok(dpC)){
+        var aglFt=Math.round((oatC-dpC)/2.5*1000);
+        f.base=this.fields[2].unit==='M'?fmt(Math.round(aglFt*0.3048)):fmt(aglFt);
+      } else f.base='';
+    }
+  },
+
+  // ── STANDARD ATMOSPHERE / ISA ──
+  STDATM:{
+    title:'STD ATMOSPHERE',
+    fields:[
+      {id:'alt', lbl:'Alt',     unit:'FT',   units:['FT','M'],
+        unitConv:{'FT':{'M':function(x){return x*0.3048;}},'M':{'FT':function(x){return x/0.3048;}}},
+        out:false},
+      {id:'oat', lbl:'ISA OAT', unit:'°C',   units:['°C','°F'], out:true},
+      {id:'inhg',lbl:'Pressure',unit:'IN HG',units:['IN HG'], out:true},
+      {id:'mb',  lbl:'Pressure',unit:'MB',   units:['MB'],    out:true},
+    ],
+    calc:function(f){
+      var altF=this.fields[0],oatF=this.fields[1];
+      var altRaw=pf(f.alt);
+      if(!ok(altRaw)){f.oat='';f.inhg='';f.mb='';return;}
+      var altFt=altF.unit==='M'?altRaw/0.3048:altRaw;
+      var tC=isaTemp(altFt);
+      f.oat=oatF.unit==='°F'?fmt(Math.round((tC*1.8+32)*10)/10):fmt(Math.round(tC*10)/10);
+      var pInHg=isaPress(altFt);
+      f.inhg=fmt(Math.round(pInHg*100)/100);
+      f.mb=fmt(Math.round(pInHg*33.8639*10)/10);
+    }
+  },
+
+  // ── AIRSPEED ──
+  AIRSPEED:{
+    title:'AIRSPEED',
+    fields:[
+      {id:'cas',  lbl:'CAS',  unit:'KTS', units:['KTS','MPH'],
+        unitConv:{'KTS':{'MPH':function(x){return x*1.15078;}},'MPH':{'KTS':function(x){return x*0.868976;}}},
+        out:false},
+      {id:'oat',  lbl:'OAT',  unit:'°C',  units:['°C','°F'],
+        unitConv:{'°C':{'°F':function(x){return x*1.8+32;}},'°F':{'°C':function(x){return(x-32)/1.8;}}},
+        out:false},
+      {id:'tat',  lbl:'TAT',  unit:'°C',  units:['°C','°F'],
+        unitConv:{'°C':{'°F':function(x){return x*1.8+32;}},'°F':{'°C':function(x){return(x-32)/1.8;}}},
+        out:false},
+      {id:'pa',   lbl:'PAlt', unit:'FT',  units:['FT','M'],
+        unitConv:{'FT':{'M':function(x){return x*0.3048;}},'M':{'FT':function(x){return x/0.3048;}}},
+        out:false},
+      {id:'mach', lbl:'MACH', unit:'',    units:[''], out:false},
+      {id:'tas',  lbl:'TAS',  unit:'KTS', units:['KTS','MPH'],
+        unitConv:{'KTS':{'MPH':function(x){return x*1.15078;}},'MPH':{'KTS':function(x){return x*0.868976;}}},
+        out:false},
+    ],
+    calc:function(f){
+      var casF=this.fields[0],oatF=this.fields[1],tatF=this.fields[2],paF=this.fields[3],tasF=this.fields[5];
+      var cas=pf(f.cas),oatRaw=pf(f.oat),tatRaw=pf(f.tat),pa=pf(f.pa),mach=pf(f.mach);
+      var casKt=casF.unit==='MPH'?cas*0.868976:cas;
+      var oatC=oatF.unit==='°F'?(oatRaw-32)/1.8:oatRaw;
+      var tatC=tatF.unit==='°F'?(tatRaw-32)/1.8:tatRaw;
+      var paFt=paF.unit==='M'?pa/0.3048:pa;
+      function sos(T){return Math.sqrt(1.4*287.05*T)/0.514444;}
+      function dispT(c,field){return field.unit==='°F'?fmt(Math.round((c*1.8+32)*10)/10):fmt(Math.round(c*10)/10);}
+      function dispTAS(kt){return tasF.unit==='MPH'?fmt(Math.round(kt*1.15078)):fmt(Math.round(kt));}
+      // only write to fields that are currently empty
+      function empty(id){return !f[id]||f[id]==='';}
+      // Mode 1: CAS + OAT + PA → TAS, MACH, TAT  (planned)
+      // Always recompute when all three primary inputs are present — avoids stale
+      // outputs from digit-by-digit entry blocking a fresh computation.
+      if(ok(casKt)&&ok(oatC)&&ok(paFt)){
+        var P=isaPress(paFt),T=oatC+273.15;
+        var tk=casKt*Math.sqrt(T/288.15)/Math.sqrt(P/29.92126);
+        var m=tk/sos(T);
+        f.tas=dispTAS(tk);
+        f.mach=fmt(Math.round(m*1000)/1000);
+        f.tat=dispT(T*(1+0.2*m*m)-273.15,tatF);
+        return;
+      }
+      // Mode 2: CAS + TAT + PA → TAS, MACH, OAT  (actual)
+      if(ok(casKt)&&ok(tatC)&&ok(paFt)&&empty('oat')&&empty('mach')&&empty('tas')){
+        var P=isaPress(paFt),T_tat=tatC+273.15;
+        var tk=casKt*Math.sqrt(T_tat/288.15)/Math.sqrt(P/29.92126);
+        var m=tk/sos(T_tat),T_oat;
+        for(var i=0;i<3;i++){T_oat=T_tat/(1+0.2*m*m);tk=casKt*Math.sqrt(T_oat/288.15)/Math.sqrt(P/29.92126);m=tk/sos(T_oat);}
+        f.tas=dispTAS(tk);
+        if(empty('mach'))f.mach=fmt(Math.round(m*1000)/1000);
+        if(empty('oat'))f.oat=dispT(T_oat-273.15,oatF);
+        return;
+      }
+      // Mode 3: MACH + OAT → TAS, TAT  (planned mach)
+      if(ok(mach)&&ok(oatC)&&empty('cas')&&empty('tat')&&empty('tas')){
+        var T=oatC+273.15,tk=mach*sos(T);
+        if(empty('tas'))f.tas=dispTAS(tk);
+        if(empty('tat'))f.tat=dispT(T*(1+0.2*mach*mach)-273.15,tatF);
+        return;
+      }
+      // Mode 4: MACH + TAT → TAS, OAT  (actual mach)
+      if(ok(mach)&&ok(tatC)&&empty('cas')&&empty('oat')&&empty('tas')){
+        var T_tat=tatC+273.15,T_oat=T_tat/(1+0.2*mach*mach),tk=mach*sos(T_oat);
+        if(empty('tas'))f.tas=dispTAS(tk);
+        if(empty('oat'))f.oat=dispT(T_oat-273.15,oatF);
+        return;
+      }
+    }
+  },
+
+  // ── FUEL (Photo 5) ──
+  FUEL:{
+    title:'FUEL',
+    fields:[
+      {id:'vol',  lbl:'Vol',  unit:'US GAL',units:['US GAL','IMP GAL','LITERS','LBS'],
+        unitConv:{
+          'US GAL':{'IMP GAL':function(x){return x*0.832674;},'LITERS':function(x){return x*3.78541;},'LBS':function(x){return x*6.0;}},
+          'IMP GAL':{'US GAL':function(x){return x/0.832674;},'LITERS':function(x){return x*4.54609;},'LBS':function(x){return x*7.2;}},
+          'LITERS':{'US GAL':function(x){return x/3.78541;},'IMP GAL':function(x){return x/4.54609;},'LBS':function(x){return x*1.5855;}},
+          'LBS':{'US GAL':function(x){return x/6.0;},'IMP GAL':function(x){return x/7.2;},'LITERS':function(x){return x/1.5855;}},
+        },
+        out:false},
+      {id:'dur',  lbl:'Dur',  unit:'HR',   units:['HR','HMS','S','MIN'], out:false},
+      {id:'rate', lbl:'Rate', unit:'US GPH',units:['US GPH','IMP GPH','LPH','PPH'],out:false},
+      {id:'wt',   lbl:'Wt',   unit:'LBS',  units:['LBS','KGS'], out:false},
+      {id:'rateW',lbl:'Rate', unit:'LBS/HR',units:['LBS/HR','KGS/HR'], out:false},
+      {id:'type', lbl:'Type', unit:'Av Gas',units:['Av Gas','Jet-A','Diesel'],
+        unitConv:null, out:true},
+    ],
+    calc:function(f){
+      var vol=pf(f.vol), rate=pf(f.rate);
+      var volField=this.fields[0], durField=this.fields[1], rateField=this.fields[2];
+      var wtField=this.fields[3], rateWField=this.fields[4];
+      // Determine fuel type weight per gallon first (needed for LBS/PPH normalization)
+      var typeField=this.fields[5];
+      var lbPerGal=typeField.unit==='Jet-A'?6.7:6.0;
+      // Normalize to US gal and hours
+      var volGal=vol, durHr=timeToHr(f.dur,durField.unit), rateGph=rate;
+      if(volField.unit==='LITERS')  volGal=vol/3.78541;
+      if(volField.unit==='IMP GAL') volGal=vol/0.832674;
+      if(volField.unit==='LBS')     volGal=vol/lbPerGal;
+      if(rateField.unit==='LPH')    rateGph=rate/3.78541;
+      if(rateField.unit==='IMP GPH')rateGph=rate/0.832674;
+      if(rateField.unit==='PPH')    rateGph=rate/lbPerGal;
+
+      if(ok(volGal)&&ok(rateGph)&&rateGph>0){
+        durHr=volGal/rateGph;
+        f.dur=hrToUnit(durHr,durField.unit);
+        var wtLbs=volGal*lbPerGal;
+        f.wt=fmt(Math.round(wtField.unit==='KGS'?wtLbs*0.453592:wtLbs));
+        var rWLbs=rateGph*lbPerGal;
+        f.rateW=fmt(Math.round(rateWField.unit==='KGS/HR'?rWLbs*0.453592:rWLbs));
+      } else if(ok(durHr)&&ok(rateGph)&&rateGph>0){
+        volGal=durHr*rateGph;
+        var volDisp=volField.unit==='LITERS'?volGal*3.78541:volField.unit==='IMP GAL'?volGal*0.832674:volField.unit==='LBS'?volGal*lbPerGal:volGal;
+        f.vol=fmt(volDisp);
+        var wtLbs=volGal*lbPerGal;
+        f.wt=fmt(Math.round(wtField.unit==='KGS'?wtLbs*0.453592:wtLbs));
+      }
+    }
+  },
+
+  // ── TSD ──
+  TSD:{
+    title:'TIME·SPEED·DIST',
+    fields:[
+      {id:'dist',lbl:'Dist', unit:'NM',  units:['NM','SM','KM'],
+        unitConv:{'NM':{'SM':function(x){return x*1.15078;},'KM':function(x){return x*1.852;}},'SM':{'NM':function(x){return x*0.868976;},'KM':function(x){return x*1.60934;}},'KM':{'NM':function(x){return x/1.852;},'SM':function(x){return x/1.60934;}}},
+        out:false},
+      {id:'gs',  lbl:'GS',  unit:'KTS', units:['KTS','MPH','KPH'], out:false},
+      {id:'time',lbl:'Time',unit:'HR',units:['HR','HMS','S','MIN'],  out:false},
+    ],
+    calc:function(f){
+      var distF=this.fields[0],gsF=this.fields[1];
+      var d=pf(f.dist),s=pf(f.gs);
+      // Normalize to NM and KTS before any calculation
+      var dNm=distF.unit==='SM'?d*0.868976:distF.unit==='KM'?d/1.852:d;
+      var sKt=gsF.unit==='MPH'?s*0.868976:gsF.unit==='KPH'?s/1.852:s;
+      var timeF=this.fields[2];
+      var tHr=timeToHr(f.time,timeF.unit),tOk=isFinite(tHr)&&tHr>0;
+      var dOk=ok(dNm)&&dNm>=0,sOk=ok(sKt)&&sKt>0;
+      if(!f.time||f.time===''){
+        if(dOk&&sOk){f.time=hrToUnit(dNm/sKt,timeF.unit);}
+      } else if(!f.dist||f.dist===''){
+        if(tOk&&sOk){
+          var nm=tHr*sKt;
+          var dDisp=distF.unit==='SM'?nm*1.15078:distF.unit==='KM'?nm*1.852:nm;
+          f.dist=fmt(Math.round(dDisp*10)/10);
+        }
+      } else if(!f.gs||f.gs===''){
+        if(dOk&&tOk&&tHr>0){
+          var kt=dNm/tHr;
+          var sDisp=gsF.unit==='MPH'?kt*1.15078:gsF.unit==='KPH'?kt*1.852:kt;
+          f.gs=fmt(Math.round(sDisp));
+        }
+      } else {
+        if(dOk&&sOk){f.time=hrToUnit(dNm/sKt,timeF.unit);}
+      }
+    }
+  },
+
+  // ── WIND ──
+  WIND:{
+    title:'HEADING & WIND',
+    fields:[
+      {id:'tc',  lbl:'True Crs',  unit:'°T', units:['°T'], out:false},
+      {id:'tas', lbl:'TAS',        unit:'KTS',units:['KTS','MPH'], out:false},
+      {id:'wd',  lbl:'Wind Dir',   unit:'°T', units:['°T'], out:false},
+      {id:'ws',  lbl:'Wind Spd',   unit:'KTS',units:['KTS','MPH'], out:false},
+      {id:'wca', lbl:'Wind Corr',  unit:'°',  units:['°'],  out:true},
+      {id:'mh',  lbl:'True Hdg',   unit:'°T', units:['°T'], out:true},
+      {id:'gs',  lbl:'GS',         unit:'KTS',units:['KTS'], out:true},
+      {id:'hw',  lbl:'Headwind',   unit:'KTS',units:['KTS'], out:true},
+      {id:'xw',  lbl:'Crosswind',  unit:'KTS',units:['KTS'], out:true},
+    ],
+    calc:function(f){
+      var tasF=this.fields[1],wsF=this.fields[3];
+      var tc=pf(f.tc),tasRaw=pf(f.tas),wd=pf(f.wd),wsRaw=pf(f.ws);
+      // Normalize to KTS for all vector calculations
+      var tas=tasF.unit==='MPH'?tasRaw*0.868976:tasRaw;
+      var ws=wsF.unit==='MPH'?wsRaw*0.868976:wsRaw;
+      if([tc,tas,wd,ws].every(ok)&&tas>0){
+        var swca=ws*Math.sin((wd-tc)*Math.PI/180)/tas;
+        if(Math.abs(swca)<=1){
+          var wca=Math.asin(swca)*180/Math.PI;
+          var mh=((tc+wca)%360+360)%360;
+          var gsKt=tas*Math.cos(wca*Math.PI/180)-ws*Math.cos((wd-tc)*Math.PI/180);
+          f.wca=fmt(wca);f.mh=fmt(Math.round(mh));f.gs=fmt(Math.round(gsKt));
+          f.hw=fmt(ws*Math.cos((wd-tc)*Math.PI/180));
+          f.xw=fmt(ws*Math.sin((wd-tc)*Math.PI/180));
+          return;
+        }
+      }
+      f.wca='';f.mh='';f.gs='';f.hw='';f.xw='';
+    }
+  },
+
+  // ── GLIDE ──
+  GLIDE:{
+    title:'GLIDE',
+    fields:[
+      {id:'rat', lbl:'Glide Rat', unit:':1', units:[':1'], out:false},
+      {id:'desc',lbl:'Desc',      unit:'FT', units:['FT','M'],
+        unitConv:{'FT':{'M':function(x){return x*0.3048;}},'M':{'FT':function(x){return x/0.3048;}}},
+        out:false},
+      {id:'dist',lbl:'Glide Dist',unit:'NM', units:['NM','SM','KM'],
+        unitConv:{'NM':{'SM':function(x){return x*1.15078;},'KM':function(x){return x*1.852;}},'SM':{'NM':function(x){return x*0.868976;},'KM':function(x){return x*1.60934;}},'KM':{'NM':function(x){return x/1.852;},'SM':function(x){return x/1.60934;}}},
+        out:false},
+    ],
+    calc:function(f){
+      var descF=this.fields[1],distF=this.fields[2];
+      var rat=pf(f.rat),descRaw=pf(f.desc),distRaw=pf(f.dist);
+      var descFt=descF.unit==='M'?descRaw/0.3048:descRaw;
+      var distNm=distF.unit==='SM'?distRaw*0.868976:(distF.unit==='KM'?distRaw/1.852:distRaw);
+      function nmToDisp(nm){return distF.unit==='SM'?nm*1.15078:distF.unit==='KM'?nm*1.852:nm;}
+
+      if(!f.dist||f.dist===''){
+        if(ok(rat)&&rat>0&&ok(descFt)){var nm=rat*descFt/6076.12;f.dist=fmt(Math.round(nmToDisp(nm)*100)/100);}
+      } else if(!f.desc||f.desc===''){
+        if(ok(rat)&&rat>0&&ok(distNm)){
+          var ft=distNm*6076.12/rat;
+          f.desc=descF.unit==='M'?fmt(Math.round(ft*0.3048)):fmt(Math.round(ft));
+        }
+      } else if(!f.rat||f.rat===''){
+        if(ok(descFt)&&descFt>0&&ok(distNm)){f.rat=fmt(Math.round(distNm*6076.12/descFt*10)/10);}
+      } else {
+        if(ok(rat)&&rat>0&&ok(descFt)){var nm=rat*descFt/6076.12;f.dist=fmt(Math.round(nmToDisp(nm)*100)/100);}
+      }
+    }
+  },
+
+  // ── CLIMB & DESCENT ──
+  CLIMB:{
+    title:'CLIMB & DESCENT',
+    fields:[
+      {id:'dist',lbl:'Dist',     unit:'NM',  units:['NM','SM','KM'],   out:false},
+      {id:'desc',lbl:'Alt Chg',  unit:'FT',  units:['FT','M'],
+        unitConv:{'FT':{'M':function(x){return x*0.3048;}},'M':{'FT':function(x){return x/0.3048;}}},
+        out:false},
+      {id:'gs',  lbl:'GS',       unit:'KTS', units:['KTS','MPH'],      out:false},
+      {id:'fpm', lbl:'RoC/D',    unit:'FPM', units:['FPM','M/MIN'],    out:false},
+      {id:'aocd',lbl:'AoC/D',    unit:'FT/NM',units:['FT/NM'],         out:true},
+      {id:'rat', lbl:'Ratio',    unit:':1',  units:[':1'],             out:true},
+      {id:'time',lbl:'Time to Alt',unit:'MIN',units:['MIN'],            out:true},
+    ],
+    calc:function(f){
+      var distF=this.fields[0],descF=this.fields[1],gsF=this.fields[2],fpmF=this.fields[3];
+      var dist=pf(f.dist),descRaw=pf(f.desc),gsRaw=pf(f.gs),fpmRaw=pf(f.fpm);
+      var distNm=distF.unit==='SM'?dist*0.868976:(distF.unit==='KM'?dist/1.852:dist);
+      var descFt=descF.unit==='M'?descRaw/0.3048:descRaw;
+      // Normalize GS to KTS and RoC/D to FPM
+      var gs=gsF.unit==='MPH'?gsRaw*0.868976:gsRaw;
+      var fpm=fpmF.unit==='M/MIN'?fpmRaw/0.3048:fpmRaw;
+
+      // From Dist + Desc → AoC/D + Rat
+      if(ok(distNm)&&distNm>0&&ok(descFt)&&descFt>0){
+        var aocd=descFt/distNm;
+        f.aocd=fmt(Math.round(aocd*100)/100);
+        f.rat=fmt(Math.round(distNm*6076.12/descFt*10)/10);
+        // GS → RoC/D
+        if(ok(gs)&&gs>0){
+          var roc=aocd*gs/60; // FPM
+          f.fpm=fmt(Math.round(fpmF.unit==='M/MIN'?roc*0.3048:roc));
+          f.time=fmt(Math.round(descFt/roc));
+        } else if(ok(fpm)&&fpm>0){
+          var gsKt=fpm*60/aocd;
+          f.gs=fmt(Math.round(gsF.unit==='MPH'?gsKt*1.15078:gsKt));
+          f.time=fmt(Math.round(descFt/fpm));
+        } else {f.time='';}
+      } else if(ok(gs)&&gs>0&&ok(fpm)&&fpm>0){
+        // From GS + RoC/D → AoC/D
+        var aocd=fpm*60/gs;
+        f.aocd=fmt(Math.round(aocd*100)/100);
+        f.rat=fmt(Math.round(6076.12/aocd*10)/10);
+        if(ok(descFt)&&descFt>0){f.time=fmt(Math.round(descFt/fpm));}
+        else f.time='';
+      } else {f.aocd='';f.rat='';f.time='';}
+    }
+  },
+
+  // ── WEIGHT & BALANCE ──
+  WB:{
+    title:'WEIGHT & BALANCE',
+    fields:[
+      {id:'w1',lbl:'Weight 1 (Pilot)',unit:'LBS',units:['LBS','KGS'],out:false},
+      {id:'a1',lbl:'Arm 1',           unit:'IN', units:['IN'],       out:false},
+      {id:'w2',lbl:'Weight 2 (Pax)',  unit:'LBS',units:['LBS','KGS'],out:false},
+      {id:'a2',lbl:'Arm 2',           unit:'IN', units:['IN'],       out:false},
+      {id:'w3',lbl:'Fuel Weight',     unit:'LBS',units:['LBS','KGS'],out:false},
+      {id:'a3',lbl:'Fuel Arm',        unit:'IN', units:['IN'],       out:false},
+      {id:'w4',lbl:'Baggage Wt',      unit:'LBS',units:['LBS','KGS'],out:false},
+      {id:'a4',lbl:'Baggage Arm',     unit:'IN', units:['IN'],       out:false},
+      {id:'tow',lbl:'Total Weight',   unit:'LBS',units:['LBS'],      out:true},
+      {id:'cg', lbl:'CG Location',    unit:'IN', units:['IN'],       out:true},
+      {id:'mom',lbl:'Total Moment',   unit:'LB·IN',units:['LB·IN'],  out:true},
+    ],
+    calc:function(f){
+      var tw=0,tm=0;
+      var wFields=[this.fields[0],this.fields[2],this.fields[4],this.fields[6]];
+      for(var i=1;i<=4;i++){
+        var wRaw=pf(f['w'+i])||0;
+        var wLbs=wFields[i-1].unit==='KGS'?wRaw/0.453592:wRaw;
+        var a=pf(f['a'+i])||0;
+        tw+=wLbs;tm+=wLbs*a;
+      }
+      f.tow=fmt(tw);f.cg=tw>0?fmt(tm/tw):'';f.mom=fmt(tm);
+    }
+  },
+
+  // ── HOLDING ──
+  HOLD:{
+    title:'HOLDING PATTERN',
+    fields:[
+      {id:'dir',  lbl:'Turn Dir',    unit:'',  units:[''],  toggle:['Right','Left'], out:false},
+      {id:'head', lbl:'Head',        unit:'°', units:['°'], out:false},
+      {id:'ctype',lbl:'Crs Type',    unit:'',  units:[''],  toggle:['Outbound','Inbound'], out:false},
+      {id:'hold', lbl:'Hold',        unit:'°', units:['°'], out:false},
+      {id:'entry',lbl:'Entry',       unit:'',  units:[''],  out:true},
+      {id:'inb',  lbl:'Inbound',     unit:'°', units:['°'], out:true},
+      {id:'legT', lbl:'Leg Time',    unit:'MIN',units:['MIN'],out:false},
+    ],
+    calc:function(f){
+      var right=(!f.dir||f.dir==='Right');
+      var head=pf(f.head),hold=pf(f.hold);
+      if(!ok(head)||!ok(hold)){f.entry='';f.inb='';f.legT='';return;}
+      hold=((hold%360)+360)%360; head=((head%360)+360)%360;
+      // Crs Type: Outbound = Hold es rumbo de salida (conv. CX-3)
+      //           Inbound  = Hold es rumbo de entrada
+      var isOut=(!f.ctype||f.ctype==='Outbound');
+      var inbound=isOut?((hold+180)%360):hold;
+      inbound=((inbound%360)+360)%360;
+      var d=((head-inbound)+360)%360;
+      var entry;
+      if(right) entry=(d<110||d>=290)?'DIRECT':(d<180?'TEARDROP':'PARALLEL');
+      else      entry=(d<110||d>=290)?'DIRECT':(d<180?'PARALLEL':'TEARDROP');
+      f.entry=entry;
+      f.inb=fmt(Math.round(inbound));
+      if(!f.legT||f.legT==='')f.legT='1.0';
+    }
+  },
+
+  // ── COMPASS HEADING ──
+  COMPASS:{
+    title:'COMPASS HDG',
+    fields:[
+      {id:'thdg',lbl:'True Hdg',  unit:'°T',units:['°T'], out:false},
+      {id:'var', lbl:'Var (W+/E-)',unit:'°', units:['°'],  out:false},
+      {id:'dev', lbl:'Dev',       unit:'°', units:['°'],  out:false},
+      {id:'mhdg',lbl:'Mag Hdg',   unit:'°M',units:['°M'], out:true},
+      {id:'chdg',lbl:'Comp Hdg',  unit:'°', units:['°'],  out:true},
+    ],
+    calc:function(f){
+      var th=pf(f.thdg),vari=pf(f.var)||0,dev=pf(f.dev)||0;
+      if(ok(th)){
+        var mh=((th+vari)%360+360)%360;
+        var ch=((mh+dev)%360+360)%360;
+        f.mhdg=fmt(Math.round(mh));
+        f.chdg=fmt(Math.round(ch));
+      } else {f.mhdg='';f.chdg='';}
+    }
+  },
+
+  // ── WIND COMPONENT ──
+  WINDCOMP:{
+    title:'WIND COMPONENT',
+    fields:[
+      {id:'wspd',lbl:'Wind Spd',  unit:'KTS',units:['KTS','MPH'], out:false},
+      {id:'wdir',lbl:'Wind Dir',  unit:'°',  units:['°'],         out:false},
+      {id:'rnwy',lbl:'Runway',    unit:'',   units:[''],           out:false},
+      {id:'hwnd',lbl:'H Wnd',     unit:'KTS',units:['KTS'],        out:true},
+      {id:'xwnd',lbl:'X Wnd',     unit:'KTS',units:['KTS'],        out:true},
+    ],
+    calc:function(f){
+      var wspdF=this.fields[0];
+      var wspdRaw=pf(f.wspd),wdir=pf(f.wdir),rnwy=pf(f.rnwy);
+      var wspdKt=wspdF.unit==='MPH'?wspdRaw*0.868976:wspdRaw;
+      if(ok(wspdKt)&&ok(wdir)&&ok(rnwy)){
+        var rhdg=(rnwy*10)%360;
+        var ang=(wdir-rhdg)*Math.PI/180;
+        f.hwnd=fmt(Math.round(wspdKt*Math.cos(ang)*10)/10);
+        f.xwnd=fmt(Math.round(wspdKt*Math.sin(ang)*10)/10);
+      } else {f.hwnd='';f.xwnd='';}
+    }
+  },
+
+  // ── TO-FROM (reciprocal) ──
+  TOFROM:{
+    title:'TO / FROM',
+    fields:[
+      {id:'from',lbl:'From (radial)',unit:'°',units:['°'], out:false},
+      {id:'to',  lbl:'To',          unit:'°',units:['°'], out:true},
+    ],
+    calc:function(f){
+      var fr=pf(f.from);
+      f.to=ok(fr)?fmt(Math.round((fr+180)%360)):'';
+    }
+  },
+
+  // ── COORDS DMS ↔ DECIMAL ──
+  COORD:{
+    title:'COORD DMS⇔DEC',
+    fields:[
+      {id:'crd_d', lbl:'Decimal',  unit:'°', units:['°'], out:false},
+      {id:'crd_g', lbl:'Grados',   unit:'°', units:['°'], out:false},
+      {id:'crd_m', lbl:'Minutos',  unit:"'",       units:["'"],      out:false},
+      {id:'crd_s', lbl:'Segundos', unit:'"',        units:['"'],      out:false},
+      {id:'crd_f', lbl:'DMS',      unit:'',         units:[''],       out:true},
+    ],
+    calc:function(f){
+      var self=this;
+      var fi=self.fields[fnIdx]?self.fields[fnIdx].id:null;
+      var isDEC=(fi==='crd_d');
+      var isDMS=(fi==='crd_g'||fi==='crd_m'||fi==='crd_s');
+      function pad(n){return (n<10?'0':'')+n;}
+      function dmsStr(g,m,s){
+        var neg=g<0; var ag=Math.abs(g);
+        var ss=Math.round(s*10)/10;
+        var sStr=(ss%1===0?(ss<10?'0':'')+ss:(ss<10?'0':'')+ss);
+        return (neg?'−':'')+ag+'°'+pad(m)+"'"+sStr+'"';
+      }
+      if(isDEC||(ok(pf(f.crd_d))&&!isDMS&&!ok(pf(f.crd_g)))){
+        // Decimal → DMS
+        var d=pf(f.crd_d);
+        if(ok(d)){
+          var neg=d<0; var ad=Math.abs(d);
+          var g=Math.floor(ad);
+          var rm=(ad-g)*60; var m=Math.floor(rm);
+          var s=Math.round((rm-m)*60*100)/100;
+          if(s>=60){m++;s=0;} if(m>=60){g++;m=0;}
+          f.crd_g=fmt(neg?-g:g); f.crd_m=fmt(m); f.crd_s=fmt(s);
+          f.crd_f=dmsStr(neg?-g:g,m,s);
+        } else { f.crd_g='';f.crd_m='';f.crd_s='';f.crd_f=''; }
+      } else if(isDMS||(ok(pf(f.crd_g))&&!isDEC&&!ok(pf(f.crd_d)))){
+        // DMS → Decimal
+        var g=pf(f.crd_g); var m=pf(f.crd_m); var s=pf(f.crd_s);
+        if(ok(g)){
+          var neg=g<0;
+          var dec=Math.abs(g)+(ok(m)?Math.abs(m):0)/60+(ok(s)?Math.abs(s):0)/3600;
+          f.crd_d=fmt(Math.round(dec*1e8)/1e8*(neg?-1:1));
+          f.crd_f=dmsStr(g,ok(m)?Math.abs(m):0,ok(s)?Math.abs(s):0);
+        } else { f.crd_d='';f.crd_f=''; }
+      }
+    }
+  },
+};
+
+// ═══════════════════════════════════════
+//  FUNCTION UI
+// ═══════════════════════════════════════
+
+// Save non-carry field values to the cross-module carry store.
+function updateCarryStore(){
+  if(!fnId)return;
+  var def=FNS[fnId];
+  def.fields.forEach(function(f){
+    var v=fnData[f.id];
+    if(v&&v!==''&&!fnCarry[f.id]) carryStore[f.id]={val:v,unit:f.unit};
+  });
+}
+
+function OF(id){
+  // Persist current module's values before leaving
+  updateCarryStore();
+
+  fnId=id;fnData={};fnIdx=0;fnCarry={};fnUser={};fnUserOrder=[];mode='func';
+  var def=FNS[id];
+  def.fields.forEach(function(f){
+    if(f.units&&f.units.length){
+      var key=f.units.slice().sort().join('|');
+      var pref=globalUnitPref[key];
+      f.unit=(pref&&f.units.indexOf(pref)>=0)?pref:f.units[0];
+    }
+    if(f.toggle)fnData[f.id]=f.toggle[0];
+  });
+
+  // Pre-fill input fields from carry store
+  def.fields.forEach(function(f){
+    if(f.out||f.toggle)return;
+    var cs=carryStore[f.id];
+    if(!cs)return;
+    var val=cs.val, srcUnit=cs.unit, dstUnit=f.unit;
+    if(srcUnit===dstUnit){
+      fnData[f.id]=val; fnCarry[f.id]=true;
+    } else if(srcUnit&&dstUnit&&UC[srcUnit]&&UC[srcUnit][dstUnit]){
+      var n=parseFloat(val);
+      if(!isNaN(n)){
+        var cv=UC[srcUnit][dstUnit](n);
+        fnData[f.id]=fmt(Math.abs(cv)>=10?Math.round(cv*100)/100:Math.round(cv*1000)/1000);
+        fnCarry[f.id]=true;
+      }
+    } else if(f.unitConv&&f.unitConv[srcUnit]&&f.unitConv[srcUnit][dstUnit]){
+      var n=parseFloat(val);
+      if(!isNaN(n)){
+        var cv=f.unitConv[srcUnit][dstUnit](n);
+        fnData[f.id]=fmt(Math.abs(cv)>=10?Math.round(cv*100)/100:Math.round(cv*1000)/1000);
+        fnCarry[f.id]=true;
+      }
+    }
+  });
+
+  def.calc(fnData);
+  var lbl=def.title.replace(/ \/ /g,'/').slice(0,10);
+  document.querySelector('.lb-left').textContent=lbl;
+  document.getElementById('lcd-body').scrollTop=0;
+  showScr('scr-func');
+  renderFn();
+}
+
+function renderFn(){
+  var def=FNS[fnId];
+  var el=document.getElementById('scr-func');
+  el.innerHTML='';
+
+  def.fields.forEach(function(f,fi){
+    var isActive=fi===fnIdx;
+    var isCarry=!!(fnCarry[f.id]&&fnData[f.id]&&fnData[f.id]!=='');
+    var hasVal=!!(fnData[f.id]&&fnData[f.id]!=='');
+
+    var row=document.createElement('div');
+    row.className='frow'+(isActive?' active':'')+(isCarry?' carry':'');
+
+    // Icon: ⊙ carry, ◈ empty, ◉ has value
+    var ic=document.createElement('div');
+    ic.className='frow-icon '+(isCarry?'inp':(hasVal?'out':'inp'));
+    ic.textContent=isCarry?'⊙':(hasVal?'◉':'◈');
+    row.appendChild(ic);
+
+    // Label
+    var lb=document.createElement('span');
+    lb.className='frow-lbl';
+    lb.textContent=f.lbl;
+    row.appendChild(lb);
+
+    // Value — all fields show cursor when active
+    var vl=document.createElement('span');
+    vl.className='frow-val';
+    var v=fnData[f.id]||'';
+    vl.textContent=(isActive&&!f.out)?(v||'')+'▮':v||'--';
+    row.appendChild(vl);
+
+    // Unit
+    var un=document.createElement('span');
+    un.className='frow-unit';
+    un.textContent=f.unit||'';
+    row.appendChild(un);
+
+    (function(i){row.onclick=function(){
+      // Navigating away from carry field via click clears the suggestion
+      if(i!==fnIdx){
+        var cf=def.fields[fnIdx];
+        if(cf&&fnCarry[cf.id]){fnData[cf.id]='';delete fnCarry[cf.id];runFnCalc();}
+      }
+      fnIdx=i;renderFn();
+    };})(fi);
+    el.appendChild(row);
+  });
+
+  // Scroll active row into view within lcd-body
+  var activeRow=el.querySelector('.frow.active');
+  if(activeRow){
+    var body=document.getElementById('lcd-body');
+    var rowTop=activeRow.offsetTop+el.offsetTop;
+    var rowBot=rowTop+activeRow.offsetHeight;
+    if(rowTop<body.scrollTop) body.scrollTop=rowTop;
+    else if(rowBot>body.scrollTop+body.clientHeight) body.scrollTop=rowBot-body.clientHeight;
+  }
+
+  // VER DIAGRAMA button for HOLD function when entry is computed
+  if(fnId==='HOLD'&&fnData.entry&&fnData.inb){
+    var diagRow=document.createElement('div');
+    diagRow.style.cssText='text-align:center;padding:5px 0 2px;';
+    var diagBtn=document.createElement('button');
+    diagBtn.textContent='▣ VER DIAGRAMA';
+    diagBtn.style.cssText='background:#1a1a00;color:#D4AF37;border:1px solid #D4AF37;border-radius:4px;padding:4px 20px;font-size:10px;cursor:pointer;font-family:monospace;letter-spacing:1px;';
+    diagBtn.onclick=function(){showHoldDiagram();};
+    diagRow.appendChild(diagBtn);
+    el.appendChild(diagRow);
+  }
+
+  updateCarryStore();
+}
+
+function showHoldDiagram(){
+  var right=(!fnData.dir||fnData.dir==='Right');
+  var head=pf(fnData.head);
+  var inbRaw=pf(fnData.inb);
+  if(!ok(head)||!ok(inbRaw))return;
+  var inb=((Math.round(inbRaw)%360)+360)%360;
+  var outb=(inb+180)%360;
+  var entry=fnData.entry||'';
+
+  var el=document.getElementById('scr-hold-diag');
+  el.innerHTML='';
+  el.style.cssText='display:flex;flex-direction:column;align-items:center;';
+
+  var lcdInner=document.getElementById('lcd').clientWidth||294;
+  var sz=Math.min(lcdInner-8, 278);
+  var hcanvas=document.createElement('canvas');
+  var dpr=window.devicePixelRatio||1;
+  hcanvas.width=sz*dpr; hcanvas.height=sz*dpr;
+  hcanvas.style.cssText='width:'+sz+'px;height:'+sz+'px;display:block;margin:2px auto 0;';
+  el.appendChild(hcanvas);
+
+  var backRow=document.createElement('div');
+  backRow.style.cssText='text-align:center;padding:4px 0 2px;width:100%;';
+  var backBtn=document.createElement('button');
+  backBtn.textContent='◄ VOLVER';
+  backBtn.style.cssText='background:#1a1a00;color:#D4AF37;border:1px solid #4a4010;border-radius:4px;padding:3px 20px;font-size:10px;cursor:pointer;font-family:monospace;letter-spacing:1px;';
+  backBtn.onclick=function(){holdDiagBack();};
+  backRow.appendChild(backBtn);
+  el.appendChild(backRow);
+
+  mode='hold-diag';
+  document.querySelector('.lb-left').textContent='HOLD·DGM';
+  document.getElementById('lcd-body').scrollTop=0;
+  showScr('scr-hold-diag');
+
+  // --- Canvas drawing ---
+  var hc=hcanvas.getContext('2d');
+  hc.scale(dpr,dpr);
+  var W=sz,H=sz;
+  var cx2=W/2,cy2=H/2;
+  var Rc=W*0.38;   // compass radius
+  var Ra=W*0.065;  // hold arc (turn) radius
+  var Ll=W*0.19;   // straight leg length
+
+  // compass bearing → canvas angle (N=up=−90°)
+  function br(deg){return(deg-90)*Math.PI/180;}
+  // point at bearing b, radius r from center
+  function cpt(b,r){r=r||Rc;return[cx2+r*Math.cos(br(b)),cy2+r*Math.sin(br(b))];}
+
+  function drawSector(b1,b2,color){
+    hc.beginPath();
+    hc.moveTo(cx2,cy2);
+    hc.arc(cx2,cy2,Rc,br(b1),br(b2),false);
+    hc.closePath();
+    hc.fillStyle=color;
+    hc.fill();
+  }
+
+  // Background
+  hc.fillStyle='#050500';
+  hc.fillRect(0,0,W,H);
+
+  // Sector boundaries (e6bx formula, based on inbound course):
+  // b1=(inb+110°), b2=(inb+290°), b3=inb
+  // Right: Direct b1→b2 CW (180°), Teardrop b2→b3 CW (70°), Parallel b3→b1 CW (110°)
+  // Left: swap Teardrop/Parallel
+  var sb1=(inb+110)%360, sb2=(inb+290)%360, sb3=inb;
+  drawSector(sb1,sb2,'rgba(212,175,55,0.22)'); // Direct (gold, 180°)
+  if(right){
+    drawSector(sb2,sb3,'rgba(220,80,80,0.28)');  // Teardrop (red, 70°)
+    drawSector(sb3,sb1,'rgba(60,120,220,0.28)'); // Parallel (blue, 110°)
+  } else {
+    drawSector(sb2,sb3,'rgba(60,120,220,0.28)'); // Parallel (blue, 70°) left
+    drawSector(sb3,sb1,'rgba(220,80,80,0.28)');  // Teardrop (red, 110°) left
+  }
+
+  // Compass ring
+  hc.beginPath();
+  hc.arc(cx2,cy2,Rc,0,2*Math.PI);
+  hc.strokeStyle='rgba(212,175,55,0.45)';
+  hc.lineWidth=1.5;
+  hc.stroke();
+
+  // Tick marks
+  for(var ti=0;ti<360;ti+=10){
+    var inn=ti%30===0?Rc-W*0.04:Rc-W*0.018;
+    var pt0=cpt(ti,inn),pt1=cpt(ti,Rc);
+    hc.beginPath();
+    hc.moveTo(pt0[0],pt0[1]);
+    hc.lineTo(pt1[0],pt1[1]);
+    hc.strokeStyle=ti%30===0?'rgba(212,175,55,0.7)':'rgba(212,175,55,0.3)';
+    hc.lineWidth=ti%30===0?1.5:0.7;
+    hc.stroke();
+  }
+
+  // NSEW labels
+  [['N',0],['E',90],['S',180],['W',270]].forEach(function(x){
+    var p=cpt(x[1],Rc-W*0.065);
+    hc.fillStyle='#D4AF37';
+    hc.font='bold '+(W*0.038)+'px Arial';
+    hc.textAlign='center';
+    hc.textBaseline='middle';
+    hc.fillText(x[0],p[0],p[1]);
+  });
+
+  // Sector boundary dashed lines
+  [sb1,sb2,sb3].forEach(function(b){
+    var p=cpt(b);
+    hc.beginPath();
+    hc.moveTo(cx2,cy2);
+    hc.lineTo(p[0],p[1]);
+    hc.strokeStyle='rgba(212,175,55,0.4)';
+    hc.lineWidth=1;
+    hc.setLineDash([3,4]);
+    hc.stroke();
+    hc.setLineDash([]);
+  });
+
+  // --- Holding pattern racetrack ---
+  // c1 = fix-end turn center (Ra to the right/left of inbound)
+  var toC1=((inb+(right?90:-90))%360+360)%360;
+  var c1=cpt(toC1,Ra);
+  // c2 = outbound-end turn center (Ll in outbound direction from c1)
+  var c2x=c1[0]+Ll*Math.cos(br(outb));
+  var c2y=c1[1]+Ll*Math.sin(br(outb));
+  // p3 = far end of inbound leg
+  var p3x=cx2+Ll*Math.cos(br(outb));
+  var p3y=cy2+Ll*Math.sin(br(outb));
+  var aStart=br(toC1+180);
+  var aEnd=br(toC1);
+  var ccw=!right;
+
+  hc.beginPath();
+  hc.moveTo(p3x,p3y);
+  hc.lineTo(cx2,cy2);
+  hc.arc(c1[0],c1[1],Ra,aStart,aEnd,ccw);
+  hc.arc(c2x,c2y,Ra,aEnd,aStart,ccw);
+  hc.closePath();
+  hc.strokeStyle='#D4AF37';
+  hc.lineWidth=2;
+  hc.stroke();
+  hc.fillStyle='rgba(212,175,55,0.06)';
+  hc.fill();
+
+  // Direction arrows
+  function drawArrow(x,y,bearing){
+    hc.save();
+    hc.translate(x,y);
+    // tip starts at (0,-as)=up-local; bearing*PI/180 rotates correctly to compass direction
+    hc.rotate(bearing*Math.PI/180);
+    var as=W*0.022;
+    hc.beginPath();
+    hc.moveTo(0,-as*1.2);
+    hc.lineTo(as*0.7,as*0.8);
+    hc.lineTo(-as*0.7,as*0.8);
+    hc.closePath();
+    hc.fillStyle='#D4AF37';
+    hc.fill();
+    hc.restore();
+  }
+  drawArrow((cx2+p3x)/2,(cy2+p3y)/2,inb);
+  var omx=(c1[0]+c2x)/2+Ra*Math.cos(br(toC1));
+  var omy=(c1[1]+c2y)/2+Ra*Math.sin(br(toC1));
+  drawArrow(omx,omy,outb);
+
+  // Fix marker (white triangle)
+  hc.save();
+  hc.translate(cx2,cy2);
+  var fm=W*0.022;
+  hc.beginPath();
+  hc.moveTo(0,-fm*1.2);
+  hc.lineTo(fm,fm*0.8);
+  hc.lineTo(-fm,fm*0.8);
+  hc.closePath();
+  hc.fillStyle='#fff';
+  hc.strokeStyle='#888';
+  hc.lineWidth=0.5;
+  hc.fill();
+  hc.stroke();
+  hc.restore();
+
+  // --- Aircraft symbol ---
+  var acBrg=((Math.round(head)+180)%360+360)%360;
+  var acPos=cpt(acBrg,Rc*0.73);
+  hc.save();
+  hc.translate(acPos[0],acPos[1]);
+  hc.rotate(br(head)); // nose pointing toward fix (bearing = head from aircraft's position)
+  var as=W*0.028;
+  hc.beginPath();
+  hc.moveTo(as*1.5,0);
+  hc.lineTo(as*0.3,as*0.35);
+  hc.lineTo(-as*0.35,as*1.4);
+  hc.lineTo(-as*0.85,as*1.4);
+  hc.lineTo(-as*0.35,as*0.28);
+  hc.lineTo(-as*1.3,as*0.28);
+  hc.lineTo(-as*1.75,as*0.85);
+  hc.lineTo(-as*2.0,as*0.85);
+  hc.lineTo(-as*1.7,0);
+  hc.lineTo(-as*2.0,-as*0.85);
+  hc.lineTo(-as*1.75,-as*0.85);
+  hc.lineTo(-as*1.3,-as*0.28);
+  hc.lineTo(-as*0.35,-as*0.28);
+  hc.lineTo(-as*0.85,-as*1.4);
+  hc.lineTo(-as*0.35,-as*1.4);
+  hc.lineTo(as*0.3,-as*0.35);
+  hc.closePath();
+  hc.fillStyle='#D4AF37';
+  hc.strokeStyle='#000';
+  hc.lineWidth=0.5;
+  hc.fill();
+  hc.stroke();
+  hc.restore();
+
+  // --- Legend ---
+  var lg=[['rgba(212,175,55,0.4)','#D4AF37','DIRECT'],
+          ['rgba(220,80,80,0.4)','#ff7070','TEARDROP'],
+          ['rgba(60,120,220,0.4)','#6090ff','PARALLEL']];
+  lg.forEach(function(x,i){
+    var lx=W*0.04+i*(W*0.33);
+    var ly=H-W*0.04;
+    hc.fillStyle=x[0];
+    hc.fillRect(lx,ly-W*0.022,W*0.022,W*0.022);
+    hc.strokeStyle=x[1];
+    hc.lineWidth=0.5;
+    hc.strokeRect(lx,ly-W*0.022,W*0.022,W*0.022);
+    hc.fillStyle=x[1];
+    hc.font=(W*0.025)+'px monospace';
+    hc.textAlign='left';
+    hc.textBaseline='middle';
+    hc.fillText(x[2],lx+W*0.028,ly-W*0.011);
+  });
+}
+
+function fN(k){
+  var def=FNS[fnId];
+  if(fnIdx>=def.fields.length)return;
+  var field=def.fields[fnIdx];
+  if(field.out)return;
+  var fid=field.id;
+  // Toggle fields cycle on any key press
+  if(field.toggle){
+    var cur=fnData[fid]||field.toggle[0];
+    var idx=field.toggle.indexOf(cur);
+    fnData[fid]=field.toggle[(idx+1)%field.toggle.length];
+    runFnCalc();renderFn();
+    return;
+  }
+  // Typing on a carry field replaces the suggestion with fresh input
+  if(fnCarry[fid]){fnData[fid]='';delete fnCarry[fid];}
+  // Typing on a solver-computed field starts a fresh entry (never append)
+  // y libera la entrada más antigua del usuario para que el solver la resuelva
+  if(fnData[fid]&&!fnUser[fid]){
+    fnData[fid]='';
+    var oldest=fnUserOrder[0];
+    if(oldest&&oldest!==fid)unmarkUser(oldest);
+  }
+  var isHMS=field.unit==='HMS';
+  if(k===':'){
+    if(!isHMS)return; // colon only valid in HMS mode
+    var cur=fnData[fid]||'';
+    if((cur.match(/:/g)||[]).length>=2)return; // H:MM:SS complete
+    var lc=cur.lastIndexOf(':');
+    var seg=lc>=0?cur.slice(lc+1):cur;
+    var pfx=lc>=0?cur.slice(0,lc+1):'';
+    fnData[fid]=pfx+(seg.length===1?'0':'')+seg+':';
+  } else if(k==='±'){fnData[fid]=fmt(-(pf(fnData[fid])||0));}
+  else if(k==='.'){if(isHMS)return;if(!fnData[fid])fnData[fid]='0.';else if(!fnData[fid].includes('.'))fnData[fid]+='.';}
+  else{fnData[fid]=(fnData[fid]||'')+k;}
+  markUser(fid);
+  runFnCalc();renderFn();
+}
+function fNext(){
+  var def=FNS[fnId];
+  // ENTER on a carry field confirms the suggested value (counts as user input)
+  var cf=def.fields[fnIdx];
+  if(cf&&fnCarry[cf.id]){delete fnCarry[cf.id];markUser(cf.id);}
+  runFnCalc();
+  fnIdx=(fnIdx+1)%def.fields.length;
+  renderFn();
+}
+function fClear(){
+  var def=FNS[fnId];
+  if(fnIdx<def.fields.length){
+    var fid=def.fields[fnIdx].id;
+    fnData[fid]='';
+    delete fnCarry[fid];
+    unmarkUser(fid);
+  }
+  runFnCalc();renderFn();
+}
+function fBS(){
+  var def=FNS[fnId];
+  if(fnIdx>=def.fields.length)return;
+  var fid=def.fields[fnIdx].id;
+  // Backspace on a carry or computed field clears it entirely
+  if(fnCarry[fid]||!fnUser[fid]){fnData[fid]='';delete fnCarry[fid];unmarkUser(fid);}
+  else if(fnData[fid]&&fnData[fid].length>1)fnData[fid]=fnData[fid].slice(0,-1);
+  else {fnData[fid]='';unmarkUser(fid);}
+  runFnCalc();renderFn();
+}
+
+// ═══════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════
+function pf(v){return parseFloat(v);}
+function ok(v){return v!==null&&v!==undefined&&v!==''&&!isNaN(v)&&isFinite(v);}
+function toHM(hrs){var h=Math.floor(hrs),m=Math.round((hrs-h)*60);if(m===60){h++;m=0;}return h+':'+z(m);}
+function parseHM(v){var s=String(v||'').trim();var c=s.indexOf(':');if(c>=0)return parseFloat(s.slice(0,c))+parseFloat(s.slice(c+1))/60;return parseFloat(s);}
+
+// ── Time unit helpers (HR / HMS / S / MIN) ──
+function toHMS(hrs){
+  var neg=hrs<0;hrs=Math.abs(hrs);
+  var tot=Math.round(hrs*3600);
+  var h=Math.floor(tot/3600),m=Math.floor((tot%3600)/60),s=tot%60;
+  return (neg?'-':'')+h+':'+z(m)+':'+z(s);
+}
+function parseHMS(v){
+  var s=String(v||'').trim();
+  var p=s.split(':');
+  if(p.length>=2){var h=parseFloat(p[0])||0,m=parseFloat(p[1])||0,sec=p.length>=3?parseFloat(p[2])||0:0;return h+m/60+sec/3600;}
+  return parseFloat(s);
+}
+var TIME_UNITS=['HR','HMS','S','MIN'];
+function isTimeUnit(u){return TIME_UNITS.indexOf(u)>=0;}
+function timeToHr(v,unit){
+  if(!v&&v!==0)return NaN;
+  if(unit==='S')  return parseFloat(v)/3600;
+  if(unit==='MIN')return parseFloat(v)/60;
+  return parseHMS(v); // HR and HMS both use parseHMS (handles decimal and H:MM:SS)
+}
+function hrToUnit(hrs,unit){
+  if(!isFinite(hrs)||isNaN(hrs))return '';
+  if(unit==='HMS')return toHMS(hrs);
+  if(unit==='S')  return fmt(Math.round(hrs*3600));
+  if(unit==='MIN')return fmt(Math.round(hrs*60*10)/10);
+  return fmt(Math.round(hrs*10000)/10000); // HR: decimal hours
+}
+function palt(ft){var h=ft*0.3048;return 101325*Math.pow(1-2.25577e-5*h,5.25588);}
+function isaTemp(altFt){return altFt<=36089?15-1.98*(altFt/1000):(altFt<=65617?-56.5:-56.5+(altFt-65617)*0.000547);}
+function isaPress(altFt){return altFt<=36089?29.92126*Math.pow(1-6.8755856e-6*altFt,5.2559):29.92126*Math.pow(0.751865,5.2559)*Math.exp(-4.806346e-5*(altFt-36089));}
+
+// ═══════════════════════════════════════
+//  PLAN — TRIP PLANNER
+// ═══════════════════════════════════════
+function initPlan(){
+  if(planLegs.length)return;
+  for(var i=0;i<PLAN_MAX;i++)planLegs.push({dep:'',ete:'',etd:'',eta:''});
+}
+
+function doPLAN(){
+  initPlan();
+  mode='plan';
+  document.querySelector('.lb-left').textContent='PLAN';
+  showScr('scr-plan');
+  renderPlan();
+}
+
+function planFmtInput(digits){
+  var p=digits.padStart(4,'0');
+  var h=parseInt(p.slice(0,2)),m=parseInt(p.slice(2,4));
+  if(m>59)m=59;
+  return h+':'+z(m);
+}
+
+function planParseMin(s){
+  if(!s||s.indexOf(':')<0)return null;
+  var c=s.indexOf(':');
+  var h=parseInt(s.slice(0,c)),m=parseInt(s.slice(c+1));
+  if(isNaN(h)||isNaN(m))return null;
+  return h*60+m;
+}
+
+function planMinToStr(mins){
+  return Math.floor(mins/60)+':'+z(mins%60);
+}
+
+function planCompute(){
+  var prevMins=null;
+  planLegs.forEach(function(leg,i){
+    leg.etd=i===0?leg.dep:(prevMins!==null?planMinToStr(prevMins%1440):'');
+    var etdM=planParseMin(leg.etd),eteM=planParseMin(leg.ete);
+    if(etdM!==null&&eteM!==null){
+      leg.eta=planMinToStr((etdM+eteM)%1440);
+      prevMins=etdM+eteM;
+    } else {
+      leg.eta='';
+      prevMins=null;
+    }
+  });
+}
+
+function execPlanField(){
+  // Commit current digit buffer to the active field
+  if(planInput){
+    var p=planInput.padStart(4,'0');
+    var h=parseInt(p.slice(0,2)),m=parseInt(p.slice(2,4));
+    if(m>59)m=59;
+    if(planLegIdx===0&&planField===0&&h>23)h=23;
+    var str=z(h)+':'+z(m);
+    if(planLegIdx===0&&planField===0)planLegs[0].dep=str;
+    else planLegs[planLegIdx].ete=str;
+    planInput='';
+  }
+  // Advance to next editable field
+  if(planLegIdx===0&&planField===0){planField=1;}
+  else if(planLegIdx<PLAN_MAX-1){planLegIdx++;planField=1;}
+  else{planLegIdx=0;planField=0;}
+  renderPlan();
+}
+
+function renderPlan(){
+  planCompute();
+  var el=document.getElementById('scr-plan');
+  el.innerHTML='';
+
+  // Column header
+  var hdr=document.createElement('div');
+  hdr.className='plan-hdr';
+  hdr.innerHTML='<span></span><span>ETD</span><span>ETE</span><span>ETA</span>';
+  el.appendChild(hdr);
+
+  planLegs.forEach(function(leg,i){
+    var isActive=i===planLegIdx;
+    var depActive=isActive&&i===0&&planField===0;
+    var eteActive=isActive&&(i>0||planField===1);
+
+    var etdStr=leg.etd||'--:--';
+    var eteStr=leg.ete||'--:--';
+    var etaStr=leg.eta||'--:--';
+
+    if(isActive&&planInput){
+      if(depActive)etdStr=planFmtInput(planInput)+'▮';
+      else if(eteActive)eteStr=planFmtInput(planInput)+'▮';
+    } else if(isActive){
+      if(depActive)etdStr=(leg.dep||'')+'▮';
+      else if(eteActive)eteStr=(leg.ete||'')+'▮';
+    }
+
+    var row=document.createElement('div');
+    row.className='plan-row'+(isActive?' active':'');
+
+    var lbl=document.createElement('span');
+    lbl.className='plan-lbl';
+    lbl.textContent='L'+(i+1);
+    row.appendChild(lbl);
+
+    [etdStr,eteStr,etaStr].forEach(function(t,j){
+      var cell=document.createElement('span');
+      cell.className='plan-cell';
+      var thisActive=(j===0&&depActive)||(j===1&&eteActive);
+      var isComputedETA=j===2&&leg.eta;
+      var isComputedETD=j===0&&i>0&&leg.etd;
+      if(thisActive)cell.classList.add('active-field');
+      else if(isComputedETA||isComputedETD)cell.classList.add('computed');
+      cell.textContent=t;
+      row.appendChild(cell);
+    });
+
+    (function(idx){row.onclick=function(){
+      planInput='';
+      planLegIdx=idx;
+      planField=(idx===0?0:1);
+      renderPlan();
+    };})(i);
+    el.appendChild(row);
+  });
+
+  // Total ETE
+  var totalMins=planLegs.reduce(function(acc,leg){
+    var m=planParseMin(leg.ete);return acc+(m!==null?m:0);
+  },0);
+  var tot=document.createElement('div');
+  tot.className='plan-tot';
+  tot.innerHTML='<span>TOTAL ETE</span><span>'+(totalMins>0?planMinToStr(totalMins):'--:--')+'</span>';
+  el.appendChild(tot);
+}
+
+// ═══════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════
+doFLT();
+</script>
+</body>
+</html>

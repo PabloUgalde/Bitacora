@@ -1,0 +1,2473 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<script>
+// ── Guard Pro: estas herramientas requieren sesión de Bitácora y plan Pro ──
+(async function () {
+    const SB_URL = "https://rdnniehpsdforkfngwrf.supabase.co";
+    const SB_KEY = "sb_publishable_iavyVSmxuwncUjdCM9e9kw_5c4QC-b5";
+    const raw = localStorage.getItem("sb-rdnniehpsdforkfngwrf-auth-token");
+    let token = null;
+    try { token = raw ? JSON.parse(raw).access_token : null; } catch {}
+    if (!token) { window.location.replace("index.html?auth=1"); return; }
+    try {
+        const res = await fetch(SB_URL + "/rest/v1/profiles?select=plan,plan_expires_at", {
+            headers: { apikey: SB_KEY, Authorization: "Bearer " + token }
+        });
+        if (!res.ok) return; // token raro: dejar pasar, wx-proxy igual valida server-side
+        const rows = await res.json();
+        const p = Array.isArray(rows) ? rows[0] : null; // RLS: solo el perfil propio
+        const isPro = p && p.plan === "pro" && (!p.plan_expires_at || new Date(p.plan_expires_at) > new Date());
+        if (!isPro) window.location.replace("index.html?upgrade=envuelo");
+    } catch (e) {
+        // Sin red no bloqueamos (CX-3 funciona offline); el server valida lo que cuesta plata.
+        console.warn("guard plan:", e);
+    }
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>EasyPlan — Briefing de Vuelo</title>
+    <style>
+        :root {
+            --bg:#0d0d0d; --surface:#161616; --surface2:#1e1e1e; --surface3:#242424;
+            --border:#2a2a2a; --border2:#333;
+            --gold:#D4AF37; --gold-dim:rgba(212,175,55,0.12);
+            --text:#e0e0e0; --text-bright:#ffffff; --muted:#666; --muted2:#888;
+            --green:#4ade80; --green-bg:rgba(74,222,128,0.08); --green-border:rgba(74,222,128,0.25);
+            --red:#f87171; --red-bg:rgba(248,113,113,0.08); --red-border:rgba(248,113,113,0.25);
+            --amber:#fbbf24; --amber-bg:rgba(251,191,36,0.08); --amber-border:rgba(251,191,36,0.25);
+            --blue:#60a5fa; --blue-bg:rgba(96,165,250,0.08); --blue-border:rgba(96,165,250,0.25);
+            --purple:#c084fc; --purple-bg:rgba(192,132,252,0.08); --purple-border:rgba(192,132,252,0.25);
+            --radius-sm:6px; --radius:10px; --radius-lg:14px;
+            --font:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+            --mono:'Menlo','Consolas','Monaco',monospace;
+        }
+        *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+        html{-webkit-text-size-adjust:100%;}
+        body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:1.5;min-height:100dvh;}
+
+        .app-header{display:flex;align-items:center;gap:12px;padding:14px 16px 12px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:50;}
+        .app-header-icon{width:38px;height:38px;flex-shrink:0;border-radius:var(--radius-sm);background:linear-gradient(135deg,#D4AF37,#8a6a10);display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 2px 10px rgba(212,175,55,0.25);}
+        .app-header-text h1{font-size:16px;font-weight:800;color:var(--text-bright);letter-spacing:-0.01em;}
+        .app-header-text p{font-size:11px;color:var(--muted);}
+        .main{max-width:760px;margin:0 auto;padding:20px 16px 40px;}
+
+        input[type="text"],input[type="password"]{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);font-size:13px;padding:8px 10px;outline:none;font-family:var(--font);}
+        input[type="text"]:focus,input[type="password"]:focus{border-color:var(--gold);}
+
+        .route-form{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;margin-bottom:20px;}
+        .route-row{display:flex;align-items:flex-end;gap:8px;margin-bottom:12px;}
+        .route-arrow{color:var(--muted);font-size:22px;flex-shrink:0;padding:0 4px 8px;}
+        .icao-wrap{flex:1;}
+        .icao-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;}
+        .icao-input{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text-bright);font-size:22px;font-weight:700;letter-spacing:.06em;padding:10px 12px;text-transform:uppercase;outline:none;font-family:var(--font);}
+        .icao-input::placeholder{color:var(--muted);font-weight:400;font-size:18px;}
+        .icao-input:focus{border-color:var(--gold);}
+
+        .waypoints-area{margin-bottom:12px;display:flex;flex-direction:column;gap:8px;}
+        .waypoint-row{display:flex;align-items:flex-end;gap:8px;}
+        .waypoint-row .icao-input{font-size:17px;}
+        .btn-remove{background:none;border:1px solid var(--border2);color:var(--muted2);border-radius:var(--radius-sm);width:36px;height:36px;cursor:pointer;font-size:16px;flex-shrink:0;font-family:var(--font);transition:color .15s,border-color .15s;margin-bottom:1px;}
+        .btn-remove:hover{color:var(--red);border-color:var(--red);}
+
+        .form-actions{display:flex;gap:10px;}
+        .btn-add-wpt{display:none;}
+        .btn-add-via{background:none;border:1px dashed rgba(255,255,255,.15);border-radius:var(--radius-sm);color:var(--muted2);font-size:11px;font-weight:600;letter-spacing:.04em;cursor:pointer;font-family:var(--font);padding:7px 12px;text-align:left;width:100%;transition:color .15s,border-color .15s;}
+        .btn-add-via:hover{color:var(--gold);border-color:var(--gold);}
+        .btn-gen{flex:1;background:linear-gradient(135deg,var(--gold),#8a6a10);color:#000;border:none;border-radius:var(--radius-sm);padding:12px 20px;font-size:14px;font-weight:800;cursor:pointer;font-family:var(--font);letter-spacing:.02em;transition:opacity .15s;}
+        .btn-gen:hover:not(:disabled){opacity:.92;}
+        .btn-gen:disabled{opacity:.4;cursor:not-allowed;}
+        .waypoint-row{border-left:2px solid rgba(91,184,219,.35);padding-left:6px;}
+        .wpt-input{width:100%;background:var(--surface2);border:1px solid rgba(91,184,219,.25);border-radius:var(--radius-sm);color:var(--text-bright);font-size:15px;font-weight:500;padding:9px 12px;outline:none;font-family:var(--font);}
+        .wpt-input:focus{border-color:rgba(91,184,219,.7);}
+        .wpt-badge{font-size:10px;margin-top:4px;padding:2px 6px;border-radius:3px;display:inline-block;}
+        .wpt-badge-ok{color:#4caf50;background:rgba(76,175,80,.1);}
+        .wpt-badge-resolving{color:var(--muted2);}
+        .wpt-badge-warn{color:var(--amber);background:rgba(255,160,0,.08);}
+        .geo-wpt-card{background:var(--surface);border:1px solid rgba(91,184,219,.2);border-radius:var(--radius-lg);overflow:hidden;}
+        .geo-wpt-card-header{display:flex;align-items:center;gap:12px;padding:12px 16px;background:rgba(91,184,219,.05);border-bottom:1px solid rgba(91,184,219,.12);}
+        .geo-wpt-name{font-size:14px;font-weight:700;color:rgba(91,184,219,.9);letter-spacing:.04em;}
+        .geo-wpt-coords{font-size:10px;color:var(--muted2);margin-top:2px;}
+        .geo-wpt-note{padding:10px 16px;font-size:11px;color:var(--muted2);font-style:italic;}
+        .waypoints-area:empty{display:none;}
+        .route-cols .waypoints-area{margin-bottom:0;}
+        .terrain-footer{border-top:1px solid var(--border2);margin-top:10px;padding-top:8px;font-size:10px;color:var(--muted2);display:flex;flex-direction:column;gap:4px;}
+        .terrain-details summary{cursor:pointer;list-style:none;user-select:none;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted2);}
+        .terrain-details summary::-webkit-details-marker{display:none;}
+        .terrain-details summary::after{content:' ▶';font-size:7px;opacity:.5;}
+        .terrain-details[open] summary::after{content:' ▼';}
+        .terrain-sample-list{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:4px;}
+        .terrain-sample{font-size:10px;color:var(--muted2);}
+        .terrain-sample-peak{color:var(--amber);font-weight:700;}
+        .terrain-footer-summary{font-size:10px;color:var(--muted2);}
+        .terrain-footer-summary b{color:var(--text);}
+        .terrain-footer-minsafe{font-size:11px;font-weight:700;color:rgba(91,184,219,.8);}
+
+        .loading-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:36px;text-align:center;color:var(--muted2);}
+        .spinner{width:28px;height:28px;border:3px solid var(--border2);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 14px;}
+        @keyframes spin{to{transform:rotate(360deg);}}
+
+        .results{display:flex;flex-direction:column;gap:14px;}
+
+        /* AI Card */
+        .ai-card{background:var(--surface);border:1px solid rgba(212,175,55,.35);border-radius:var(--radius-lg);overflow:hidden;}
+        .ai-card-header{display:flex;align-items:center;gap:10px;padding:13px 16px;background:var(--gold-dim);border-bottom:1px solid rgba(212,175,55,.2);}
+        .ai-card-title{font-size:12px;font-weight:700;color:var(--gold);letter-spacing:.06em;text-transform:uppercase;}
+        .ai-verdict{margin-left:auto;font-size:11px;font-weight:800;padding:3px 10px;border-radius:20px;letter-spacing:.06em;}
+        .verdict-go{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border);}
+        .verdict-caution{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border);}
+        .verdict-nogo{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);}
+        .ai-section{padding:12px 16px;border-bottom:1px solid var(--border);}
+        .ai-section:last-child{border-bottom:none;}
+        .ai-section-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted2);margin-bottom:5px;}
+        .ai-section-body{font-size:13px;color:var(--text);line-height:1.6;}
+        .ai-loading-row{display:flex;align-items:center;gap:10px;padding:16px;color:var(--muted2);font-size:13px;}
+        .ai-loading-row .spinner{margin:0;width:18px;height:18px;border-width:2px;flex-shrink:0;}
+        .ai-error{padding:14px 16px;color:var(--red);font-size:12px;}
+        .ai-no-metar-warn{padding:8px 16px;font-size:11px;color:#c9a227;background:rgba(212,175,55,.08);border-bottom:1px solid rgba(212,175,55,.15);}
+        .ai-trigger-area{padding:14px 16px;display:flex;flex-direction:column;gap:10px;}
+        .ai-disclaimer{font-size:11px;color:var(--muted2);line-height:1.5;}
+        .btn-ai-run{align-self:flex-start;background:var(--gold);color:#000;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.03em;}
+        .btn-ai-run:hover{background:#c9a227;}
+        .role-altn{background:rgba(120,80,200,.18);color:#b088f0;border:1px solid rgba(120,80,200,.25);}
+        .ai-key-hint{padding:14px 16px;color:var(--muted);font-size:12px;}
+        .ai-key-hint a{color:var(--gold);cursor:pointer;text-decoration:underline;}
+
+        /* Airport card */
+        .airport-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;}
+        .airport-card-header{display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--surface2);border-bottom:1px solid var(--border);}
+        .airport-icao-badge{display:flex;align-items:center;gap:8px;}
+        .airport-icao{font-size:22px;font-weight:800;color:var(--text-bright);letter-spacing:.04em;}
+        .airport-name{font-size:11px;color:var(--muted2);margin-top:1px;}
+        .airport-role{margin-left:auto;font-size:10px;font-weight:700;letter-spacing:.08em;padding:3px 9px;border-radius:20px;flex-shrink:0;}
+        .role-dep{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border);}
+        .role-arr{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border);}
+        .role-via{background:var(--gold-dim);color:var(--gold);border:1px solid rgba(212,175,55,.25);}
+
+        .flt-cat{font-size:10px;font-weight:800;padding:2px 7px;border-radius:4px;letter-spacing:.06em;}
+        .cat-vfr{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border);}
+        .cat-mvfr{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border);}
+        .cat-ifr{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);}
+        .cat-lifr{background:var(--purple-bg);color:var(--purple);border:1px solid var(--purple-border);}
+
+        .data-section{padding:14px 16px;border-bottom:1px solid var(--border);}
+        .data-section:last-child{border-bottom:none;}
+        .section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted2);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+        .section-title .age{font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0;}
+
+        .raw-metar{font-family:var(--mono);font-size:12px;color:var(--text);word-break:break-all;line-height:1.7;margin-bottom:10px;}
+        .metar-chips{display:flex;flex-wrap:wrap;gap:7px;}
+        .metar-chip{background:var(--surface3);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:5px 10px;display:flex;flex-direction:column;align-items:center;min-width:64px;}
+        .chip-lbl{color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.06em;}
+        .chip-val{color:var(--text-bright);font-weight:600;font-size:13px;white-space:nowrap;}
+
+        .taf-raw{font-family:var(--mono);font-size:11px;color:var(--text);white-space:pre-wrap;word-break:break-word;line-height:1.8;background:var(--surface2);border-radius:var(--radius-sm);padding:10px 12px;}
+
+        .gamet-card{background:var(--surface);border:1px solid var(--amber-border);border-radius:var(--radius-lg);overflow:hidden;}
+        .gamet-card-header{padding:13px 16px;background:var(--amber-bg);border-bottom:1px solid var(--amber-border);}
+        .gamet-card-title{font-size:11px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.06em;}
+        .gamet-fir{padding:14px 16px;border-bottom:1px solid var(--border);}
+        .gamet-fir:last-child{border-bottom:none;}
+        .gamet-fir-name{font-size:10px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;}
+        .gamet-validity{font-size:11px;color:var(--muted2);margin-bottom:10px;line-height:1.5;}
+        .gamet-secn{color:var(--gold);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;padding:8px 0 4px;margin-top:4px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;}
+        .gamet-secn::after{content:'';flex:1;border-top:1px solid var(--border);}
+        .gamet-field{display:grid;grid-template-columns:90px 1fr;gap:6px;padding:3px 0;align-items:start;}
+        .gamet-lbl{font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding-top:1px;white-space:nowrap;}
+        .gamet-lbl-default{color:var(--muted2);}
+        .gamet-lbl-caution{color:var(--amber);}
+        .gamet-lbl-danger{color:var(--red);}
+        .gamet-lbl-info{color:var(--blue);}
+        .gamet-lbl-fzlvl{color:var(--purple);}
+        .gamet-val{font-family:var(--mono);font-size:11px;color:var(--text);line-height:1.65;word-break:break-word;}
+        .gamet-alt-ft{color:var(--muted2);font-size:10px;font-weight:700;white-space:nowrap;}
+        /* ── GAMET Internacional ── */
+        .intl-country-section{padding:14px 16px;border-bottom:1px solid var(--border);}
+        .intl-country-section:last-child{border-bottom:none;}
+        .intl-country-label{font-size:10px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;}
+        .intl-age-warn{background:rgba(255,170,0,.12);border:1px solid rgba(255,170,0,.3);border-radius:6px;padding:7px 11px;font-size:11px;color:var(--amber);margin-bottom:10px;line-height:1.5;}
+        .intl-link-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:12px;}
+        .intl-link-row a{color:var(--gold);text-decoration:none;}
+        .intl-link-row a:hover{text-decoration:underline;}
+        .intl-paste-label{font-size:10px;color:var(--muted2);margin-bottom:5px;}
+        .intl-paste-area{width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:11px;padding:8px 10px;resize:vertical;min-height:80px;outline:none;display:block;}
+        .intl-paste-area:focus{border-color:var(--gold);}
+        .intl-br-fir{border-top:1px solid var(--border);padding:10px 0 0;}
+        .intl-br-fir:first-child{border-top:none;padding-top:0;}
+        /* WIND/T: filas gamet-field con zona geográfica scrollable en sincronía */
+        .wind-row-scroll{display:flex;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+        .wind-row-scroll::-webkit-scrollbar{display:none;}
+        .wz-cell{flex:0 0 110px;min-width:110px;padding:2px 6px;font-family:var(--mono);font-size:10px;text-align:center;border-left:1px solid rgba(255,255,255,.07);}
+        .wz-cell:first-child{border-left:none;}
+        .wz-head{color:var(--muted2);font-size:9px;font-weight:700;background:rgba(255,255,255,.03);letter-spacing:.02em;padding-top:4px;padding-bottom:4px;}
+
+        .notam-list{display:flex;flex-direction:column;gap:8px;}
+        .notam-item{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:10px 12px;}
+        .notam-num{font-size:10px;font-weight:700;color:var(--gold);letter-spacing:.06em;margin-bottom:5px;}
+        .notam-body{font-family:var(--mono);font-size:11px;white-space:pre-wrap;word-break:break-word;line-height:1.6;}
+        .notam-validity{font-size:10px;color:var(--muted2);margin-top:6px;}
+
+        .empty-msg{color:var(--muted);font-size:12px;}
+        .hist-btn{background:none;border:none;color:var(--muted2);font-size:10px;cursor:pointer;padding:0 0 0 8px;vertical-align:middle;}
+        .hist-btn:hover{color:var(--gold);}
+        .metar-hist,.taf-prev{margin-top:10px;border-top:1px solid var(--border);padding-top:8px;}
+        .hist-metar-row{display:flex;gap:8px;align-items:baseline;padding:3px 0;flex-wrap:wrap;}
+        .hist-current .hist-raw{opacity:1;color:var(--gold);}
+        .hist-current .hist-time em{color:var(--gold);font-style:normal;font-size:9px;}
+        .hist-src{font-size:9px;color:var(--muted);margin-bottom:6px;letter-spacing:.04em;}
+        .hist-time{font-size:10px;color:var(--muted2);white-space:nowrap;flex-shrink:0;}
+        .hist-raw{font-family:var(--mono);font-size:11px;color:var(--text);opacity:.7;word-break:break-all;}
+        .hist-label{font-size:10px;color:var(--muted2);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;}
+        .hist-loading{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);padding:4px 0;}
+        .sub-chips-label{font-size:11px;color:var(--muted2);margin:10px 0 6px;}
+        .sub-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px;}
+        .sub-chip{background:var(--card2);border:1px solid var(--border);color:var(--text);
+            font-family:var(--mono);font-size:11px;font-weight:600;padding:4px 10px;
+            border-radius:20px;cursor:pointer;transition:background .15s,border-color .15s;}
+        .sub-chip:hover{background:var(--border);border-color:var(--muted2);}
+        .sub-chip.active{background:rgba(212,175,55,.15);border-color:var(--gold);color:var(--gold);}
+        .sub-chip-dist{font-weight:400;color:var(--muted2);margin-left:3px;font-size:10px;}
+        .err-msg{color:var(--red);font-size:12px;}
+        .notam-key-hint{color:var(--muted);font-size:12px;}
+        .notam-key-hint a{color:var(--gold);cursor:pointer;text-decoration:underline;}
+        .more-notams{color:var(--muted);font-size:11px;margin-top:6px;}
+
+        .source-note{font-size:10px;color:var(--muted);text-align:right;margin-top:6px;}
+
+        /* ── Route form 4 filas horizontales ── */
+        .route-cols{display:flex;flex-direction:column;gap:10px;margin-bottom:12px;}
+        .route-cols .icao-wrap{flex:none;}
+        .icao-input-alt{border-color:rgba(255,255,255,.12)!important;}
+        .icao-label-alt{color:var(--muted2)!important;}
+        .etd-row{display:flex;align-items:center;gap:12px;padding:8px 12px;background:var(--surface2);border:1px solid rgba(255,255,255,.08);border-radius:var(--radius-sm);}
+        .etd-row-label{font-size:10px;color:var(--muted2);text-transform:uppercase;letter-spacing:.08em;white-space:nowrap;}
+        .etd-row-utc{font-size:10px;font-weight:700;color:var(--gold);letter-spacing:.08em;margin-left:auto;}
+        .etd-input{background:transparent;border:none;outline:none;color:var(--text-bright);font-size:16px;font-weight:700;font-family:var(--font);letter-spacing:.04em;width:90px;color-scheme:dark;}
+
+        /* ── Route summary card (post-generate) ── */
+        .route-summary{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;margin-bottom:20px;}
+        .rs-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+        .rs-section-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted2);}
+        .btn-modify{background:none;border:1px solid var(--border2);color:var(--muted2);border-radius:var(--radius-sm);padding:6px 12px;font-size:12px;cursor:pointer;font-family:var(--font);transition:color .15s,border-color .15s;}
+        .btn-modify:hover{color:var(--gold);border-color:var(--gold);}
+        .rs-route-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+        .rs-icao-lg{font-size:22px;font-weight:800;color:var(--text-bright);letter-spacing:.04em;}
+        .rs-arrow-sm{color:var(--muted2);font-size:16px;}
+        .rs-dist{font-size:13px;font-weight:700;color:var(--gold);margin-left:auto;white-space:nowrap;}
+        .rs-names{font-size:11px;color:var(--muted2);margin:4px 0 10px;line-height:1.5;}
+        .rs-via-row{font-size:11px;color:var(--muted2);margin:3px 0 6px;display:flex;align-items:center;flex-wrap:wrap;gap:3px 5px;}
+        .rs-via-icao{font-weight:700;color:var(--muted);font-size:11px;}
+        .rs-via-place{color:var(--muted2);font-style:italic;font-size:11px;}
+        .rs-via-sep{color:var(--border2);font-size:10px;}
+        .rs-sep{border:none;border-top:1px solid var(--border);margin:10px 0;}
+        .rs-alts{display:flex;flex-direction:column;gap:8px;}
+        .rs-alt-item{display:flex;align-items:flex-start;gap:8px;}
+        .rs-alt-badge{font-size:9px;font-weight:700;letter-spacing:.08em;padding:2px 7px;border-radius:20px;background:var(--purple-bg);color:var(--purple);border:1px solid var(--purple-border);flex-shrink:0;margin-top:3px;}
+        .rs-alt-body{flex:1;min-width:0;}
+        .rs-alt-icao{font-size:15px;font-weight:700;color:var(--text-bright);}
+        .rs-alt-name{font-size:11px;color:var(--muted2);}
+        .rs-alt-dist-nm{font-size:13px;font-weight:700;color:var(--muted2);}
+        .rs-alt-dist-lbl{font-size:10px;color:var(--muted);}
+    </style>
+</head>
+<body>
+
+<header class="app-header">
+    <div class="app-header-icon">🗺</div>
+    <div class="app-header-text">
+        <h1>EasyPlan</h1>
+        <p>METAR · TAF · GAMET · NOTAMs — Datos MeteoChile + DGAC</p>
+    </div>
+</header>
+
+<div class="main">
+
+    <div class="route-form" id="route-form">
+        <div class="route-cols">
+            <div class="icao-wrap">
+                <div class="icao-label">Desde</div>
+                <input class="icao-input" id="ep-desde" placeholder="SCEL" maxlength="6">
+            </div>
+            <button class="btn-add-via" id="add-wpt-btn">+ Agregar vía o lugar</button>
+            <div class="waypoints-area" id="waypoints-area"></div>
+            <div class="icao-wrap">
+                <div class="icao-label">Hasta</div>
+                <input class="icao-input" id="ep-hasta" placeholder="SCTE" maxlength="6">
+            </div>
+            <div class="icao-wrap">
+                <div class="icao-label icao-label-alt">Alt 1</div>
+                <input class="icao-input icao-input-alt" id="ep-altn1" placeholder="SCVM" maxlength="6">
+            </div>
+            <div class="icao-wrap">
+                <div class="icao-label icao-label-alt">Alt 2</div>
+                <input class="icao-input icao-input-alt" id="ep-altn2" placeholder="ICAO" maxlength="6">
+            </div>
+        </div>
+        <div class="etd-row">
+            <span class="etd-row-label">Hora de salida</span>
+            <input class="etd-input" type="text" id="ep-etd" placeholder="HH:MM" maxlength="5" inputmode="numeric" autocomplete="off">
+            <span class="etd-row-utc">UTC</span>
+        </div>
+        <div class="form-actions">
+            <button class="btn-gen" id="gen-btn">Generar Briefing</button>
+        </div>
+    </div>
+    <div class="route-summary" id="route-summary" style="display:none;"></div>
+
+    <div id="results"></div>
+
+</div>
+
+<script>
+const EasyPlan = {
+    _wpts: [], _wptCount: 0,
+
+    // FIRs chilenas: qué aeródromos pertenecen a cada una (aprox. por latitud)
+    _CL_FIRS: {
+        SCFA: { name: 'FIR ANTOFAGASTA', lat_s: 18.35, lat_n: 28.5 },  // S18°21'–S28°30' (AIP Chile)
+        SCEL: { name: 'FIR SANTIAGO',    lat_s: 28.5,  lat_n: 38.5 },  // S28°30'–S38°30'
+        SCTE: { name: 'FIR PUERTO MONTT',lat_s: 38.5,  lat_n: 47   },  // S38°30'–S47°00'
+        SCCI: { name: 'FIR PUNTA ARENAS',lat_s: 47,    lat_n: 90   },  // S47°00'–Polo Sur
+    },
+
+    // Cache de coordenadas: { ICAO: {lat, lon} } — poblado dinámicamente desde AVWX
+    // Coords de pistas chilenas frecuentes no listadas en OurAirports.
+    // Son leídas como base; el CSV de OurAirports puede sobreescribirlas si las tiene.
+    // Verificadas contra OurAirports (13-jul-2026) — SCVI y SCRD tenían coords
+    // de otros aeródromos y varios comentarios describían el lugar equivocado.
+    _STATIC_COORDS: {
+        SCVH: { lat: -33.051, lon: -70.709 },  // La Victoria de Chacabuco
+        SCTL: { lat: -35.378, lon: -71.602 },  // Panguilemo (Talca)
+        SCCH: { lat: -36.582, lon: -72.031 },  // Gral. O'Higgins (Chillán)
+        SCQP: { lat: -38.926, lon: -72.652 },  // La Araucanía (Temuco)
+        SCVI: { lat: -39.317, lon: -72.229 },  // Villarrica
+        SCVM: { lat: -32.950, lon: -71.479 },  // Viña del Mar (Torquemada)
+        SCRD: { lat: -33.068, lon: -71.558 },  // Rodelillo (Viña del Mar)
+        SCIP: { lat: -27.165, lon: -109.421 }, // Mataveri (Isla de Pascua)
+        SCGZ: { lat: -54.931, lon: -67.626 },  // G. Zañartu (Pto. Williams)
+    },
+
+    // Cache de coordenadas: { ICAO: {lat, lon} } — poblado dinámicamente desde OurAirports
+    // (persiste en localStorage)
+    _coordsCache: {},
+
+    // Cache de info de aeródromo: { ICAO: {name, city} } — poblado desde OurAirports
+    // (persiste en localStorage)
+    _airportInfoCache: {},
+
+    init() {
+        // Seed con coords estáticas de pistas no indexadas en OurAirports
+        this._coordsCache = { ...this._STATIC_COORDS };
+        try {
+            const saved = localStorage.getItem('_ep_coords_cache');
+            if (saved) Object.assign(this._coordsCache, JSON.parse(saved));
+        } catch {}
+        try {
+            const saved = localStorage.getItem('_ep_airport_info');
+            if (saved) Object.assign(this._airportInfoCache, JSON.parse(saved));
+        } catch {}
+
+        ['ep-desde','ep-hasta','ep-altn1','ep-altn2'].forEach(id =>
+            document.getElementById(id).addEventListener('input', e => {
+                e.target.value = e.target.value.toUpperCase();
+            }));
+
+        // Auto-formato HH:MM para el campo de hora UTC (24h, libre de locale del SO)
+        const etdInput = document.getElementById('ep-etd');
+        etdInput.addEventListener('input', e => {
+            let v = e.target.value.replace(/[^\d]/g, '').slice(0, 4);
+            if (v.length >= 3) v = v.slice(0, 2) + ':' + v.slice(2);
+            e.target.value = v;
+        });
+        etdInput.addEventListener('blur', e => {
+            const m = e.target.value.match(/^(\d{1,2}):(\d{2})$/);
+            if (m) {
+                const hh = Math.min(23, parseInt(m[1])), mm = Math.min(59, parseInt(m[2]));
+                e.target.value = String(hh).padStart(2,'0') + ':' + String(mm).padStart(2,'0');
+            } else if (e.target.value && !e.target.value.includes(':')) {
+                e.target.value = '';
+            }
+        });
+
+        document.getElementById('add-wpt-btn').addEventListener('click', () => this._addWaypoint());
+        document.getElementById('gen-btn').addEventListener('click', () => this._generate());
+    },
+
+    _addWaypoint() {
+        const idx = this._wptCount++;
+        const id  = `ep-wpt-${idx}`;
+        const wpt = { id, val: '', isIcao: false, coords: null, displayName: '' };
+        this._wpts.push(wpt);
+        const area = document.getElementById('waypoints-area');
+        const div  = document.createElement('div');
+        div.className = 'waypoint-row';
+        div.innerHTML = `
+            <div class="icao-wrap" style="flex:1">
+                <div class="icao-label">Vía ${this._wpts.length}</div>
+                <input class="wpt-input" id="${id}" placeholder="ICAO, ciudad o lugar" autocomplete="off" spellcheck="false">
+                <div class="wpt-badge" id="badge-${id}" style="display:none"></div>
+            </div>
+            <button class="btn-remove" title="Eliminar">✕</button>`;
+        area.appendChild(div);
+        const inputEl = div.querySelector('input');
+        inputEl.addEventListener('input', () => {
+            wpt.val = inputEl.value;
+            wpt.resolved = false;
+            const badge = document.getElementById(`badge-${id}`);
+            if (badge) badge.style.display = 'none';
+        });
+        inputEl.addEventListener('blur', () => this._resolveWptPlace(wpt, inputEl));
+        div.querySelector('.btn-remove').addEventListener('click', () => {
+            this._wpts = this._wpts.filter(w => w.id !== id);
+            div.remove();
+        });
+        inputEl.focus();
+    },
+
+    async _resolveWptPlace(wpt, inputEl) {
+        const v = inputEl.value.trim();
+        if (!v) return;
+        const badge = document.getElementById(`badge-${wpt.id}`);
+        const showBadge = (txt, cls) => {
+            if (!badge) return;
+            badge.textContent = txt; badge.className = `wpt-badge ${cls}`; badge.style.display = 'inline-block';
+        };
+        // ICAO-like: 2-6 uppercase letters only
+        if (/^[A-Z]{2,6}$/.test(v.toUpperCase()) && v === v.toUpperCase()) {
+            wpt.val = v; wpt.isIcao = true; wpt.coords = null; wpt.displayName = v;
+            if (badge) badge.style.display = 'none';
+            return;
+        }
+        // Free-text place: geocode via Nominatim restringido al país de la ruta
+        wpt.isIcao = false;
+        showBadge('Buscando…', 'wpt-badge-resolving');
+        try {
+            // Inferir país desde el prefijo ICAO de salida o destino
+            const routeCountry = (() => {
+                const ICAO_CC = { SC:'cl', SB:'br', SA:'ar', SP:'pe', SU:'uy', SK:'co',
+                                  SE:'ec', SL:'bo', SY:'py', SV:'ve', SG:'py', MD:'do',
+                                  K:'us', C:'ca', EG:'gb', LF:'fr', LE:'es', ED:'de' };
+                const desde = document.getElementById('ep-desde')?.value.trim().toUpperCase() || '';
+                for (const [pfx, cc] of Object.entries(ICAO_CC)) {
+                    if (desde.startsWith(pfx)) return cc;
+                }
+                return null;
+            })();
+            const q   = encodeURIComponent(v);
+            const cc  = routeCountry ? `&countrycodes=${routeCountry}` : '';
+            const url = `https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1&accept-language=es${cc}`;
+            const res = await fetch(url, {
+                headers: { 'User-Agent': 'EasyPlan/1.0 (bitacoradevuelo.cl)' },
+                signal: AbortSignal.timeout(7000)
+            });
+            const data = await res.json();
+            if (data?.[0]) {
+                const lat = parseFloat(data[0].lat), lon = parseFloat(data[0].lon);
+                wpt.coords      = { lat, lon };
+                wpt.displayName = data[0].display_name.split(',')[0].trim();
+                wpt.val         = v;
+                const latS = lat.toFixed(3), lonS = lon.toFixed(3);
+                const osmUrl = `https://www.openstreetmap.org/?mlat=${latS}&mlon=${lonS}&zoom=12`;
+                console.log(`[EasyPlan] Waypoint "${v}" → ${wpt.displayName} (${latS}, ${lonS})`);
+                // Badge con coordenadas y link OSM para que el piloto verifique
+                if (badge) {
+                    badge.innerHTML = `✓ ${this._esc(wpt.displayName)} <span style="opacity:.65">${latS}, ${lonS}</span> <a href="${osmUrl}" target="_blank" rel="noopener" style="color:inherit;opacity:.8" title="Ver en OpenStreetMap">🗺</a>`;
+                    badge.className = 'wpt-badge wpt-badge-ok';
+                    badge.style.display = 'inline-block';
+                }
+            } else {
+                showBadge('⚠ No encontrado — intenta un nombre más específico', 'wpt-badge-warn');
+            }
+        } catch {
+            showBadge('⚠ Error al buscar', 'wpt-badge-warn');
+        }
+    },
+
+    // Retorna array ordenado de puntos {name, lat, lon} para todo el tramo incluyendo
+    // waypoints no-ICAO resueltos por Nominatim. Usado para muestreo de terreno.
+    _getFullRoutePoints() {
+        const desde = document.getElementById('ep-desde')?.value.trim().toUpperCase() || '';
+        const hasta = document.getElementById('ep-hasta')?.value.trim().toUpperCase() || '';
+        if (!desde || !hasta) return [];
+        const points = [];
+        const add = (name, c) => { if (c?.lat !== undefined) points.push({ name, lat: c.lat, lon: c.lon }); };
+        add(desde, this._coordsCache[desde]);
+        for (const wpt of this._wpts) {
+            if (!wpt.val) continue;
+            if (wpt.isIcao) add(wpt.val, this._coordsCache[wpt.val]);
+            else if (wpt.coords) add(wpt.displayName || wpt.val, wpt.coords);
+        }
+        add(hasta, this._coordsCache[hasta]);
+        return points;
+    },
+
+    _getRoute() {
+        const desde = document.getElementById('ep-desde').value.trim().toUpperCase();
+        const hasta = document.getElementById('ep-hasta').value.trim().toUpperCase();
+        if (!desde || !hasta) return null;
+        const wpts = this._wpts.map(w => w.val.trim().toUpperCase()).filter(v => v.length >= 2);
+        return [...new Set([desde, ...wpts, hasta])];
+    },
+
+    _getAltn() {
+        const v = (document.getElementById('ep-altn1')?.value || '').trim().toUpperCase();
+        return v.length >= 2 ? v : null;
+    },
+
+    _getAltn2() {
+        const v = (document.getElementById('ep-altn2')?.value || '').trim().toUpperCase();
+        return v.length >= 2 ? v : null;
+    },
+
+    _getEtd() {
+        const v = (document.getElementById('ep-etd')?.value || '').trim();
+        return /^\d{2}:\d{2}$/.test(v) ? v : null;
+    },
+
+    async _generate() {
+        const route = this._getRoute();
+        if (!route) {
+            document.getElementById('results').innerHTML =
+                `<div class="loading-card"><p class="err-msg">Ingresa aeródromo de salida y destino.</p></div>`;
+            return;
+        }
+        const altn  = this._getAltn();
+        const altn2 = this._getAltn2();
+        const etd   = this._getEtd();
+        const btn = document.getElementById('gen-btn');
+        btn.disabled = true; btn.textContent = 'Cargando…';
+        document.getElementById('results').innerHTML =
+            `<div class="loading-card"><div class="spinner"></div>Cargando datos meteorológicos…</div>`;
+
+        // Arrancar fetch de coords en paralelo — el CSV tarda 2-5s y la IA necesita
+        // coords para filtrar WIND/T por tramo. En cache es instantáneo.
+        const allIcaos = [...route, ...(altn ? [altn] : []), ...(altn2 ? [altn2] : [])];
+        this._fetchCoordsOurAirports(allIcaos); // fire-and-forget; los usaremos cuando el user pulse IA
+
+        const countries = this._detectCountries(allIcaos);
+
+        try {
+            const [mcData, gamet, brazilGamet, uruguayAge] = await Promise.all([
+                this._loadMeteoChile(),
+                this._loadGamet(),
+                countries.has('brazil') ? this._loadGametBrazil() : Promise.resolve(null),
+                countries.has('uruguay') ? this._loadGametUruguayAge() : Promise.resolve(null),
+            ]);
+
+            this._lastMcData = mcData;
+            const mcWithData = new Set(
+                Object.keys(mcData.metar).filter(k => mcData.metar[k] && !mcData.metar[k].includes('NIL'))
+            );
+            this._mcWithData = mcWithData;
+
+            const metars = {}, tafs = {}, metarSources = {};
+            const missingFromMC = [];
+
+            // Incluir alternativa en la búsqueda de met; excluir waypoints no-ICAO
+            const nonIcaoVals = new Set(this._wpts.filter(w => !w.isIcao).map(w => w.val.trim().toUpperCase()));
+            const allRouteIcaos = [...route, ...(altn ? [altn] : []), ...(altn2 ? [altn2] : [])]
+                .filter(v => !nonIcaoVals.has(v));
+            allRouteIcaos.forEach(icao => {
+                const raw    = mcData.metar[icao];
+                const tafRaw = mcData.taf[icao];
+                if (raw && !raw.includes('NIL')) {
+                    metars[icao] = this._parseMetar(icao, raw);
+                    metarSources[icao] = 'meteochile';
+                } else {
+                    missingFromMC.push(icao);
+                }
+                if (tafRaw && !tafRaw.includes('NIL')) {
+                    tafs[icao] = { rawTAF: tafRaw.replace(/=$/, '').trim(), source: 'meteochile' };
+                }
+            });
+
+            if (missingFromMC.length) {
+                const avwxResults = await Promise.allSettled(
+                    missingFromMC.map(icao =>
+                        icao.startsWith('SB')
+                            ? this._fetchRedemtBoth(icao)
+                            : this._fetchAvwxBoth(icao)
+                    )
+                );
+                avwxResults.forEach((r, i) => {
+                    const icao = missingFromMC[i];
+                    if (r.status === 'fulfilled' && r.value) {
+                        if (r.value.metar) { metars[icao] = r.value.metar; metarSources[icao] = 'avwx'; }
+                        if (r.value.taf)   { tafs[icao]   = { rawTAF: r.value.taf, source: 'avwx' }; }
+                    }
+                });
+            }
+
+            // Guardar estado para uso posterior por el botón IA
+            this._lastRoute        = route;
+            this._lastAltn         = altn;
+            this._lastAltn2        = altn2;
+            this._lastEtd          = etd;
+            this._lastMetars       = metars;
+            this._lastTafs         = tafs;
+            this._lastGamet        = gamet;
+            this._lastIntlCountries = countries;
+            this._lastBrazilGamet  = brazilGamet;
+            this._lastUruguayAge   = uruguayAge;
+
+            this._render(route, altn, metars, tafs, gamet, true, true, metarSources, countries, brazilGamet, uruguayAge, altn2);
+            this._showRouteSummary(route, altn, altn2);
+
+            // Background: chips de sugerencia para aeródromos sin METAR
+            const noDataIcaos = allRouteIcaos.filter(icao => !metars[icao]);
+            if (noDataIcaos.length) {
+                const chipCandidates = [...this._mcWithData].filter(k => !this._coordsCache[k]);
+                if (chipCandidates.length) {
+                    this._fetchCoordsOurAirports(chipCandidates).then(() => {
+                        noDataIcaos.forEach(icao => this._updateChipDistances(icao));
+                    });
+                } else {
+                    noDataIcaos.forEach(icao => this._updateChipDistances(icao));
+                }
+            }
+        } catch (err) {
+            document.getElementById('results').innerHTML =
+                `<div class="loading-card"><p class="err-msg">Error: ${this._esc(err.message)}</p></div>`;
+        } finally {
+            btn.disabled = false; btn.textContent = 'Generar Briefing';
+        }
+    },
+
+    // ── MeteoChile data via <script> tag (bypasses CORS) ──
+    // El script define var metar=[] y taf=[] globalmente y los rellena con claves ICAO.
+    // En onload leemos window.metar/window.taf directamente — son Arrays con propiedades string.
+
+    _loadMeteoChile() {
+        return new Promise((resolve, reject) => {
+            const old = document.getElementById('mc-data');
+            if (old) old.remove();
+            const s = document.createElement('script');
+            s.id  = 'mc-data';
+            s.src = `https://archivos.meteochile.gob.cl/portaldmc/metaer/js/AftndataMetaerTodo.js?_=${Date.now()}`;
+            s.onload = () => {
+                // Object.assign copia claves string (ICAO) del Array a un objeto plano
+                const metar = Object.assign({}, window.metar);
+                const taf   = Object.assign({}, window.taf);
+                resolve({ metar, taf });
+            };
+            s.onerror = () => reject(new Error('No se pudo cargar datos de MeteoChile. Verifica tu conexión.'));
+            document.head.appendChild(s);
+            setTimeout(() => reject(new Error('Timeout: MeteoChile no responde')), 15000);
+        });
+    },
+
+    _loadGamet() {
+        // gamet.js define var FIRFA, FIRFAMSJ, contadoresXX — los lee window después del onload
+        return new Promise((resolve) => {
+            const old = document.getElementById('mc-gamet');
+            if (old) old.remove();
+            const s = document.createElement('script');
+            s.id  = 'mc-gamet';
+            s.src = `https://archivos.meteochile.gob.cl/portaldmc/meteochile/scripts/gamet.js?_=${Date.now()}`;
+            s.onload = () => {
+                const msj = Object.assign({}, window.FIRFAMSJ);
+                resolve({ msj });
+            };
+            s.onerror = () => resolve({ msj: {} });
+            document.head.appendChild(s);
+            setTimeout(() => resolve({ msj: {} }), 10000);
+        });
+    },
+
+    // ── AVWX vía wx-proxy (cobertura mundial) ──
+
+    async _fetchAvwxBoth(icao) {
+        const proxy = this._WX_PROXY;
+        const [mRes, tRes] = await Promise.allSettled([
+            fetch(`${proxy}/avwx/metar?ids=${icao}`, { headers: this._authHeaders(), signal: AbortSignal.timeout(14000) }),
+            fetch(`${proxy}/avwx/taf?ids=${icao}`,   { headers: this._authHeaders(), signal: AbortSignal.timeout(14000) })
+        ]);
+        const result = {};
+        if (mRes.status === 'fulfilled' && mRes.value.ok) {
+            const j = await mRes.value.json();
+            if (j?.raw) result.metar = this._parseMetar(icao, j.raw);
+        }
+        if (tRes.status === 'fulfilled' && tRes.value.ok) {
+            const j = await tRes.value.json();
+            if (j?.raw) result.taf = j.raw;
+        }
+        return Object.keys(result).length ? result : null;
+    },
+
+    // ── OurAirports fallback vía wx-proxy (cobertura mundial, sin key) ──
+
+    async _fetchOurAirportsBoth(icao) {
+        try {
+            const res = await fetch(
+                `${this._WX_PROXY}/oa?ids=${icao}`,
+                { headers: this._authHeaders(), signal: AbortSignal.timeout(15000) }
+            );
+            if (!res.ok) return null;
+            const d = await res.json();
+            const result = {};
+            if (d.metar) result.metar = this._parseMetar(icao, d.metar);
+            if (d.taf)   result.taf   = d.taf.replace(/^TAF\s+/, '').trim();
+            return Object.keys(result).length ? result : null;
+        } catch { return null; }
+    },
+
+    // ── REDEMET (Brasil) — METAR + TAF por aeródromo ──
+
+    async _fetchRedemtBoth(icao) {
+        const proxy = this._WX_PROXY;
+        const [mRes, tRes] = await Promise.allSettled([
+            fetch(`${proxy}/redemet/metar?ids=${icao}`, { headers: this._authHeaders(), signal: AbortSignal.timeout(14000) }),
+            fetch(`${proxy}/redemet/taf?ids=${icao}`,   { headers: this._authHeaders(), signal: AbortSignal.timeout(14000) })
+        ]);
+        const result = {};
+        if (mRes.status === 'fulfilled' && mRes.value.ok) {
+            const j = await mRes.value.json();
+            if (j?.mens) result.metar = this._parseMetar(icao, j.mens.replace(/^METAR\s+/, '').trim());
+        }
+        if (tRes.status === 'fulfilled' && tRes.value.ok) {
+            const j = await tRes.value.json();
+            if (j?.mens) result.taf = j.mens.replace(/^TAF\s+/, '').trim();
+        }
+        return Object.keys(result).length ? result : null;
+    },
+
+    // ── REDEMET — GAMET de todos los FIRs brasileños ──
+
+    async _loadGametBrazil() {
+        try {
+            const res = await fetch(`${this._WX_PROXY}/gamet-br`, { headers: this._authHeaders(), signal: AbortSignal.timeout(20000) });
+            if (!res.ok) return null;
+            const j = await res.json();
+            return Object.keys(j).length ? j : null;
+        } catch { return null; }
+    },
+
+    // ── INUMET Uruguay — edad del GAMET (Last-Modified vía wx-proxy) ──
+
+    async _loadGametUruguayAge() {
+        try {
+            const res = await fetch(`${this._WX_PROXY}/gamet-uy-age`, { headers: this._authHeaders(), signal: AbortSignal.timeout(10000) });
+            if (!res.ok) return null;
+            const j = await res.json();
+            if (j.error || !j.lastModified) return { url: j.url, lastModified: null, ageHours: null };
+            const agems = Date.now() - new Date(j.lastModified).getTime();
+            return { url: j.url, lastModified: j.lastModified, ageHours: Math.round(agems / 3600000) };
+        } catch { return null; }
+    },
+
+    // ── Detección de países a partir de prefijos ICAO ──
+
+    _detectCountries(icaos) {
+        const prefixMap = { SB:'brazil', SU:'uruguay', SA:'argentina', SP:'peru', SG:'paraguay', SL:'bolivia', SK:'colombia' };
+        const found = new Set();
+        for (const icao of icaos) {
+            const c = prefixMap[icao.slice(0,2)];
+            if (c) found.add(c);
+        }
+        return found;
+    },
+
+    // ── Sugerencia de estaciones cercanas por prefijo ICAO ──
+
+    _haversine(lat1, lon1, lat2, lon2) {
+        const R = 6371;
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat/2)**2
+                + Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180)
+                * Math.sin(dLon/2)**2;
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    },
+
+    // Retorna [{icao, dist}] — dist en km si están en cache, null si no
+    _suggestStations(icao) {
+        const all = this._mcWithData ? [...this._mcWithData] : [];
+        const candidates = all.filter(k => k !== icao);
+        if (!candidates.length) return [];
+
+        // Sin coordenadas del aeródromo consultado no hay noción de "cercanía":
+        // sugerir estaciones al azar (con "null km") confunde más de lo que ayuda.
+        const coords = this._coordsCache[icao];
+        if (!coords) return [];
+        const withDist = candidates
+            .map(k => {
+                const c = this._coordsCache[k];
+                const dist = (coords && c)
+                    ? Math.round(this._haversine(coords.lat, coords.lon, c.lat, c.lon))
+                    : null;
+                return { icao: k, dist };
+            });
+
+        // Poner primero los que tienen distancia conocida (ordenados), luego los sin datos
+        const known   = withDist.filter(x => x.dist !== null).sort((a, b) => a.dist - b.dist);
+        const unknown = withDist.filter(x => x.dist === null);
+        return [...known, ...unknown].slice(0, 5);
+    },
+
+    // Descarga airports.csv de OurAirports (CORS OK, gratis, mundial) y extrae coords
+    // Solo se descarga una vez: las coords quedan en localStorage cache para siempre
+    async _fetchCoordsOurAirports(icaos) {
+        const needed = new Set(icaos.filter(k => !this._coordsCache[k] || !this._airportInfoCache[k]));
+        if (!needed.size) return;
+        try {
+            const res = await fetch(
+                'https://davidmegginson.github.io/ourairports-data/airports.csv',
+                { signal: AbortSignal.timeout(40000) }
+            );
+            if (!res.ok) return;
+            const text = await res.text();
+            const lines = text.split('\n');
+            const h = lines[0].split(',').map(f => f.replace(/"/g, ''));
+            const iI    = h.indexOf('ident');
+            const iC    = h.indexOf('icao_code');
+            const iLat  = h.indexOf('latitude_deg');
+            const iLon  = h.indexOf('longitude_deg');
+            const iName = h.indexOf('name');
+            const iMun  = h.indexOf('municipality');
+            const iElev = h.indexOf('elevation_ft');
+            if (iLat < 0 || iLon < 0) return;
+
+            for (const line of lines.slice(1)) {
+                if (!needed.size) break;
+                const f = line.split(',');
+                const icao = (f[iI] || '').replace(/"/g, '').trim()
+                          || (iC >= 0 ? (f[iC] || '').replace(/"/g, '').trim() : '');
+                if (!icao || !needed.has(icao)) continue;
+                const lat = parseFloat(f[iLat]);
+                const lon = parseFloat(f[iLon]);
+                if (!isNaN(lat) && !isNaN(lon)) {
+                    this._coordsCache[icao] = { lat, lon };
+                    const name = iName >= 0 ? (f[iName] || '').replace(/"/g, '').trim() : '';
+                    const city = iMun  >= 0 ? (f[iMun]  || '').replace(/"/g, '').trim() : '';
+                    const elev = iElev >= 0 ? parseInt((f[iElev] || '').replace(/"/g, '')) : NaN;
+                    this._airportInfoCache[icao] = { name, city, ...(isNaN(elev) ? {} : { elevFt: elev }) };
+                    needed.delete(icao);
+                }
+            }
+            try { localStorage.setItem('_ep_coords_cache',  JSON.stringify(this._coordsCache));    } catch {}
+            try { localStorage.setItem('_ep_airport_info',  JSON.stringify(this._airportInfoCache)); } catch {}
+        } catch {}
+    },
+
+    // Actualiza distancias en chips ya renderizados
+    _updateChipDistances(icao) {
+        const section = document.getElementById(`ap-metar-${icao}`);
+        if (!section) return;
+        const origCoords = this._coordsCache[icao];
+        if (!origCoords) return;
+        section.querySelectorAll('.sub-chip').forEach(chip => {
+            const c = this._coordsCache[chip.dataset.sub];
+            if (!c) return;
+            const dist = Math.round(this._haversine(origCoords.lat, origCoords.lon, c.lat, c.lon));
+            const el = chip.querySelector('.sub-chip-dist');
+            if (el) el.textContent = `${dist} km`;
+        });
+        // Re-ordenar chips por distancia
+        const container = section.querySelector('.sub-chips');
+        if (!container) return;
+        const chips = [...container.querySelectorAll('.sub-chip')]
+            .map(c => {
+                const sub = this._coordsCache[c.dataset.sub];
+                const d = (origCoords && sub) ? this._haversine(origCoords.lat, origCoords.lon, sub.lat, sub.lon) : 99999;
+                return { el: c, d };
+            })
+            .sort((a, b) => a.d - b.d);
+        chips.forEach(x => container.appendChild(x.el));
+    },
+
+    // ── METAR parser ──
+
+    _parseMetar(icao, raw) {
+        const text = raw.replace(/=$/, '').trim();
+
+        // Wind
+        const wm = text.match(/\b(VRB|\d{3})(\d{2,3})(G(\d{2,3}))?KT\b/);
+        const wdirVRB = wm ? wm[1] === 'VRB' : false;
+        const wdir    = wm ? (wdirVRB ? 0 : parseInt(wm[1])) : undefined;
+        const wspd    = wm ? parseInt(wm[2]) : undefined;
+        const wgst    = wm && wm[4] ? parseInt(wm[4]) : null;
+
+        // Visibility (metros o SM, o CAVOK)
+        const isCavokVis = /\bCAVOK\b/.test(text);
+        let visib = '', visM = null;
+        if (isCavokVis) { visib = 'CAVOK'; visM = 99999; }
+        else {
+            const vm = text.match(/\b(P6SM|M?\d+SM|\d{4})\b/);
+            if (vm) {
+                const v = vm[1];
+                if (v === 'P6SM') { visib = '10+ SM'; visM = 99999; }
+                else if (v.endsWith('SM')) { const n = parseFloat(v); visib = `${n} SM`; visM = n * 1609; }
+                else { visM = parseInt(v); visib = visM >= 9999 ? '10+ km' : visM >= 1000 ? `${(visM/1000).toFixed(1)} km` : `${visM} m`; }
+            }
+        }
+
+        // Clouds
+        const cloudRe = /\b(FEW|SCT|BKN|OVC)(\d{3})(?:CB|TCU)?\b/g;
+        const clouds = []; let cm;
+        while ((cm = cloudRe.exec(text)) !== null)
+            clouds.push({ cover: cm[1], base: parseInt(cm[2]) * 100 });
+        const skyClear = /\b(SKC|CLR|NCD|NSC|CAVOK)\b/.test(text);
+
+        // Temp / dewpoint
+        const tm = text.match(/\b(M?\d{2})\/(M?\d{2})\b/);
+        const parseT = s => s.startsWith('M') ? -parseInt(s.slice(1)) : parseInt(s);
+        const temp = tm ? parseT(tm[1]) : undefined;
+        const dewp = tm ? parseT(tm[2]) : undefined;
+
+        // QNH
+        let altim;
+        const qm = text.match(/\bQ(\d{4})\b/);
+        const am = text.match(/\bA(\d{4})\b/);
+        if (qm) altim = parseInt(qm[1]);
+        else if (am) altim = Math.round(parseInt(am[1]) / 100 * 33.8639);
+
+        // Weather phenomena
+        const wxRe = /\b([-+]?(?:TS|SH|FZ)?(?:RA|SN|DZ|GR|GS|UP)|FG|BR|HZ|FU|DU|SA|VA|PY|PO|SQ|FC|SS|DS|MIFG|BCFG|PRFG|FZFG|BLSN|BLDU|BLSA|DRSN|DRDU|DRSA|VCSH|VCTS|VCFG|VC\w+)\b/g;
+        const wxParts = []; let wxm;
+        while ((wxm = wxRe.exec(text)) !== null) wxParts.push(wxm[1]);
+        const wxString = [...new Set(wxParts)].join(' ');
+
+        // Flight category
+        const ceil = clouds.find(c => c.cover === 'BKN' || c.cover === 'OVC');
+        const ceilFt = ceil?.base;
+        let fltCat = 'VFR';
+        if (!isCavokVis && !skyClear) {
+            const cBad = ceilFt !== undefined && ceilFt < 3000;
+            const vBad = visM !== null && visM < 8000;
+            if ((ceilFt !== undefined && ceilFt < 500) || (visM !== null && visM < 1500)) fltCat = 'LIFR';
+            else if ((ceilFt !== undefined && ceilFt < 1000) || (visM !== null && visM < 3000)) fltCat = 'IFR';
+            else if (cBad || vBad) fltCat = 'MVFR';
+        }
+
+        return { icaoId: icao, rawOb: text, fltCat, wdir, _wdirVRB: wdirVRB, wspd, wgst, visib, altim, temp, dewp, clouds: skyClear ? [] : clouds, wxString };
+    },
+
+    // ── Relevant GAMET FIRs for route ──
+
+    // Mapa ICAO-prefix → FIR para fallback cuando no hay coords en cache.
+    // Solo necesita distinguir los casos más comunes; los demás van a SCEL.
+    // Solo aeródromos que NO caen en SCEL; los SC* restantes van a SCEL por defecto.
+    _ICAO_FIR_FALLBACK: {
+        // FIR ANTOFAGASTA (norte, S17-S30)
+        SCFA:'SCFA', SCDA:'SCFA', SCBE:'SCFA', SCAT:'SCFA', SCAN:'SCFA',
+        SCAR:'SCFA', SCIP:'SCFA', SCPZ:'SCFA',
+        // FIR PUERTO MONTT (sur, S41-S47) — Puerto Montt ~S41.4
+        SCPV:'SCTE', SCVD:'SCTE', SCTH:'SCTE', SCAS:'SCTE', SCMV:'SCTE',
+        // FIR PUNTA ARENAS (extremo sur, S47+)
+        SCCI:'SCCI', SCNT:'SCCI', SCPU:'SCCI', SCGZ:'SCCI',
+    },
+
+    _relevantFirs(route) {
+        const firs = new Set();
+        let coordsFound = false;
+
+        route.forEach(icao => {
+            const c = this._coordsCache[icao];
+            if (c) {
+                coordsFound = true;
+                const absLat = Math.abs(c.lat);
+                Object.entries(this._CL_FIRS).forEach(([fir, d]) => {
+                    if (absLat >= d.lat_s && absLat < d.lat_n) firs.add(fir);
+                });
+            }
+        });
+
+        // Fallback cuando no hay coords: usar tabla ICAO-prefix → FIR.
+        // Así el GAMET siempre se muestra aunque sea la primera vez.
+        if (!coordsFound) {
+            route.forEach(icao => {
+                const prefix4 = icao.slice(0, 4).toUpperCase();
+                const prefix3 = icao.slice(0, 3).toUpperCase();
+                const fir = this._ICAO_FIR_FALLBACK[prefix4]
+                         || this._ICAO_FIR_FALLBACK[prefix3]
+                         || (/^SC/i.test(icao) ? 'SCEL' : null);
+                if (fir) firs.add(fir);
+            });
+        }
+
+        return [...firs];
+    },
+
+    // ── Render ──
+
+    _render(route, altn, metars, tafs, gamet, hasAvwxKey, hasGemini, metarSources = {}, intlCountries = new Set(), brazilGamet = null, uruguayAge = null, altn2 = null) {
+        const desde = route[0], hasta = route[route.length - 1];
+        let html = '<div class="results">';
+
+        // ── Renderizar tarjeta de aeródromo ──────────────────────────────────────
+        const renderApCard = (icao, role) => {
+            const rClass = { DEP:'role-dep', ARR:'role-arr', VIA:'role-via', ALTN:'role-altn', ALTN2:'role-altn' }[role];
+            const roleLabel = { DEP:'DEP', ARR:'ARR', VIA:'VIA', ALTN:'ALT 1', ALTN2:'ALT 2' }[role];
+            const m = metars[icao], t = tafs[icao];
+            const cat = m?.fltCat || '';
+            const cClass = { VFR:'cat-vfr', MVFR:'cat-mvfr', IFR:'cat-ifr', LIFR:'cat-lifr' }[cat] || '';
+            const catBadge = cat ? `<span class="flt-cat ${cClass}">${cat}</span>` : '';
+            const src = metarSources[icao];
+            const srcBadge = src === 'avwx'
+                ? ' <span style="font-size:9px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">via AVWX</span>'
+                : '';
+            const noMetarMsg = this._renderNoMetarMsg(icao, hasAvwxKey);
+            const info = this._airportInfoCache[icao];
+            const aptNameHtml = info
+                ? `<div class="airport-name">${this._esc(info.name)}${info.city ? ` — ${this._esc(info.city)}` : ''}</div>`
+                : '';
+            return `<div class="airport-card" id="ap-card-${icao}">
+                <div class="airport-card-header">
+                    <div style="flex:1;min-width:0">
+                        <div class="airport-icao-badge">
+                            <div class="airport-icao">${this._esc(icao)}</div>${catBadge}
+                        </div>
+                        ${aptNameHtml}
+                    </div>
+                    <span class="airport-role ${rClass}">${roleLabel}</span>
+                </div>
+                <div class="data-section" id="ap-metar-${icao}">
+                    <div class="section-title">METAR${srcBadge}${hasAvwxKey && m ? `<button class="hist-btn" onclick="EasyPlan._loadHistoric('${icao}')">↺ últimos 3</button>` : ''}</div>
+                    ${m ? `<div class="raw-metar">${this._esc(m.rawOb)}</div>${this._metarChips(m)}` : noMetarMsg}
+                </div>
+                <div class="data-section" id="ap-taf-${icao}">
+                    <div class="section-title">TAF${hasAvwxKey && t ? `<button class="hist-btn" onclick="EasyPlan._loadTafHistory('${icao}')">↺ anterior</button>` : ''}</div>
+                    ${t ? `<div class="taf-raw">${this._esc(t.rawTAF)}</div>`
+                        : `<div class="empty-msg">Sin TAF disponible</div>`}
+                </div>
+            </div>`;
+        };
+
+        // 1. Aeródromo de salida
+        html += renderApCard(desde, 'DEP');
+
+        // 2. Escalas intermedias — ICAO con carta met normal, lugares libres con tarjeta geo
+        const nonIcaoByVal = new Map(
+            (this._wpts || [])
+                .filter(w => !w.isIcao && w.coords)
+                .map(w => [w.val.trim().toUpperCase(), w])
+        );
+        route.slice(1, -1).forEach(val => {
+            const geoWpt = nonIcaoByVal.get(val);
+            if (geoWpt) {
+                const osmUrl = `https://www.openstreetmap.org/?mlat=${geoWpt.coords.lat.toFixed(3)}&mlon=${geoWpt.coords.lon.toFixed(3)}&zoom=12`;
+                html += `<div class="geo-wpt-card">
+                    <div class="geo-wpt-card-header">
+                        <div style="flex:1;min-width:0">
+                            <div class="geo-wpt-name">${this._esc(geoWpt.displayName || geoWpt.val)}</div>
+                            <div class="geo-wpt-coords">${geoWpt.coords.lat.toFixed(3)}, ${geoWpt.coords.lon.toFixed(3)} · <a href="${osmUrl}" target="_blank" rel="noopener" style="color:inherit">ver mapa</a></div>
+                        </div>
+                        <span class="airport-role role-via">VIA</span>
+                    </div>
+                    <div class="geo-wpt-note">Punto de referencia geográfico — sin datos meteorológicos</div>
+                </div>`;
+            } else {
+                html += renderApCard(val, 'VIA');
+            }
+        });
+
+        // 3. Aeródromo de destino
+        if (route.length > 1) html += renderApCard(hasta, 'ARR');
+
+        // 4. Alternativas (si fueron ingresadas)
+        if (altn) html += renderApCard(altn, 'ALTN');
+        if (altn2) html += renderApCard(altn2, 'ALTN2');
+
+        // 5. GAMET — pronóstico de ruta
+        const firs = this._relevantFirs(route);
+        if (firs.length && gamet.msj) {
+            const firSections = firs.map(fir => {
+                const msj = gamet.msj[fir] || '';
+                if (!msj.trim()) return '';
+                const firstGamet = msj.split('<br><br>')[0].replace(/<br>/gi, ' ').trim();
+                if (!firstGamet) return '';
+                const formatted = this._formatGametHtml(firstGamet);
+                return `<div class="gamet-fir">
+                    <div class="gamet-fir-name">FIR ${fir} — ${this._CL_FIRS[fir]?.name || fir}</div>
+                    ${formatted}
+                </div>`;
+            }).filter(Boolean);
+
+            if (firSections.length) {
+                html += `<div class="gamet-card">
+                    <div class="gamet-card-header">
+                        <div class="gamet-card-title">⚡ GAMET — Pronóstico de Baja Altura</div>
+                    </div>
+                    ${firSections.join('')}
+                </div>`;
+            }
+        }
+
+        // 6. GAMET Internacional
+        if (intlCountries.size) {
+            html += this._renderIntlSection(intlCountries, brazilGamet, uruguayAge);
+        }
+
+        // 7. Botón IA + tarjeta resultado (vacía hasta que el usuario pulse)
+        html += `<div class="ai-card" id="ai-card">
+            <div class="ai-card-header"><span class="ai-card-title">✦ Análisis IA</span></div>
+            ${hasGemini
+                ? `<div class="ai-trigger-area">
+                    <div class="ai-disclaimer">⚠ El análisis generado por IA puede contener errores. No reemplaza el briefing oficial DGAC ni la autorización ATC.</div>
+                    <button class="btn-ai-run" id="btn-ai-run">Analizar con IA</button>
+                   </div>`
+                : `<div class="ai-key-hint">Configura tu Gemini API Key en <a class="open-settings-link">⚙ Config</a> para recibir análisis de altitud, engelamiento y zonas a evitar.</div>`
+            }
+        </div>`;
+
+        html += `<div class="source-note">Datos: MeteoChile / DGAC</div>`;
+        html += '</div>';
+        document.getElementById('results').innerHTML = html;
+
+        // Sincronizar scroll horizontal de todas las filas WIND/T del mismo card
+        // (cabecera de zonas + filas de altitud deben desplazarse juntas)
+        this._wireWindScroll();
+
+        const btnAI = document.getElementById('btn-ai-run');
+        if (btnAI) {
+            btnAI.addEventListener('click', async () => {
+                const triggerArea = btnAI.closest('.ai-trigger-area');
+
+                // Verificar si los coords de los aeródromos de la ruta están disponibles.
+                // Son necesarios para filtrar WIND/T por zona geográfica y calcular
+                // componente de cola. Si no están, esperamos el CSV de OurAirports.
+                const allRouteIcaos = [...(this._lastRoute || []), ...(this._lastAltn ? [this._lastAltn] : []), ...(this._lastAltn2 ? [this._lastAltn2] : [])];
+                const missingCoords = allRouteIcaos.filter(icao => !this._coordsCache[icao]);
+
+                if (missingCoords.length) {
+                    // Coords exactos son necesarios para identificar qué zona del WIND/T
+                    // corresponde al tramo y calcular componente de viento de cola/frente.
+                    // Esto ocurre solo la primera vez que se usan estos aeródromos.
+                    triggerArea.innerHTML =
+                        `<div class="ai-loading-row"><div class="spinner"></div>Primera consulta: descargando base de aeródromos para análisis de viento…</div>`;
+                    await Promise.race([
+                        this._fetchCoordsOurAirports(missingCoords),
+                        new Promise(r => setTimeout(r, 10000))
+                    ]);
+                }
+
+                triggerArea.innerHTML =
+                    `<div class="ai-loading-row"><div class="spinner"></div>Analizando condiciones…</div>`;
+
+                const pastedParts = [];
+                document.querySelectorAll('.intl-paste-area').forEach(ta => {
+                    if (ta.value.trim()) pastedParts.push(ta.value.trim());
+                });
+                const intlPasteText = pastedParts.join('\n\n');
+                this._startAI(
+                    this._lastRoute, this._lastMetars, this._lastTafs,
+                    this._lastGamet, this._lastAltn,
+                    { brazilGamet: this._lastBrazilGamet, intlPasteText, etd: this._lastEtd }
+                );
+            });
+        }
+    },
+
+    _showRouteSummary(route, altn, altn2) {
+        const desde = route[0], hasta = route[route.length - 1];
+        const form = document.getElementById('route-form');
+        const summaryEl = document.getElementById('route-summary');
+        if (!form || !summaryEl) return;
+
+        const coordsOf = (icao) => this._coordsCache[icao] || null;
+        const segNm = (a, b) => {
+            if (!a?.lat || !b?.lat) return null;
+            return Math.round(this._haversine(a.lat, a.lon, b.lat, b.lon) / 1.852);
+        };
+        const fmtName = (icao) => {
+            const info = this._airportInfoCache[icao];
+            if (!info) return '';
+            return info.city ? `${info.name} — ${info.city}` : info.name;
+        };
+
+        // Distancia total sobre todos los waypoints (ICAO + lugares Nominatim)
+        const fullPts = this._getFullRoutePoints();
+        let totalDist = null;
+        if (fullPts.length >= 2) {
+            let sum = 0, allOk = true;
+            for (let i = 0; i < fullPts.length - 1; i++) {
+                const d = segNm(fullPts[i], fullPts[i + 1]);
+                if (d === null) { allOk = false; break; }
+                sum += d;
+            }
+            if (allOk) totalDist = sum;
+        }
+        // Fallback a línea directa si faltan coords
+        if (totalDist === null) {
+            const d = segNm(coordsOf(desde), coordsOf(hasta));
+            if (d !== null) totalDist = d;
+        }
+
+        // Fila de vías intermedias (ICAO + lugares libres)
+        const viaHtml = (() => {
+            const items = this._wpts.map(w => {
+                if (!w.val) return '';
+                if (w.isIcao) return `<span class="rs-via-icao">${this._esc(w.val)}</span>`;
+                if (w.coords) return `<span class="rs-via-place">${this._esc(w.displayName || w.val)}</span>`;
+                return '';
+            }).filter(Boolean);
+            if (!items.length) return '';
+            return `<div class="rs-via-row">Vía: ${items.join('<span class="rs-via-sep"> → </span>')}</div>`;
+        })();
+
+        const depName = fmtName(desde), arrName = fmtName(hasta);
+        const routeNamesHtml = (depName || arrName)
+            ? `<div class="rs-names">${this._esc(depName || desde)} → ${this._esc(arrName || hasta)}</div>`
+            : '';
+
+        const altnItemHtml = (icao, label) => {
+            if (!icao) return '';
+            const dist = segNm(coordsOf(hasta), coordsOf(icao));
+            const name = fmtName(icao);
+            return `<div class="rs-alt-item">
+                <span class="rs-alt-badge">${label}</span>
+                <div class="rs-alt-body">
+                    <div class="rs-alt-icao">${this._esc(icao)}</div>
+                    ${name ? `<div class="rs-alt-name">${this._esc(name)}</div>` : ''}
+                </div>
+                <div style="text-align:right;white-space:nowrap">
+                    <div class="rs-alt-dist-nm">${dist !== null ? dist + ' NM' : '— NM'}</div>
+                    <div class="rs-alt-dist-lbl">desde destino</div>
+                </div>
+            </div>`;
+        };
+
+        const hasAlts = altn || altn2;
+        const altsHtml = hasAlts
+            ? `<hr class="rs-sep"><div class="rs-alts">${altnItemHtml(altn, 'ALT 1')}${altnItemHtml(altn2, 'ALT 2')}</div>`
+            : '';
+
+        summaryEl.innerHTML = `
+            <div class="rs-header">
+                <span class="rs-section-lbl">Ruta</span>
+                <button class="btn-modify" id="btn-modify-route">✎ Modificar ruta</button>
+            </div>
+            <div class="rs-route-row">
+                <span class="rs-icao-lg">${this._esc(desde)}</span>
+                <span class="rs-arrow-sm">→</span>
+                <span class="rs-icao-lg">${this._esc(hasta)}</span>
+                ${totalDist !== null ? `<span class="rs-dist">${totalDist} NM</span>` : ''}
+            </div>
+            ${routeNamesHtml}
+            ${viaHtml}
+            ${altsHtml}
+        `;
+
+        form.style.display = 'none';
+        summaryEl.style.display = 'block';
+
+        document.getElementById('btn-modify-route')?.addEventListener('click', () => {
+            summaryEl.style.display = 'none';
+            form.style.display = 'block';
+            document.getElementById('results').innerHTML = '';
+        });
+    },
+
+    // Formatea texto GAMET en HTML estructurado con labels y colores
+    // Campos según ICAO Annex 3 / DAP DGAC Chile
+    // Parsea el valor de un campo FZLVL en pares "ZONA  ALT".
+    // Soporta formato zona-primero (N OF S31 12000FT AMSL BTN S31-S35 ...)
+    // y altitud-primero (12000FT AMSL N OF S35 10000FT AMSL ...).
+    // Devuelve array de strings listos para mostrar, uno por fila.
+    _parseFzlvlPairs(value) {
+        const v = value.trim();
+        if (!v || v === 'NIL') return [v || '—'];
+        const ALT_RE = /\d{4,6}FT (?:AMSL|AGL)|FL\d{2,3}/;
+        if (ALT_RE.test(v) === false) return [v]; // sin altitudes → texto libre
+        // Dividir en tokens [texto, alt, texto, alt, ...]
+        const parts = v.split(new RegExp(`(${ALT_RE.source})`, 'g')).map(s => s.trim()).filter(Boolean);
+        const rows = [];
+        let zone = '';
+        for (let i = 0; i < parts.length; i++) {
+            if (ALT_RE.test(parts[i])) {
+                rows.push((zone ? zone + '  ' : '') + parts[i]);
+                zone = '';
+            } else {
+                zone += (zone ? ' ' : '') + parts[i];
+            }
+        }
+        if (zone) rows.push(zone); // zona sin altitud al final
+        return rows.length ? rows : [v];
+    },
+
+    _formatGametHtml(raw) {
+        const text = raw.trim();
+
+        // ── 1. Separar cabecera y validez ──
+        // Hasta "BLW FLxxx" o hasta "SECN I"
+        const headerEndRe = /(?=SECN\s+I\b)/;
+        const headerEndIdx = text.search(headerEndRe);
+        const headerRaw   = headerEndIdx > 0 ? text.slice(0, headerEndIdx).trim() : '';
+        const bodyRaw     = headerEndIdx > 0 ? text.slice(headerEndIdx)       : text;
+
+        // Dividir cabecera en línea de identificación y línea de validez
+        const validMatch = headerRaw.match(/^(.*?)\s+(SCEZ\s+GAMET.*|[A-Z]{4}\s+GAMET.*)$/s);
+        const idLine     = validMatch ? validMatch[1].trim() : headerRaw;
+        const validLine  = validMatch ? validMatch[2].trim() : '';
+
+        // ── 2. Definir todos los campos GAMET conocidos y su clase visual ──
+        const FIELDS = [
+            // Sección I — condiciones operacionales
+            { key:'SFC WIND',  cls:'default' },
+            { key:'SFC VIS',   cls:'default' },
+            { key:'SIG WX',    cls:'caution' },   // tiempo significativo
+            { key:'MT OBSC',   cls:'caution' },   // montañas obscurecidas
+            { key:'SIG CLD',   cls:'caution' },   // nubes significativas
+            { key:'ICE',       cls:'caution' },   // engelamiento (severidad determina color)
+            { key:'TURB',      cls:'caution' },   // turbulencia
+            // Sección II — condiciones sinópticas
+            { key:'PSYS',      cls:'info'    },   // sistemas de presión
+            { key:'WIND/T',    cls:'default' },   // viento/temperatura por niveles
+            { key:'CLD',       cls:'default' },   // nubosidad general
+            { key:'FZLVL',     cls:'fzlvl'  },   // nivel de congelamiento
+            { key:'MNM QNH',   cls:'info'    },   // QNH mínimo
+            { key:'VA',        cls:'danger'  },   // ceniza volcánica
+            { key:'LLWS',      cls:'danger'  },   // wind shear baja altura
+            { key:'RDOACT CLD',cls:'danger'  },   // nube radiactiva
+        ];
+
+        // ── 3. Insertar saltos de línea antes de cada campo ──
+        let body = bodyRaw;
+
+        // SECN I / SECN II primero (sin colon).
+        // Nota: el body puede empezar directamente con "SECN I" (sin whitespace previo),
+        // por eso usamos (^|\s) en vez de \s+.
+        body = body.replace(/(^|\s)(SECN\s+I{1,2})\b/g, '\n\nSECN\t$2');
+
+        // Un único regex con todas las claves (más largas primero) para que la alternación
+        // no retroceda: SIG CLD: se matchea completo antes de que CLD: pueda robárselo.
+        const sortedKeys = [...FIELDS].sort((a,b) => b.key.length - a.key.length);
+        const escapedAlts = sortedKeys
+            .map(f => f.key.replace(/[/\\()*+?.[\]{}|^$]/g, '\\$&') + ':')
+            .join('|');
+        const allFieldRe = new RegExp(`\\s+(${escapedAlts})`, 'g');
+        body = body.replace(allFieldRe, (_, field) => `\n${field.slice(0,-1)}:\t`);
+
+        // Paso 2.5: proteger contenido de FZLVL de la extracción de altitudes (paso 3).
+        // Los pares zona-altitud del FZLVL se parsean aparte en el renderer.
+        // Usamos U+00B7 (·) como separador temporal dentro de "nnnnFT AMSL" para que
+        // el regex del paso 3 no los capture.
+        body = body.replace(/\nFZLVL:\t([^\n]+)/g, (_, val) =>
+            '\nFZLVL:\t' + val.replace(/(\d{4,6})(FT AMSL)/g, '$1·$2')
+        );
+
+        // Paso 3: filas de altitud en bloque WIND/T (ej: "2000FT AMSL 180/05KT ...")
+        body = body.replace(/\s+(\d{4,6}FT AMSL)/g, '\nALT\t$1');
+
+        // Restaurar altitudes en FZLVL (revertir protección)
+        body = body.replace(/\nFZLVL:\t([^\n]+)/g, (_, val) =>
+            '\nFZLVL:\t' + val.replace(/(\d{4,6})·(FT AMSL)/g, '$1 $2')
+        );
+
+        // ── 4. Render HTML por línea (con estado para tabla WIND/T) ──
+        const lines = body.split('\n').map(l => l.trim()).filter(Boolean);
+
+        // Helper: renderiza el bloque WIND/T como filas gamet-field.
+        // La columna izquierda (altitud) queda fija; las celdas de zona hacen scroll
+        // en sincronía mediante JS aplicado después del render (ver _wireWindScroll).
+        const flushWindTable = (wt) => {
+            if (!wt || !wt.zones.length || !wt.rows.length) return '';
+
+            const cells = (contents, head = false) =>
+                contents.map(c =>
+                    `<span class="wz-cell${head ? ' wz-head' : ''}">${this._esc(c)}</span>`
+                ).join('');
+
+            // Fila de cabeceras de zona
+            let out = `<div class="gamet-field">
+                <span class="gamet-lbl gamet-lbl-default">WIND/T</span>
+                <div class="wind-row-scroll">${cells(wt.zones, true)}</div>
+            </div>`;
+
+            // Una fila por altitud — altitud en columna izquierda fija
+            wt.rows.forEach(r => {
+                const vals = wt.zones.map((_, i) => r.winds[i] || '—');
+                out += `<div class="gamet-field">
+                    <span class="gamet-lbl gamet-alt-ft">${this._esc(r.alt)}</span>
+                    <div class="wind-row-scroll">${cells(vals)}</div>
+                </div>`;
+            });
+
+            return out;
+        };
+
+        const zoneRe = /([SN]\d{2}\s+[EW]\d{3})[–\-]([SN]\d{2}\s+[EW]\d{3})/g;
+        const windRe = /(\d{3}\/\d{2}KT)\s+([PM]S\d{2})/g;
+
+        let windTable = null; // { zones:[], rows:[] } — activo mientras procesamos WIND/T
+        const parts = [];
+
+        for (const line of lines) {
+            // ── Fin de contexto WIND/T: flush tabla si es necesario ──
+            const isAlt = line.startsWith('ALT\t');
+            if (!isAlt && windTable) {
+                parts.push(flushWindTable(windTable));
+                windTable = null;
+            }
+
+            // ── Sección ──
+            if (line.startsWith('SECN\t')) {
+                parts.push(`<div class="gamet-secn">${this._esc(line.replace('SECN\t', ''))}</div>`);
+                continue;
+            }
+
+            // ── Fila de altitud: acumular en tabla si estamos en modo WIND/T ──
+            if (isAlt) {
+                const content = line.replace('ALT\t', '');
+                const ftMatch = content.match(/^(\d{4,6}FT AMSL)(.*)/);
+                if (windTable && ftMatch) {
+                    const dataStr = ftMatch[2].trim();
+                    const winds = [];
+                    windRe.lastIndex = 0;
+                    let wm;
+                    while ((wm = windRe.exec(dataStr)) !== null) winds.push(`${wm[1]} ${wm[2]}`);
+                    windTable.rows.push({ alt: ftMatch[1], winds });
+                } else {
+                    // Fila de altitud fuera de WIND/T (fallback: renderizar como field)
+                    const alt  = ftMatch ? ftMatch[1] : content;
+                    const rest = ftMatch ? ftMatch[2].trim() : '';
+                    parts.push(`<div class="gamet-field">
+                        <span class="gamet-lbl gamet-alt-ft">${this._esc(alt)}</span>
+                        <span class="gamet-val">${this._esc(rest)}</span>
+                    </div>`);
+                }
+                continue;
+            }
+
+            // ── Campo etiquetado ──
+            const tabIdx = line.indexOf('\t');
+            if (tabIdx > 0) {
+                const label = line.slice(0, tabIdx).replace(/:$/, '');
+                const value = line.slice(tabIdx + 1).trim();
+                const fieldDef = FIELDS.find(f => f.key === label);
+                let cls = fieldDef ? fieldDef.cls : 'default';
+                if ((label === 'ICE' || label === 'TURB') && /SEV|SEVERE/i.test(value)) cls = 'danger';
+
+                // WIND/T: iniciar recolección de tabla
+                if (label === 'WIND/T') {
+                    const zones = [];
+                    zoneRe.lastIndex = 0;
+                    let zm;
+                    while ((zm = zoneRe.exec(value)) !== null) {
+                        zones.push(`${zm[1].trim()}–${zm[2].trim()}`);
+                    }
+                    windTable = { zones, rows: [] };
+                    continue;
+                }
+
+                // FZLVL: pares zona-altitud como filas
+                if (label === 'FZLVL') {
+                    const fzRows = this._parseFzlvlPairs(value);
+                    parts.push(fzRows.map((row, i) => `<div class="gamet-field">
+                        <span class="gamet-lbl ${i === 0 ? 'gamet-lbl-fzlvl' : ''}">${i === 0 ? 'FZLVL' : ''}</span>
+                        <span class="gamet-val">${this._esc(row)}</span>
+                    </div>`).join(''));
+                    continue;
+                }
+
+                parts.push(`<div class="gamet-field">
+                    <span class="gamet-lbl gamet-lbl-${cls}">${this._esc(label)}</span>
+                    <span class="gamet-val">${this._esc(value)}</span>
+                </div>`);
+                continue;
+            }
+
+            // Texto libre
+            parts.push(`<div class="gamet-field"><span class="gamet-lbl gamet-lbl-default"></span><span class="gamet-val">${this._esc(line)}</span></div>`);
+        }
+
+        // Flush tabla pendiente al final
+        if (windTable) parts.push(flushWindTable(windTable));
+
+        const html = parts.join('');
+
+        const validHtml = (idLine || validLine) ? `<div class="gamet-validity">${this._esc(idLine)}${validLine ? '<br>' + this._esc(validLine) : ''}</div>` : '';
+        return validHtml + `<div class="gamet-body">${html}</div>`;
+    },
+
+    _renderNoMetarMsg(icao, hasAvwxKey) {
+        const nearby = this._suggestStations(icao); // [{icao, dist}]
+        const chipsHtml = nearby.length
+            ? `<div class="sub-chips-label">Usar datos de estación cercana:</div>
+               <div class="sub-chips">
+                 ${nearby.map(s =>
+                   `<button class="sub-chip" onclick="EasyPlan._applySubstitute('${icao}','${s.icao}')"
+                            data-orig="${icao}" data-sub="${s.icao}">
+                      ${s.icao} <span class="sub-chip-dist">${s.dist != null ? s.dist + ' km' : '…'}</span>
+                    </button>`
+                 ).join('')}
+               </div>`
+            : '';
+        return `<div class="empty-msg">Aeródromo sin observación METAR disponible.</div>${chipsHtml}`;
+    },
+
+    _metarChips(m) {
+        const chips = [];
+        if (m.wspd !== undefined) {
+            const dir = m._wdirVRB ? 'VRB' : m.wdir !== undefined ? String(m.wdir).padStart(3,'0')+'°' : '???';
+            chips.push({ lbl:'Viento', val:`${dir} ${m.wspd}kt${m.wgst ? ` G${m.wgst}` : ''}` });
+        }
+        if (m.visib) chips.push({ lbl:'Visib.', val: m.visib });
+        const ceil = (m.clouds||[]).find(c => c.cover==='BKN'||c.cover==='OVC');
+        if (ceil) chips.push({ lbl:'Techo', val:`${ceil.cover} ${ceil.base}ft` });
+        else if (m.clouds?.length === 0 && !m._wdirVRB) chips.push({ lbl:'Cielo', val:'CAVOK/CLR' });
+        if (m.temp !== undefined && m.dewp !== undefined)
+            chips.push({ lbl:'T / DP', val:`${m.temp}° / ${m.dewp}°` });
+        if (m.altim !== undefined) chips.push({ lbl:'QNH', val:`${m.altim} hPa` });
+        if (m.wxString) chips.push({ lbl:'Tiempo', val: m.wxString });
+        if (!chips.length) return '';
+        return `<div class="metar-chips">${chips.map(c =>
+            `<div class="metar-chip"><span class="chip-lbl">${c.lbl}</span><span class="chip-val">${this._esc(String(c.val))}</span></div>`
+        ).join('')}</div>`;
+    },
+
+
+    // ── Gemini AI ──
+
+    async _startAI(route, metars, tafs, gamet, altn = null, intlOpts = {}) {
+        const card = document.getElementById('ai-card');
+        if (!card) return;
+
+        const routeAndAltn = altn ? [...route, altn] : [...route];
+        const metarCount = routeAndAltn.filter(icao => metars[icao]).length;
+        const tafCount   = routeAndAltn.filter(icao => tafs[icao]).length;
+        const noObsData  = metarCount === 0 && tafCount === 0;
+
+        if (noObsData) {
+            const loadingRow = card.querySelector('.ai-loading-row');
+            if (loadingRow) {
+                loadingRow.insertAdjacentHTML('beforebegin',
+                    `<div class="ai-no-metar-warn">⚠ Sin datos METAR/TAF para esta ruta — análisis basado en GAMET</div>`);
+            }
+        }
+
+        try {
+            const fullPoints    = this._getFullRoutePoints();
+            console.log('[EasyPlan] Puntos de ruta para terreno:', fullPoints);
+            const terrainResult = await this._fetchRouteTerrainMef(fullPoints);
+            console.log('[EasyPlan] Resultado terreno:', terrainResult);
+            if (!terrainResult) console.warn('[EasyPlan] ⚠ Terreno no disponible — recomendación de altitud sin datos SRTM');
+            const mef           = terrainResult?.mef || null;
+            const terrainSamples = terrainResult?.samples || null;
+            const prompt = this._buildAIPrompt(route, metars, tafs, gamet, { noObsData, altn, mef, terrainSamples, ...intlOpts });
+            console.log('[EasyPlan] Prompt enviado a IA:\n' + '─'.repeat(60) + '\n' + prompt + '\n' + '─'.repeat(60));
+            const text   = await this._callGemini(prompt);
+            this._renderAI(card, text, terrainResult);
+        } catch (err) {
+            const body = card.querySelector('.ai-loading-row');
+            if (body) body.outerHTML = `<div class="ai-error">Error IA: ${this._esc(err.message)}</div>`;
+        }
+    },
+
+    // Muestrea elevación SRTM en ~9 puntos interpolados del tramo completo vía OpenTopoData.
+    // Retorna { mef, maxElevFt, samples } o null si falla. samples: [{name,lat,lon,elevFt}]
+    async _fetchRouteTerrainMef(points) {
+        if (!points || points.length < 2) return null;
+        // 25 muestras a lo largo de la ruta (una sola llamada a OpenTopoData).
+        // Con 9 puntos un cerro entre muestras podía pasar inadvertido.
+        const N = 24;
+        const interp = [];
+        for (let i = 0; i <= N; i++) {
+            const t   = i / N;
+            const raw = t * (points.length - 1);
+            const idx = Math.min(Math.floor(raw), points.length - 2);
+            const lt  = raw - idx;
+            interp.push({
+                name: lt < 0.5 ? points[idx].name : points[idx + 1].name,
+                lat:  points[idx].lat + lt * (points[idx + 1].lat - points[idx].lat),
+                lon:  points[idx].lon + lt * (points[idx + 1].lon - points[idx].lon),
+            });
+        }
+        const locations = interp.map(p => `${p.lat.toFixed(3)},${p.lon.toFixed(3)}`).join('|');
+        // Llamada a través de wx-proxy para evitar CORS (OpenTopoData no envía CORS headers desde el browser)
+        try {
+            const res = await fetch(
+                `${this._WX_PROXY}/topo?locations=${encodeURIComponent(locations)}`,
+                { headers: this._authHeaders(), signal: AbortSignal.timeout(15000) }
+            );
+            if (!res.ok) {
+                console.warn(`[EasyPlan] topo proxy HTTP ${res.status}`);
+                return null;
+            }
+            const data = await res.json();
+            if (data.error) { console.warn('[EasyPlan] topo proxy error:', data.error); return null; }
+            const elevs = (data.results || []).map(r => r.elevation ?? 0);
+            if (!elevs.length) return null;
+            const maxElevM  = Math.max(...elevs);
+            const maxElevFt = Math.round(maxElevM * 3.281);
+            const mef       = Math.ceil((maxElevFt + 2000) / 500) * 500;
+            const samples   = interp.map((p, i) => ({ ...p, elevFt: Math.round((elevs[i] ?? 0) * 3.281) }));
+            console.log(`[EasyPlan] Terreno OK: max ${maxElevFt} ft → MEF ${mef} ft`);
+            return { mef, maxElevFt, samples };
+        } catch (err) {
+            console.warn('[EasyPlan] topo proxy falló:', err.message || err);
+            return null;
+        }
+    },
+
+    _renderIntlSection(countries, brazilGamet, uruguayAge) {
+        const BR_FIRS = {
+            SBAZ: 'FIR Amazônica',
+            SBBS: 'FIR Brasília',
+            SBCW: 'FIR Curitiba',
+            SBRE: 'FIR Recife',
+        };
+
+        let sections = '';
+
+        // Brasil — GAMET auto-fetched desde REDEMET
+        if (countries.has('brazil')) {
+            if (brazilGamet && Object.keys(brazilGamet).length) {
+                let firHtml = '';
+                for (const [fir, data] of Object.entries(brazilGamet)) {
+                    const firName = BR_FIRS[fir] || fir;
+                    const formatted = this._formatGametHtml(data.text);
+                    firHtml += `<div class="intl-br-fir">
+                        <div class="gamet-fir-name">${this._esc(fir)} — ${this._esc(firName)}</div>
+                        ${formatted}
+                    </div>`;
+                }
+                sections += `<div class="intl-country-section">
+                    <div class="intl-country-label">Brasil — GAMET (REDEMET)</div>
+                    ${firHtml}
+                </div>`;
+            } else {
+                sections += `<div class="intl-country-section">
+                    <div class="intl-country-label">Brasil — GAMET</div>
+                    <div class="empty-msg">Sin datos REDEMET disponibles.</div>
+                </div>`;
+            }
+        }
+
+        // Uruguay — link al PDF + edad + textarea
+        if (countries.has('uruguay')) {
+            const pdfUrl = (uruguayAge?.url) || 'https://www.inumet.gub.uy/reportes/aeronautica/gamet.pdf';
+            let ageWarn = '';
+            if (uruguayAge?.ageHours !== null && uruguayAge?.ageHours !== undefined) {
+                const h = uruguayAge.ageHours;
+                const dateStr = uruguayAge.lastModified
+                    ? new Date(uruguayAge.lastModified).toUTCString().replace('GMT','UTC')
+                    : '';
+                if (h >= 12) {
+                    ageWarn = `<div class="intl-age-warn">⚠ Documento publicado hace ${h}h (${dateStr}) — puede no estar vigente.</div>`;
+                } else {
+                    ageWarn = `<div style="font-size:11px;color:var(--muted2);margin-bottom:8px">Publicado hace ${h}h (${dateStr})</div>`;
+                }
+            } else {
+                ageWarn = `<div class="intl-age-warn">⚠ No se pudo verificar la fecha. El GAMET de Uruguay puede tener días de antigüedad.</div>`;
+            }
+            sections += `<div class="intl-country-section">
+                <div class="intl-country-label">Uruguay — GAMET SUEO (INUMET)</div>
+                ${ageWarn}
+                <div class="intl-link-row"><a href="${this._esc(pdfUrl)}" target="_blank">Abrir GAMET PDF (INUMET) →</a></div>
+                <div class="intl-paste-label">Copia el texto del PDF y pégalo aquí para incluirlo en el análisis IA:</div>
+                <textarea class="intl-paste-area" data-country="uy"
+                    placeholder="SUEO GAMET VALID …" rows="4"></textarea>
+            </div>`;
+        }
+
+        // Argentina — link SMN PRONAREA + textarea
+        if (countries.has('argentina')) {
+            sections += `<div class="intl-country-section">
+                <div class="intl-country-label">Argentina — PRONAREA (SMN)</div>
+                <div class="intl-link-row"><a href="https://www.smn.gob.ar/pronarea" target="_blank">smn.gob.ar/pronarea →</a></div>
+                <div class="intl-paste-label">Copia el PRONAREA del FIR que corresponda (SIS = norte del país / EZE = Buenos Aires) y pégalo:</div>
+                <textarea class="intl-paste-area" data-country="ar"
+                    placeholder="FBAG55 SARE …  PRONAREA FIR …" rows="4"></textarea>
+            </div>`;
+        }
+
+        // Perú, Paraguay, Bolivia, Colombia — solo textarea
+        const OTHER_LABELS = { peru:'Perú', paraguay:'Paraguay', bolivia:'Bolivia', colombia:'Colombia' };
+        const others = [...countries].filter(c => OTHER_LABELS[c]);
+        if (others.length) {
+            const label = others.map(c => OTHER_LABELS[c]).join(' / ');
+            sections += `<div class="intl-country-section">
+                <div class="intl-country-label">${this._esc(label)} — pronóstico de área</div>
+                <div class="intl-paste-label">Pega aquí el pronóstico de área del país que corresponda:</div>
+                <textarea class="intl-paste-area" data-country="other"
+                    placeholder="Pega el GAMET / PRONAREA / ARFOR…" rows="4"></textarea>
+            </div>`;
+        }
+
+        if (!sections) return '';
+        return `<div class="gamet-card">
+            <div class="gamet-card-header">
+                <div class="gamet-card-title">🌎 Pronósticos Internacionales</div>
+            </div>
+            ${sections}
+        </div>`;
+    },
+
+    // Sincroniza el scroll horizontal de todas las filas .wind-row-scroll dentro
+    // de cada .gamet-card, para que cabeceras y datos de zonas se muevan juntos.
+    _wireWindScroll() {
+        document.querySelectorAll('.gamet-card').forEach(card => {
+            const rows = [...card.querySelectorAll('.wind-row-scroll')];
+            if (rows.length < 2) return;
+            rows.forEach(row => {
+                row.addEventListener('scroll', () => {
+                    rows.forEach(other => {
+                        if (other !== row) other.scrollLeft = row.scrollLeft;
+                    });
+                }, { passive: true });
+            });
+        });
+    },
+
+    // Componente de cola (positivo) o viento en contra (negativo) para un viento DDDSSkt
+    // y un rumbo de vuelo dado en grados verdaderos.
+    _tailwindKt(windStr, heading) {
+        const m = windStr.match(/^(\d{3})\/(\d{2})KT/);
+        if (!m) return null;
+        const wDir = parseInt(m[1]), wSpd = parseInt(m[2]);
+        if (wSpd === 0) return 0;
+        // El viento sopla HACIA (wDir+180). Componente sobre el rumbo del vuelo:
+        const toward = (wDir + 180) % 360;
+        const angle  = ((toward - heading + 180 + 360) % 360) - 180;
+        return Math.round(wSpd * Math.cos(angle * Math.PI / 180));
+    },
+
+    // Parsea el bloque WIND/T del texto crudo del GAMET y retorna solo las zonas que
+    // intersectan con el bounding box del tramo. Retorna string listo para insertar en prompt.
+    _parseWindTForRoute(gametRaw, latMin, latMax, lonMin, lonMax, heading = null) {
+        // Limpiar tags HTML (el texto viene con <br> de MeteoChile)
+        const text = gametRaw.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '');
+
+        // Extraer bloque WIND/T (hasta el siguiente campo en mayúsculas o fin)
+        const blockMatch = text.match(/WIND\/T:\s*([\s\S]*?)(?=\n[A-Z]{2}[A-Z/ ]+:|$)/);
+        if (!blockMatch) return null;
+
+        // Separar encabezado de zonas y filas de altitud.
+        // MeteoChile puede entregar todo el bloque WIND/T en una sola línea;
+        // lo dividimos en las marcas de altitud antes de clasificar.
+        const rawLines = blockMatch[1].split('\n').map(l => l.trim()).filter(Boolean);
+        const lines = [];
+        for (const l of rawLines) {
+            // Si la línea contiene 2+ marcas de altitud (ej: "… 2000FT AMSL … 5000FT AMSL …")
+            // la dividimos usando lookahead en cada marca, de modo que cada parte empiece por "NNNNft AMSL".
+            const parts = l.split(/(?=\b\d{3,5}FT\s+AMSL)/i).map(p => p.trim()).filter(Boolean);
+            lines.push(...parts);
+        }
+        // Requiere al menos un DDD/SSKT en la fila → excluye líneas de CLD, FZLVL, etc.
+        const altRowRe = /^(\d{3,5}FT\s+AMSL)\s+((?=.*\d{3}\/\d{2}KT).+)/i;
+        const headerParts = [], altRows = [];
+        for (const l of lines) {
+            if (altRowRe.test(l)) altRows.push(l);
+            else headerParts.push(l);
+        }
+        if (!altRows.length) return null;
+
+        // Parsear zonas del encabezado: "S28 W071–S34 W071 S34 W071–S38 W072 …"
+        const zoneRe = /([SN])(\d{2})\s+([EW])(\d{3})[–\-]([SN])(\d{2})\s+([EW])(\d{3})/g;
+        const zones = [];
+        const header = headerParts.join(' ');
+        let zm;
+        while ((zm = zoneRe.exec(header)) !== null) {
+            const toLat = (h, n) => h === 'S' ? -+n : +n;
+            const toLon = (h, n) => h === 'W' ? -+n : +n;
+            const la1 = toLat(zm[1], zm[2]), lo1 = toLon(zm[3], zm[4]);
+            const la2 = toLat(zm[5], zm[6]), lo2 = toLon(zm[7], zm[8]);
+            const isEW = Math.abs(la1 - la2) < 1 && Math.abs(lo1 - lo2) > 3; // tramo E-O (oceánico)
+            zones.push({
+                label: zm[0],
+                latMin: Math.min(la1, la2), latMax: Math.max(la1, la2),
+                lonMin: Math.min(lo1, lo2), lonMax: Math.max(lo1, lo2),
+                isOceanic: isEW
+            });
+        }
+        if (!zones.length) return null;
+
+        // Determinar relevancia: zona intersecta lat del tramo y no es tramo oceánico lejano
+        const relevant = zones.map(z => {
+            const latOk = z.latMax >= latMin - 1 && z.latMin <= latMax + 1;
+            const lonOk = z.lonMax >= lonMin - 8 && z.lonMin <= lonMax + 8;
+            return latOk && lonOk && !z.isOceanic;
+        });
+
+        // Extraer valores de viento por zona en cada fila de altitud
+        // Patrón: DDDSSKt P/MSxx (ej: 300/10KT PS07)
+        const windValRe = /(\d{3}\/\d{2}KT)\s+([PM]S\d{2})/g;
+        const rows = altRows.map(row => {
+            const m = altRowRe.exec(row); altRowRe.lastIndex = 0;
+            if (!m) return null;
+            const winds = [], re = /(\d{3}\/\d{2}KT)\s+([PM]S\d{2})/g; let w;
+            while ((w = re.exec(m[2])) !== null) winds.push(`${w[1]} ${w[2]}`);
+            return { alt: m[1].replace(/\s+/,' '), winds };
+        }).filter(Boolean);
+
+        if (!rows.length) return null;
+
+        // Formatear solo zonas relevantes
+        const relIdx = zones.map((_, i) => i).filter(i => relevant[i]);
+        if (!relIdx.length) return null; // ninguna zona aplica → devolver null (usar raw)
+
+        const excluded = zones.filter((_, i) => !relevant[i]);
+        const hNote = heading !== null ? ` [rumbo ${heading.toString().padStart(3,'0')}°V, + = cola, − = frente]` : '';
+        let out = `WIND/T (zonas del tramo${hNote}):\n`;
+        for (const row of rows) {
+            const parts = relIdx.map(i => {
+                const w = row.winds[i] || '—';
+                if (heading !== null && w !== '—') {
+                    const tc = this._tailwindKt(w, heading);
+                    const lbl = tc >= 0 ? `+${tc}KT cola` : `${Math.abs(tc)}KT frente`;
+                    return `${zones[i].label}: ${w} [${lbl}]`;
+                }
+                return `${zones[i].label}: ${w}`;
+            }).join(' | ');
+            out += `  ${row.alt}: ${parts}\n`;
+        }
+        if (excluded.length) {
+            out += `  [Excluidas por no aplicar al tramo: ${excluded.map(z => z.label).join(', ')}]\n`;
+        }
+        return out;
+    },
+
+    // Recibe el texto anotado de _parseWindTForRoute y devuelve un ranking de altitudes
+    // ordenadas de mayor a menor componente de cola, listo para incluir en el prompt.
+    // routeLatAbs: latitud absoluta de la ruta (ej: 33 para S33).
+    // Si se pasa, solo considera zonas del GAMET que cubran esa latitud,
+    // evitando que un viento favorable en otra zona del FIR infle el ranking.
+    _windRankingSummary(windT, mef = null, routeLatAbs = null) {
+        if (!windT) return null;
+
+        const zoneCoversRoute = (seg) => {
+            if (routeLatAbs === null) return true;
+            // Busca "S{lat1} ...-S{lat2}" en el segmento de zona
+            const m = seg.match(/S(\d+)[^-]*-S(\d+)/);
+            if (!m) return true;
+            const [la, lb] = [parseInt(m[1]), parseInt(m[2])];
+            return routeLatAbs >= Math.min(la, lb) && routeLatAbs <= Math.max(la, lb);
+        };
+
+        const entries = [];
+        const lineRe  = /^\s*(\d+)\s*FT\s+AMSL:\s*(.+)$/mg;
+        let lm;
+        while ((lm = lineRe.exec(windT)) !== null) {
+            const ft   = parseInt(lm[1]);
+            let best   = -Infinity;
+            // Dividir la línea en segmentos de zona separados por "|"
+            const segs = lm[2].split('|').map(s => s.trim()).filter(Boolean);
+            for (const seg of segs) {
+                if (!zoneCoversRoute(seg)) continue;
+                const colaM   = seg.match(/\[([+]?\d+)KT cola\]/);
+                const frenteM = seg.match(/\[(\d+)KT frente\]/);
+                if (colaM)   { const v =  parseInt(colaM[1]);  if (v > best) best = v; }
+                if (frenteM) { const v = -parseInt(frenteM[1]); if (v > best) best = v; }
+            }
+            if (best > -Infinity && !isNaN(ft)) entries.push({ ft, best });
+        }
+        if (!entries.length) return null;
+        // Deduplicar: misma altitud → conservar el máximo
+        const byAlt = new Map();
+        for (const { ft, best } of entries) {
+            if (!byAlt.has(ft) || best > byAlt.get(ft)) byAlt.set(ft, best);
+        }
+        const deduped = [...byAlt.entries()].map(([ft, best]) => ({ ft, best }));
+        deduped.sort((a, b) => b.best - a.best);
+        return deduped.map(({ ft, best }, i) => {
+            const comp    = best >= 0 ? `+${best}KT cola` : `${Math.abs(best)}KT frente`;
+            const o2note  = ft > 10000 ? ' ← REQUIERE O2 SUPLEMENTARIO' : ft === 10000 ? ' ← apto sin O2 (máximo)' : '';
+            const mefNote = mef && ft < mef ? ' ← TERRENO SUPERIOR A ESTA ALTITUD — NO DISPONIBLE' : '';
+            return `  ${i + 1}. ${ft} FT AMSL: ${comp}${o2note}${mefNote}`;
+        }).join('\n');
+    },
+
+    _buildAIPrompt(route, metars, tafs, gamet, opts = {}) {
+        const desde = route[0], hasta = route[route.length-1];
+        const vias  = route.slice(1,-1);
+        const altn  = opts.altn || null;
+        const etd   = opts.etd  || null;
+        const mef            = opts.mef            || null;
+        const terrainSamples = opts.terrainSamples || null;
+        const brazilGamet   = opts.brazilGamet   || null;
+        const intlPasteText = opts.intlPasteText || '';
+        const routeStr = [desde, ...vias.map(v=>`(VIA ${v})`), hasta].join(' → ')
+            + (altn ? ` (ALTN: ${altn})` : '');
+
+        const allIcaos = altn ? [...route, altn] : [...route];
+
+        const metarLines = allIcaos.map(icao => {
+            const m = metars[icao];
+            const tag = icao === altn ? ' (ALTN)' : '';
+            return m ? `${icao}${tag}: ${m.rawOb}` : `${icao}${tag}: Sin METAR`;
+        }).join('\n');
+
+        const tafLines = allIcaos.map(icao => {
+            const t = tafs[icao];
+            const tag = icao === altn ? ' (ALTN)' : '';
+            return t ? `${icao}${tag}:\n${t.rawTAF}` : `${icao}${tag}: Sin TAF`;
+        }).join('\n\n');
+
+        // ── Contexto geográfico + rumbo del tramo ──
+        const routeCoords = route
+            .map(icao => { const c = this._coordsCache[icao]; return c ? { icao, ...c } : null; })
+            .filter(Boolean);
+
+        let geoContext = '';
+        let routeHeading = null;
+        if (routeCoords.length >= 2) {
+            const lats = routeCoords.map(c => c.lat);
+            const lons = routeCoords.map(c => c.lon);
+            const latMin = Math.min(...lats), latMax = Math.max(...lats);
+            const lonMin = Math.min(...lons), lonMax = Math.max(...lons);
+
+            const fmtLat = v => `${v < 0 ? 'S' : 'N'}${Math.abs(Math.round(v)).toString().padStart(2,'0')}`;
+            const fmtLon = v => `${v < 0 ? 'W' : 'E'}${Math.abs(Math.round(v)).toString().padStart(3,'0')}`;
+            const dep = routeCoords[0], arr = routeCoords[routeCoords.length - 1];
+            const dLat = arr.lat - dep.lat, dLon = arr.lon - dep.lon;
+            routeHeading = Math.round(((Math.atan2(dLon, dLat) * 180 / Math.PI) + 360) % 360);
+
+            // Determinar FIR de cada punto de la ruta para etiquetar los GAMET correctamente
+            const firOfPoint = (lat) => {
+                const absLat = Math.abs(lat);
+                for (const [fir, d] of Object.entries(this._CL_FIRS)) {
+                    if (absLat >= d.lat_s && absLat < d.lat_n) return fir;
+                }
+                return null;
+            };
+            const depFir = firOfPoint(dep.lat);
+            const arrFir = firOfPoint(arr.lat);
+
+            let firBoundaryNote = '';
+            if (depFir && arrFir && depFir !== arrFir) {
+                firBoundaryNote = `\nFRONTERA FIR: El tramo cruza de ${depFir} a ${arrFir}. \
+La recomendación de altitud y condiciones de crucero debe basarse principalmente en el GAMET ${depFir} \
+(cubre la salida y la mayor parte del vuelo). El GAMET ${arrFir} aplica solo al tramo final de llegada.`;
+            } else if (depFir) {
+                firBoundaryNote = `\nTodo el tramo está dentro de ${depFir}. Basa tu análisis en ese GAMET.`;
+            }
+
+            geoContext = `
+CONTEXTO GEOGRÁFICO DEL TRAMO:
+Aeródromos: ${routeCoords.map(c => `${c.icao} (${fmtLat(c.lat)}, ${fmtLon(c.lon)})`).join(' → ')}
+Franja latitudinal: ${fmtLat(latMax)} – ${fmtLat(latMin)}
+Rumbo aproximado del vuelo: ${routeHeading.toString().padStart(3,'0')}° V
+${firBoundaryNote}
+
+IMPORTANTE: El GAMET cubre todo el FIR. Aplica ÚNICAMENTE las condiciones del tramo \
+(entre ${fmtLat(latMax)} y ${fmtLat(latMin)}, ${fmtLon(lonMin)}–${fmtLon(lonMax)}). \
+Ignora condiciones reportadas para zonas fuera del tramo.`;
+        }
+
+        const firs = this._relevantFirs(route);
+
+        // Para etiquetar el rol de cada GAMET según su posición en la ruta
+        const routeCoordsFirs = routeCoords.map(c => {
+            const absLat = Math.abs(c.lat);
+            for (const [fir, d] of Object.entries(this._CL_FIRS)) {
+                if (absLat >= d.lat_s && absLat < d.lat_n) return fir;
+            }
+            return null;
+        }).filter(Boolean);
+        const depRouteFir  = routeCoordsFirs[0] || null;
+        const arrRouteFir  = routeCoordsFirs[routeCoordsFirs.length - 1] || null;
+
+        let capturedWindT = null; // primer windT anotado → para ranking de altitudes
+
+        const gametLines = firs.map(fir => {
+            const msj = gamet.msj?.[fir] || '';
+            if (!msj) return '';
+            const first = msj.split('<br><br>')[0].replace(/<br>/gi,' ').trim();
+
+            let gametForAI = first;
+            {
+                // Siempre filtrar zonas oceánicas del WIND/T.
+                // La detección es geométrica (mismo paralelo, gran diferencia de longitud)
+                // y no depende de las coords del tramo. Si no hay coords disponibles,
+                // se usa la bbox del FIR como fallback para conservar las zonas continentales.
+                const rLats = routeCoords.map(c => c.lat);
+                const rLons = routeCoords.map(c => c.lon);
+                const fi = this._CL_FIRS[fir];
+                const bLatMin = rLats.length ? Math.min(...rLats) : (fi ? -(fi.lat_n) : -42);
+                const bLatMax = rLats.length ? Math.max(...rLats) : (fi ? -(fi.lat_s) : -28);
+                const bLonMin = rLons.length ? Math.min(...rLons) : -75;
+                const bLonMax = rLons.length ? Math.max(...rLons) : -68;
+                const windT = this._parseWindTForRoute(
+                    msj, bLatMin, bLatMax, bLonMin, bLonMax, routeHeading
+                );
+                if (windT) {
+                    if (!capturedWindT) capturedWindT = windT;
+                    // Flag 'g' reemplaza AMBAS secciones (SECN I + SECN II) del GAMET,
+                    // no solo la primera. Sin 'g', SECN II queda con datos raw incluyendo
+                    // la zona oceánica que queremos excluir.
+                    gametForAI = first.replace(/WIND\/T:.*?(?=\s+[A-Z]{2,}:|\s*$)/gs, windT);
+                }
+            }
+
+            // Etiqueta el rol del GAMET en el vuelo
+            let role = 'reporte meteorológico regional';
+            if (firs.length > 1) {
+                if (fir === depRouteFir && fir !== arrRouteFir) role = 'FIR de salida — MAYORÍA del vuelo, usa estos datos para la recomendación de altitud';
+                else if (fir === arrRouteFir && fir !== depRouteFir) role = 'FIR de llegada — solo tramo final';
+                else if (fir === depRouteFir) role = 'FIR de salida y llegada — todo el vuelo';
+            }
+
+            return `GAMET ${fir} (${role}):\n${gametForAI.slice(0, 1800)}`;
+        }).filter(Boolean).join('\n\n');
+
+        // GAMET Brasil (REDEMET) — texto raw de cada FIR para el prompt
+        let brazilGametLines = '';
+        if (brazilGamet && Object.keys(brazilGamet).length) {
+            const BR_FIRS = { SBAZ:'FIR Amazônica', SBBS:'FIR Brasília', SBCW:'FIR Curitiba', SBRE:'FIR Recife' };
+            brazilGametLines = Object.entries(brazilGamet)
+                .map(([fir, data]) => `GAMET ${fir} (${BR_FIRS[fir] || fir}):\n${data.text.slice(0, 1200)}`)
+                .join('\n\n');
+        }
+
+        // Texto pegado de pronóstico internacional (PRONAREA/GAMET Uruguay, Argentina, etc.)
+        const intlPasteLines = intlPasteText
+            ? `\nPRONÓSTICO INTERNACIONAL (pegado por el piloto):\n${intlPasteText.slice(0, 2000)}\n\nNOTA PRONAREA Argentina: ENGELAMIENTO=icing, CORRIENTE EN CHORRO=jet stream, ISOTERMA 0 GRADOS=FZLVL, SIGFENOM=significant phenomena, ENGELAMIENTO=ICE, TURB=turbulencia, TROPOPAUSA=tropopause.`
+            : '';
+
+        const allGametSections = [
+            gametLines,
+            brazilGametLines,
+        ].filter(Boolean).join('\n\n');
+
+        const noObsNote = opts.noObsData
+            ? `\nADVERTENCIA DE DATOS: No hay METAR ni TAF disponibles para ningún aeródromo de esta ruta. \
+Los aeródromos son probablemente pistas sin estación meteorológica oficial. \
+Basa tu análisis exclusivamente en el GAMET. En el RESUMEN indica explícitamente \
+que el análisis es solo por GAMET y recomienda al piloto verificar condiciones locales antes del vuelo.\n`
+            : '';
+
+        const intlGametNote = allGametSections
+            ? ''
+            : `\nNOTA: No hay GAMET disponible para esta ruta. Para espacio aéreo no chileno, \
+los equivalentes del GAMET son: SIGMET (internacional, para fenómenos severos), \
+AIRMET (USA/Canadá, para condiciones IFR y turbulencia moderada en baja altitud) y \
+Area Forecast FA (USA/Canadá). Indica en el RESUMEN que no se dispone de reporte de área.\n`;
+
+        let windNote = '';
+        if (routeHeading !== null) {
+            // Latitud media de la ruta para filtrar zonas GAMET relevantes
+            const routeLatAbs = routeCoords.length >= 2
+                ? Math.abs((routeCoords[0].lat + routeCoords[routeCoords.length - 1].lat) / 2)
+                : null;
+            console.log('[EasyPlan] routeLatAbs para ranking:', routeLatAbs);
+            console.log('[EasyPlan] capturedWindT:', capturedWindT);
+            const ranking = capturedWindT ? this._windRankingSummary(capturedWindT, mef, routeLatAbs) : null;
+            console.log('[EasyPlan] Ranking calculado:\n' + (ranking || '(vacío)'));
+            windNote = `\nINSTRUCCIÓN VIENTOS (rumbo ~${routeHeading.toString().padStart(3,'0')}°V):`;
+            if (terrainSamples?.length) {
+                const peak = terrainSamples.reduce((a, b) => b.elevFt > a.elevFt ? b : a);
+                const sampleList = terrainSamples.map(s => `${s.elevFt}ft`).join(', ');
+                windNote += `\nPERFIL DE TERRENO SRTM (línea recta del tramo, ${terrainSamples.length} puntos): [${sampleList}]`;
+                windNote += `\nPunto más alto: ${peak.elevFt} ft AMSL aprox. ${Math.abs(peak.lat).toFixed(2)}°S, ${Math.abs(peak.lon).toFixed(2)}°O`;
+                if (mef) {
+                    windNote += `\nALTITUD MÍNIMA SEGURA DEL TRAMO: ${mef} FT AMSL (elevación máxima del terreno + 2000ft de separación). NUNCA recomendar por debajo de este nivel.`;
+                }
+            } else if (mef) {
+                windNote += `\nALTITUD MÍNIMA SEGURA DEL TRAMO: ${mef} FT AMSL (elevación máxima del terreno + 2000ft de separación). NUNCA recomendar por debajo de este nivel.`;
+            } else {
+                windNote += `\nADVERTENCIA: datos de elevación de terreno no disponibles para este tramo. El piloto debe verificar la altitud mínima segura manualmente antes de volar.`;
+            }
+            if (ranking) {
+                windNote += `\nRANKING DE ALTITUDES (zona de la ruta, ya calculado — NO uses el bloque GAMET para recalcular):\n${ranking}`;
+                windNote += `\n\nINSTRUCCIÓN OBLIGATORIA: Elige la opción #1 del ranking que cumpla TODOS estos criterios:`;
+                windNote += `\n  (a) ≤ 10000 ft (sin O2 suplementario)`;
+                windNote += `\n  (b) no marcada "TERRENO SUPERIOR A ESTA ALTITUD" (i.e. ≥ altitud mínima segura del tramo)`;
+                windNote += `\n  (c) No requiere O2 suplementario`;
+                windNote += `\nEsa es la altitud recomendada. No elijas una altitud inferior por "precaución" si el ranking muestra una mejor opción arriba.`;
+                windNote += `\nSi la #1 con mejor viento es 10000 FT, recomiéndala — sigue siendo apta sin O2.`;
+                windNote += `\nAlternativa >10000 ft: solo si la ganancia sobre la mejor ≤10000 ft es ≥5KT. Indica "requiere O2 suplementario".`;
+            }
+            windNote += `\n\nAjusta por nubosidad (sobre topes o bajo base). Si hay trade-off viento vs nubes, indica ambas opciones.\n`;
+        }
+
+        // Contexto temporal para que la IA ignore condiciones ya pasadas
+        let temporalNote = '';
+        if (etd) {
+            const todayUtc = new Date().toISOString().slice(0, 10);
+            // Estimar hora de llegada: distancia NM / 100 kt → minutos de vuelo (estimado conservador)
+            let arrivalNote = '';
+            if (routeCoords.length >= 2) {
+                const dep = routeCoords[0], arr = routeCoords[routeCoords.length - 1];
+                const dLat = (arr.lat - dep.lat) * Math.PI / 180;
+                const dLon = (arr.lon - dep.lon) * Math.PI / 180;
+                const a = Math.sin(dLat/2)**2 + Math.cos(dep.lat*Math.PI/180)*Math.cos(arr.lat*Math.PI/180)*Math.sin(dLon/2)**2;
+                const nmDist = Math.round(2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)) * 6371 / 1.852);
+                const durationMin = Math.ceil(nmDist / 100 * 60);
+                const [hh, mm] = etd.split(':').map(Number);
+                const arrMin = hh * 60 + mm + durationMin;
+                const arrH = String(Math.floor(arrMin / 60) % 24).padStart(2, '0');
+                const arrM = String(arrMin % 60).padStart(2, '0');
+                arrivalNote = ` Llegada estimada ~${arrH}:${arrM} UTC (${nmDist} NM a ~100kt).`;
+            }
+            temporalNote = `\nFECHA UTC: ${todayUtc}\nHORA DE SALIDA: ${etd} UTC.${arrivalNote}\nINSTRUCCIÓN TEMPORAL: Evalúa ÚNICAMENTE las condiciones vigentes durante la ventana de vuelo (salida ${etd}Z hasta llegada estimada +1h). NO reportes como alerta activa ninguna condición TAF/GAMET cuyo período ya haya terminado antes de ${etd}Z. Si hay condiciones previas relevantes como contexto histórico, mencionarlas brevemente sin alarmar.\n`;
+        }
+
+        return `Eres un despachador de vuelo experto. Analiza los datos meteorológicos para la ruta ${routeStr}.
+${noObsNote}${temporalNote}${windNote}${geoContext}
+
+METARS:
+${metarLines}
+
+TAFs:
+${tafLines}
+
+${allGametSections ? `${allGametSections}` : `${intlGametNote}`}${intlPasteLines}
+
+REGLAS DE INTERPRETACIÓN:
+1. TAF BECMG DDHH1/DDHH2: el cambio EMPIEZA en HH1Z y se COMPLETA en HH2Z. Reporta SIEMPRE la hora de inicio HH1Z como momento de mejora, no HH2Z.
+2. FZLVL: indica el nivel de congelamiento (0°C isotherm). El riesgo de engelamiento existe ENCIMA del FZLVL donde haya humedad, no debajo. Reporta el FZLVL del tramo aunque el crucero vaya debajo de él.
+3. Horas: reportar siempre en UTC / Z.
+
+Responde EXACTAMENTE en este formato (sin texto extra fuera del formato):
+
+CONDICIÓN: GO | CAUTION | NO-GO
+ALTITUD: [altitud óptima] ([componente de viento del ranking: ej +4KT cola / 2KT frente]) — [razón breve: ej "altitud mínima sobre el terreno más alto del tramo" o "mejor viento de cola disponible"]
+ENGELAMIENTO: [NINGUNO | BAJO | MODERADO | SEVERO a altitud de crucero] · FZLVL del tramo: [nivel FT AMSL del GAMET]
+EVITAR: [zonas o condiciones a evitar dentro del tramo; o "Nada destacable"]
+RESUMEN: [2-3 oraciones prácticas para el piloto; horas en UTC/Z]`;
+    },
+
+    async _callGemini(prompt, attempt = 0) {
+        const res = await fetch(`${this._WX_PROXY}/gemini`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...this._authHeaders() },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: { temperature: 0.2, maxOutputTokens: 700 }
+            }),
+            signal: AbortSignal.timeout(65000)
+        });
+        if (res.status === 429 && attempt < 3) {
+            const waitSec = [10, 20, 40][attempt];
+            await this._countdownWait(waitSec);
+            return this._callGemini(prompt, attempt + 1);
+        }
+        if (res.status === 503) throw new Error('Servicio IA no disponible temporalmente.');
+        if (!res.ok) throw new Error(`Error IA HTTP ${res.status}`);
+        const data = await res.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!text) throw new Error('Respuesta vacía del servidor IA');
+        return text;
+    },
+
+    _countdownWait(seconds) {
+        return new Promise(resolve => {
+            const card = document.getElementById('ai-card');
+            const row  = card?.querySelector('.ai-loading-row');
+            let t = seconds;
+            const tick = () => {
+                if (row) row.innerHTML = `<div class="spinner" style="width:18px;height:18px;border-width:2px;flex-shrink:0"></div>Rate limit — reintentando en ${t}s…`;
+                if (t-- <= 0) { resolve(); return; }
+                setTimeout(tick, 1000);
+            };
+            tick();
+        });
+    },
+
+    _renderAI(card, text, terrainResult = null) {
+        const get = key => {
+            const re = new RegExp(`${key}:\\s*(.+?)(?=\\n[A-ZÁÉÍÓÚ]+:|$)`, 'si');
+            return (text.match(re)?.[1] || '').trim();
+        };
+        const cond    = get('CONDICIÓN');
+        const altitud = get('ALTITUD');
+        const engel   = get('ENGELAMIENTO');
+        const evitar  = get('EVITAR');
+        const resumen = get('RESUMEN');
+
+        const verdict = /^NO[\s-]GO/i.test(cond) ? 'NO-GO' : /^CAUTION/i.test(cond) ? 'CAUTION' : 'GO';
+        const vClass  = { GO:'verdict-go', CAUTION:'verdict-caution', 'NO-GO':'verdict-nogo' }[verdict];
+
+        card.innerHTML = `
+            <div class="ai-card-header">
+                <span class="ai-card-title">✦ Análisis IA</span>
+                <span class="ai-verdict ${vClass}">${verdict}</span>
+            </div>
+            ${altitud ? `<div class="ai-section"><div class="ai-section-lbl">Altitud recomendada</div><div class="ai-section-body">${this._esc(altitud)}</div></div>` : ''}
+            ${engel   ? `<div class="ai-section"><div class="ai-section-lbl">Engelamiento</div><div class="ai-section-body">${this._esc(engel)}</div></div>` : ''}
+            ${evitar  ? `<div class="ai-section"><div class="ai-section-lbl">Zonas / condiciones a evitar</div><div class="ai-section-body">${this._esc(evitar)}</div></div>` : ''}
+            ${resumen ? `<div class="ai-section"><div class="ai-section-lbl">Resumen para el piloto</div><div class="ai-section-body">${this._esc(resumen)}</div></div>` : ''}
+            ${!altitud&&!resumen ? `<div class="ai-section"><div class="ai-section-body">${this._esc(text)}</div></div>` : ''}
+            ${terrainResult ? (() => {
+                const peakIdx = terrainResult.samples.reduce((pi,s,i,a) => s.elevFt > a[pi].elevFt ? i : pi, 0);
+                const sampleHtml = terrainResult.samples.map((s, i) =>
+                    `<span class="terrain-sample${i === peakIdx ? ' terrain-sample-peak' : ''}" title="${this._esc(s.name)}">${Math.round(s.lat*10)/10}°S·${s.elevFt.toLocaleString()}ft</span>`
+                ).join('');
+                return `<div class="terrain-footer">
+                    <span class="terrain-footer-minsafe">Altitud mínima sugerida del tramo: ${terrainResult.mef.toLocaleString()} FT AMSL</span>
+                    <span class="terrain-footer-summary">Terreno más alto muestreado: <b>${terrainResult.maxElevFt.toLocaleString()} ft</b> + 2000 ft separación → <b>${terrainResult.mef.toLocaleString()} ft AMSL</b> — muestreo puntual en línea recta: verificar con la carta aeronáutica</span>
+                    <details class="terrain-details">
+                        <summary>Terreno muestreado · ${terrainResult.samples.length} puntos SRTM</summary>
+                        <div class="terrain-sample-list">${sampleHtml}</div>
+                    </details>
+                </div>`;
+            })() : ''}`;
+    },
+
+    // ── Helpers ──
+
+    _fmtDate(v) {
+        if (!v) return '';
+        try { return new Date(v).toLocaleString('es-CL',{dateStyle:'short',timeStyle:'short',hour12:false}); }
+        catch { return String(v); }
+    },
+
+    _esc(s) {
+        return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    },
+
+    // Proxy meteorológico — Supabase Edge Function. Requiere sesión de
+    // Bitácora (JWT en Authorization); /gemini exige además plan Pro.
+    _WX_PROXY: 'https://rdnniehpsdforkfngwrf.supabase.co/functions/v1/wx-proxy',
+
+    // Headers de autenticación: lee el token de la sesión de Bitácora
+    // (mismo origen → mismo localStorage).
+    _authHeaders() {
+        try {
+            const raw = localStorage.getItem('sb-rdnniehpsdforkfngwrf-auth-token');
+            const tok = raw ? JSON.parse(raw)?.access_token : null;
+            return tok ? { 'Authorization': `Bearer ${tok}` } : {};
+        } catch { return {}; }
+    },
+
+    // Normaliza la respuesta de AVWX (fallback): array, {data:[]}, {results:[]}, u objeto único
+    _avwxItems(data) {
+        if (Array.isArray(data))          return data;
+        if (Array.isArray(data?.data))    return data.data;
+        if (Array.isArray(data?.results)) return data.results;
+        return data ? [data] : [];
+    },
+
+    // Carga historial de METARs. Fuentes en orden de prioridad:
+    //   1. MeteoChile vía wx-proxy  (para SC* — más preciso, fuente oficial DGAC)
+    //   2. NOAA/aw.gov vía wx-proxy (internacional)
+    //   3. AVWX con key             (fallback universal)
+    async _loadHistoric(icao, sub) {
+        const target = sub || icao;
+        const section = document.getElementById(`ap-metar-${icao}`);
+        if (!section) return;
+
+        let histDiv = section.querySelector('.metar-hist');
+        if (!histDiv) {
+            histDiv = document.createElement('div');
+            histDiv.className = 'metar-hist';
+            section.appendChild(histDiv);
+        }
+        if (histDiv.dataset.loaded === '1') {
+            histDiv.style.display = histDiv.style.display === 'none' ? '' : 'none';
+            return;
+        }
+        histDiv.innerHTML = `<div class="hist-loading"><div class="spinner" style="width:14px;height:14px;border-width:2px"></div> Cargando historial…</div>`;
+
+        let items = [], source = '';
+
+        // 1. MeteoChile (SC* solamente)
+        if (/^SC/i.test(target)) {
+            try {
+                const res = await fetch(
+                    `${this._WX_PROXY}/mc/metar?ids=${target}&limite=6`,
+                    { signal: AbortSignal.timeout(12000) }
+                );
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.items?.length) {
+                        items = data.items.map(r => ({ raw: r, time: '' }));
+                        source = 'MeteoChile';
+                    }
+                }
+            } catch { /* siguiente fuente */ }
+        }
+
+        // 2. NOAA
+        if (!items.length) {
+            try {
+                const res = await fetch(
+                    `${this._WX_PROXY}/metar?ids=${target}&hours=6`,
+                    { signal: AbortSignal.timeout(12000) }
+                );
+                if (res.ok) {
+                    const data = await res.json();
+                    if (Array.isArray(data) && data.length) {
+                        items = data.map(d => ({ raw: d.rawOb || '', time: d.reportTime || '' }));
+                        source = 'NOAA';
+                    }
+                }
+            } catch { /* siguiente fuente */ }
+        }
+
+        // 3. AVWX vía proxy
+        if (!items.length) {
+            try {
+                const res = await fetch(
+                    `${this._WX_PROXY}/avwx/metar?ids=${target}&count=4`,
+                    { signal: AbortSignal.timeout(12000) }
+                );
+                if (res.ok) {
+                    const parsed = this._avwxItems(await res.json());
+                    items = parsed.map(d => ({ raw: d.raw || d.rawOb || '', time: d.time?.dt || '' }));
+                    source = 'AVWX';
+                }
+            } catch { /* sin datos */ }
+        }
+
+        if (!items.length) {
+            histDiv.innerHTML = `<div class="empty-msg" style="font-size:11px">No hay observaciones anteriores disponibles para ${target}.</div>`;
+            return;
+        }
+
+        histDiv.dataset.loaded = '1';
+        histDiv.innerHTML = `<div class="hist-src">Fuente: ${source}</div>` +
+            items.map((item, idx) => {
+                const timeStr = item.time ? this._fmtDate(item.time) : '';
+                return `<div class="hist-metar-row${idx === 0 ? ' hist-current' : ''}">
+                    ${timeStr ? `<span class="hist-time">${timeStr}${idx === 0 ? ' <em>(actual)</em>' : ''}</span>` : ''}
+                    <span class="hist-raw">${this._esc(item.raw)}</span>
+                </div>`;
+            }).join('');
+    },
+
+    // Carga historial de TAFs. Fuentes en orden de prioridad:
+    //   1. MeteoChile vía wx-proxy  (para SC*)
+    //   2. NOAA/aw.gov vía wx-proxy (internacional)
+    //   3. AVWX con key             (fallback)
+    async _loadTafHistory(icao, sub) {
+        const target = sub || icao;
+        const tafSection = document.getElementById(`ap-taf-${icao}`);
+        if (!tafSection) return;
+
+        let prevDiv = tafSection.querySelector('.taf-prev');
+        if (!prevDiv) {
+            prevDiv = document.createElement('div');
+            prevDiv.className = 'taf-prev';
+            tafSection.appendChild(prevDiv);
+        }
+        if (prevDiv.dataset.loaded === '1') {
+            prevDiv.style.display = prevDiv.style.display === 'none' ? '' : 'none';
+            return;
+        }
+        prevDiv.innerHTML = `<div class="hist-loading"><div class="spinner" style="width:14px;height:14px;border-width:2px"></div> Cargando TAF anterior…</div>`;
+
+        let items = [], source = '';
+
+        // 1. MeteoChile (SC*)
+        if (/^SC/i.test(target)) {
+            try {
+                const res = await fetch(
+                    `${this._WX_PROXY}/mc/taf?ids=${target}&limite=3`,
+                    { signal: AbortSignal.timeout(12000) }
+                );
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.items?.length) {
+                        items = data.items.map(r => ({ raw: r, time: '' }));
+                        source = 'MeteoChile';
+                    }
+                }
+            } catch { /* siguiente fuente */ }
+        }
+
+        // 2. NOAA
+        if (!items.length) {
+            try {
+                const res = await fetch(
+                    `${this._WX_PROXY}/taf?ids=${target}&hours=24`,
+                    { signal: AbortSignal.timeout(12000) }
+                );
+                if (res.ok) {
+                    const data = await res.json();
+                    if (Array.isArray(data) && data.length) {
+                        items = data.map(d => ({ raw: d.rawTAF || d.rawTaf || '', time: d.issueTime || '' }));
+                        source = 'NOAA';
+                    }
+                }
+            } catch { /* siguiente fuente */ }
+        }
+
+        // 3. AVWX vía proxy
+        if (!items.length) {
+            try {
+                const res = await fetch(
+                    `${this._WX_PROXY}/avwx/taf?ids=${target}&count=2`,
+                    { signal: AbortSignal.timeout(12000) }
+                );
+                if (res.ok) {
+                    const parsed = this._avwxItems(await res.json());
+                    items = parsed.map(d => ({ raw: d.raw || d.rawTAF || '', time: d.time?.dt || '' }));
+                    source = 'AVWX';
+                }
+            } catch { /* sin datos */ }
+        }
+
+        if (!items.length) {
+            prevDiv.innerHTML = `<div class="empty-msg" style="font-size:11px">No hay TAF disponibles para ${target}.</div>`;
+            return;
+        }
+
+        prevDiv.dataset.loaded = '1';
+        prevDiv.innerHTML = `<div class="hist-src">Fuente: ${source}</div>` +
+            items.map((item, idx) => {
+                const timeStr = item.time ? this._fmtDate(item.time) : '';
+                return `<div class="hist-label">${idx === 0 ? 'TAF actual' : 'TAF anterior'}${timeStr ? ` · ${timeStr}` : ''}</div>
+                    <div class="taf-raw" style="${idx > 0 ? 'opacity:.7' : ''}">${this._esc(item.raw)}</div>`;
+            }).join('<hr style="border-color:var(--border);margin:10px 0">');
+    },
+
+    async _applySubstitute(orig, sub) {
+        const section = document.getElementById(`ap-metar-${orig}`);
+        if (!section) return;
+
+        section.querySelectorAll('.sub-chip').forEach(c =>
+            c.classList.toggle('active', c.dataset.sub === sub));
+
+        const mc = this._lastMcData;
+        let m = null, tafRaw = null;
+        if (mc && mc.metar[sub] && !mc.metar[sub].includes('NIL')) {
+            m = this._parseMetar(sub, mc.metar[sub]);
+            if (mc.taf[sub] && !mc.taf[sub].includes('NIL'))
+                tafRaw = mc.taf[sub].replace(/=$/, '').trim();
+        }
+        if (!m) {
+            const label = section.querySelector('.sub-chips-label');
+            if (label) label.textContent = `Cargando ${sub}…`;
+            const res = await this._fetchAvwxBoth(sub).catch(() => null);
+            if (res?.metar) m = res.metar;
+            if (res?.taf)   tafRaw = res.taf;
+        }
+
+        if (!m) {
+            const existingMsg = section.querySelector('.empty-msg');
+            if (existingMsg) existingMsg.textContent = `Sin datos disponibles para ${sub}.`;
+            return;
+        }
+
+        const coords = this._coordsCache[orig], subCoords = this._coordsCache[sub];
+        const dist = (coords && subCoords)
+            ? Math.round(this._haversine(coords.lat, coords.lon, subCoords.lat, subCoords.lon))
+            : null;
+        const cat = m.fltCat || '';
+        const cClass = { VFR:'cat-vfr', MVFR:'cat-mvfr', IFR:'cat-ifr', LIFR:'cat-lifr' }[cat] || '';
+        const catBadge = cat ? `<span class="flt-cat ${cClass}">${cat}</span>` : '';
+        const subLabel = `datos de ${sub}${dist ? ` · ${dist} km` : ''}`;
+        const histBtn  = `<button class="hist-btn" onclick="EasyPlan._loadHistoric('${orig}','${sub}')">↺ últimos 3</button>`;
+
+        const chipsHtml  = section.querySelector('.sub-chips')?.outerHTML || '';
+        const chipsLabel = section.querySelector('.sub-chips-label')?.outerHTML || '';
+        section.innerHTML = `
+            <div class="section-title">METAR <span style="font-size:9px;color:var(--muted);font-weight:400;text-transform:none">${subLabel}</span>${histBtn}</div>
+            ${catBadge}
+            <div class="raw-metar">${this._esc(m.rawOb)}</div>
+            ${this._metarChips(m)}
+            ${chipsLabel}${chipsHtml}`;
+        section.querySelectorAll('.sub-chip').forEach(c => {
+            c.classList.toggle('active', c.dataset.sub === sub);
+            c.onclick = () => EasyPlan._applySubstitute(orig, c.dataset.sub);
+        });
+
+        // Actualizar TAF con datos del sustituto
+        const tafSection = document.getElementById(`ap-taf-${orig}`);
+        if (tafSection) {
+            const tafHistBtn = tafRaw ? `<button class="hist-btn" onclick="EasyPlan._loadTafHistory('${orig}','${sub}')">↺ anterior</button>` : '';
+            tafSection.innerHTML = `
+                <div class="section-title">TAF <span style="font-size:9px;color:var(--muted);font-weight:400;text-transform:none">${subLabel}</span>${tafHistBtn}</div>
+                ${tafRaw ? `<div class="taf-raw">${this._esc(tafRaw)}</div>`
+                          : `<div class="empty-msg">Sin TAF para ${sub}</div>`}`;
+        }
+    },
+};
+
+document.addEventListener('DOMContentLoaded', () => EasyPlan.init());
+</script>
+</body>
+</html>

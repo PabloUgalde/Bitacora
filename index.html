@@ -11,6 +11,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="custom-styles.css">
+    <link rel="stylesheet" href="en-vuelo.css">
     <link rel="stylesheet" href="mobile.css">
     <link rel="stylesheet" href="print.css" media="print">
 </head>
@@ -68,11 +69,22 @@
                     <a href="#" data-view="view-summary-ifr" class="nav-link">Resumen IFR</a>
                 </div>
             </div>
+            <div class="nav-dropdown">
+                <a href="#" class="nav-link" id="envuelo-dropdown-toggle">En Vuelo ▼</a>
+                <div class="nav-dropdown-menu" id="envuelo-dropdown-menu">
+                    <a href="#" data-view="view-live-log" class="nav-link">⏱ Live Log</a>
+                    <a href="#" data-view="view-peso-balance" class="nav-link">⚖ Peso y Balance</a>
+                    <hr>
+                    <a href="cx3.html" target="_blank" class="nav-link">🔢 Computador CX-3 <span class="ev-pro-tag">PRO</span></a>
+                    <a href="easyplan.html" target="_blank" class="nav-link">🌦 EasyPlan Meteo <span class="ev-pro-tag">PRO</span></a>
+                </div>
+            </div>
             <a href="#" data-view="view-settings" class="nav-link">Configuración</a>
             <a href="manual.html" target="_blank" class="nav-link">Manual</a>
             <a href="#" class="nav-link" onclick="if(confirm('¿Estás seguro que deseas cerrar sesión?')) auth.logout(); return false;">Cerrar sesión</a>
         </nav>
         <!-- FIN DE LA MODIFICACIÓN -->
+        <div id="live-badge" class="live-badge hidden">EN VUELO</div>
     </header>
 
     <main>
@@ -666,7 +678,27 @@
                 </div>
             </div>
         </div> <!-- CIERRE DE VIEW-SETTINGS -->
+
+        <!-- MÓDULO EN VUELO: Live Log + Peso y Balance -->
+        <div id="view-live-log" class="view">
+            <div id="tab-live-log"></div>
+        </div>
+        <div id="view-peso-balance" class="view">
+            <div id="tab-peso-balance"></div>
+        </div>
     </main> <!-- CIERRE DE MAIN -->
+
+    <!-- Barra global de vuelo activo (Live Log) -->
+    <div id="flight-timer-bar" class="flight-timer-bar hidden">
+        <div class="ftb-left">
+            <span class="ftb-dot"></span>
+            <div>
+                <div class="ftb-time" id="ftb-time">00:00:00</div>
+                <div class="ftb-route" id="ftb-route"></div>
+            </div>
+        </div>
+        <span class="ftb-hint">Live Log ›</span>
+    </div>
 
     <!-- Lente de zoom para foto del escáner -->
     <div id="sc-photo-lens"></div>
@@ -879,6 +911,9 @@
     <script src="add-flight-modal.js"></script>
     <script src="mi-cuenta.js"></script>
     <script src="logbook-scanner.js"></script>
+    <script src="aeronaves-db.js"></script>
+    <script src="live-log.js"></script>
+    <script src="peso-balance.js"></script>
     <script src="app.js"></script>
 <datalist id="datalist-aeronave"></datalist>
 <datalist id="datalist-matricula"></datalist>

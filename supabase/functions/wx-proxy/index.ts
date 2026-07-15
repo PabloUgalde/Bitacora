@@ -1,9 +1,40 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
+const SUPABASE_SVC = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+}
+
+// ── Auth: todas las rutas exigen JWT de Supabase (antes era un proxy
+//    abierto — cualquiera podía consumir AVWX/REDEMET/Gemini).
+//    /gemini exige además plan Pro vigente (misma regla que plan.isPro()).
+async function requireUser(req: Request): Promise<{ userId: string } | Response> {
+  const authHeader = req.headers.get('Authorization') || ''
+  const token = authHeader.replace(/^Bearer\s+/i, '')
+  if (!token) return json({ error: 'No autorizado: falta token' }, 401)
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SVC)
+  const { data: { user }, error } = await supabase.auth.getUser(token)
+  if (error || !user) return json({ error: 'No autorizado: token inválido' }, 401)
+  return { userId: user.id }
+}
+
+async function requirePro(userId: string): Promise<true | Response> {
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SVC)
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('plan, plan_expires_at')
+    .eq('id', userId)
+    .single()
+  if (error || !data) return json({ error: 'Perfil no encontrado' }, 403)
+  const isPro = data.plan === 'pro' &&
+    (!data.plan_expires_at || new Date(data.plan_expires_at) > new Date())
+  if (!isPro) return json({ error: 'Función disponible solo para plan Pro' }, 403)
+  return true
 }
 
 const AW_BASE      = 'https://aviationweather.gov/api/data'
@@ -45,6 +76,10 @@ serve(async (req) => {
   const url  = new URL(req.url)
   const path = url.pathname.replace(/^\/wx-proxy\/?/, '')
   const [endpoint, ...rest] = path.split('/')
+
+  // JWT obligatorio en todas las rutas
+  const auth = await requireUser(req)
+  if (auth instanceof Response) return auth
 
   // ── MeteoChile proxy ──────────────────────────────────────────────
   // /wx-proxy/mc/metar?ids=SCPD&limite=6
@@ -206,18 +241,29 @@ serve(async (req) => {
   // POST /wx-proxy/gemini  body: { contents, generationConfig, model? }
   if (endpoint === 'gemini') {
     if (req.method !== 'POST') return json({ error: 'POST requerido' }, 405)
+    // Gemini tiene costo real por llamada → solo plan Pro vigente
+    const pro = await requirePro(auth.userId)
+    if (pro instanceof Response) return pro
     const geminiKey = Deno.env.get('GEMINI_API_KEY') || ''
     if (!geminiKey) return json({ error: 'GEMINI_API_KEY no configurada' }, 503)
 
     try {
-      const body  = await req.json()
-      const model = body.model || 'gemini-3.1-flash-lite-preview'
+      const raw = await req.text()
+      if (raw.length > 100_000) return json({ error: 'body demasiado grande' }, 413)
+      const body = JSON.parse(raw)
+      if (!Array.isArray(body.contents)) return json({ error: 'contents requerido' }, 400)
+      // Modelo pinneado y salida acotada — evita usar el proxy como Gemini genérico
+      const model = 'gemini-3.1-flash-lite-preview'
+      const genCfg = {
+        temperature: Math.min(1, Number(body.generationConfig?.temperature ?? 0.2)),
+        maxOutputTokens: Math.min(1024, Number(body.generationConfig?.maxOutputTokens ?? 700)),
+      }
       const res   = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contents: body.contents, generationConfig: body.generationConfig }),
+          body: JSON.stringify({ contents: body.contents, generationConfig: genCfg }),
           signal: AbortSignal.timeout(60000),
         }
       )

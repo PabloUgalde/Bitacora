@@ -51,9 +51,20 @@ const app = {
                 ui.showCheckoutResult('cancelled');
                 window.history.replaceState({}, '', window.location.pathname);
             }
+            // Redirigido desde una herramienta Pro (CX-3 / EasyPlan) sin plan
+            if (urlParams.get('upgrade') === 'envuelo') {
+                plan.showUpgradeScreen();
+                window.history.replaceState({}, '', window.location.pathname);
+            }
         }, 500);
         app.setupEventListeners();
         app.setupLogbookActionsListener();
+
+        // Módulo En Vuelo: restaura vuelo activo (badge + barra) y flota
+        liveLog.init();
+        pesoBalance.init();
+        document.getElementById('flight-timer-bar')?.addEventListener('click', () => ui.showView('view-live-log'));
+
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('./sw.js')
                 .then((reg) => console.log('Service Worker Registrado. Scope:', reg.scope))
@@ -127,6 +138,8 @@ const app = {
         const sortDropdownMenu = document.getElementById('sort-order-menu');
         const bitacoraDropdownToggle = document.getElementById('bitacora-dropdown-toggle');
         const bitacoraDropdownMenu = document.getElementById('bitacora-dropdown-menu');
+        const envueloDropdownToggle = document.getElementById('envuelo-dropdown-toggle');
+        const envueloDropdownMenu = document.getElementById('envuelo-dropdown-menu');
         const hamburgerBtn = document.getElementById('hamburger-btn');
         const mainNav = document.getElementById('main-nav');
 
@@ -134,6 +147,7 @@ const app = {
         const closeAllDropdowns = () => {
             navDropdownMenu?.classList.remove('active');
             bitacoraDropdownMenu?.classList.remove('active');
+            envueloDropdownMenu?.classList.remove('active');
             sortDropdownMenu?.classList.remove('active');
             if (colVisibilityPanel) colVisibilityPanel.style.display = 'none';
         };
@@ -155,6 +169,7 @@ const app = {
             mainNav?.classList.remove('mobile-nav-open');
             navDropdownMenu?.classList.remove('mobile-submenu-open');
             bitacoraDropdownMenu?.classList.remove('mobile-submenu-open');
+            envueloDropdownMenu?.classList.remove('mobile-submenu-open');
         };
 
         // Dropdown Resúmenes (solo desktop)
@@ -176,6 +191,17 @@ const app = {
                 const isOpen = bitacoraDropdownMenu.classList.contains('active');
                 closeAllDropdowns();
                 if (!isOpen) bitacoraDropdownMenu.classList.add('active');
+            });
+        }
+
+        // Dropdown En Vuelo (solo desktop)
+        if (envueloDropdownToggle) {
+            envueloDropdownToggle.addEventListener('click', (e) => {
+                if (window.innerWidth <= 800) return;
+                e.preventDefault();
+                const isOpen = envueloDropdownMenu.classList.contains('active');
+                closeAllDropdowns();
+                if (!isOpen) envueloDropdownMenu.classList.add('active');
             });
         }
 
@@ -242,6 +268,14 @@ const app = {
                     if (isMobile) {
                         navDropdownMenu.classList.toggle('mobile-submenu-open');
                         bitacoraDropdownMenu?.classList.remove('mobile-submenu-open');
+                        envueloDropdownMenu?.classList.remove('mobile-submenu-open');
+                    }
+                } else if (link.id === 'envuelo-dropdown-toggle') {
+                    e.preventDefault();
+                    if (isMobile) {
+                        envueloDropdownMenu.classList.toggle('mobile-submenu-open');
+                        navDropdownMenu?.classList.remove('mobile-submenu-open');
+                        bitacoraDropdownMenu?.classList.remove('mobile-submenu-open');
                     }
                 } else {
                     if (isMobile) {
@@ -249,6 +283,7 @@ const app = {
                         mainNav.classList.remove('mobile-nav-open');
                         bitacoraDropdownMenu?.classList.remove('mobile-submenu-open');
                         navDropdownMenu?.classList.remove('mobile-submenu-open');
+                        envueloDropdownMenu?.classList.remove('mobile-submenu-open');
                     }
                 }
             });

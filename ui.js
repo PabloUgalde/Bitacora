@@ -19,6 +19,8 @@ const ui = {
                     document.getElementById('summaries-dropdown-toggle')?.classList.add('active');
                 } else if (parentMenu.id === 'bitacora-dropdown-menu') {
                     document.getElementById('bitacora-dropdown-toggle')?.classList.add('active');
+                } else if (parentMenu.id === 'envuelo-dropdown-menu') {
+                    document.getElementById('envuelo-dropdown-toggle')?.classList.add('active');
                 }
             }
         }
@@ -62,7 +64,9 @@ const ui = {
         'view-summary-by-airport': summaryRenderer.byAirport, 
         'view-summary-by-aircraft': summaryRenderer.byAircraft,
         'view-summary-ifr': summaryRenderer.byIFR,
-        'view-settings': () => app.loadSettings() 
+        'view-settings': () => app.loadSettings(),
+        'view-live-log': () => liveLog.render(),
+        'view-peso-balance': () => pesoBalance.render()
     },
 
     getTodayString: () => { const today = new Date(); const year = today.getFullYear(); const month = String(today.getMonth() + 1).padStart(2, '0'); const day = String(today.getDate()).padStart(2, '0'); return `${year}-${month}-${day}`; },

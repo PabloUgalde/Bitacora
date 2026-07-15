@@ -1,4 +1,4 @@
-const CACHE_NAME = 'flight-log-cache-v2.28';
+const CACHE_NAME = 'flight-log-cache-v2.29';
 
 const APP_SHELL_FILES = [
     './',
@@ -27,6 +27,12 @@ const APP_SHELL_FILES = [
     './anotaciones.js',
     './mi-cuenta.js',
     './logbook-scanner.js',
+    './en-vuelo.css',
+    './aeronaves-db.js',
+    './live-log.js',
+    './peso-balance.js',
+    './cx3.html',
+    './easyplan.html',
     './logo-avion.png',
     './logo-avion-osc.png',
     './icon-192.png',

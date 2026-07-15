@@ -273,6 +273,11 @@
             .section { page-break-before: auto; }
             a { color: inherit; text-decoration: none; }
         }
+        .ev-pro {
+            font-size: 0.65em; font-weight: 800; letter-spacing: 0.08em;
+            color: #000; background: var(--primary, #D4AF37);
+            border-radius: 8px; padding: 1px 7px; vertical-align: middle;
+        }
     </style>
 </head>
 <body>
@@ -327,6 +332,14 @@
                 <a class="toc-link" href="#config-licencias">Licencias y habilitaciones</a>
                 <a class="toc-link" href="#config-dashboard">Personalizar dashboard</a>
                 <a class="toc-link" href="#config-horas">Formato de horas</a>
+            </div>
+            <div class="toc-section">
+                <div class="toc-section-title">En Vuelo</div>
+                <a class="toc-link" href="#envuelo">Herramientas En Vuelo</a>
+                <a class="toc-link sub" href="#envuelo-livelog">Live Log</a>
+                <a class="toc-link sub" href="#envuelo-pb">Peso y Balance</a>
+                <a class="toc-link sub" href="#envuelo-cx3">Computador CX-3</a>
+                <a class="toc-link sub" href="#envuelo-easyplan">EasyPlan Meteo</a>
             </div>
             <div class="toc-section">
                 <div class="toc-section-title">Planes</div>
@@ -1207,6 +1220,67 @@
         </section>
 
         <!-- ─────────────────── 12. PLANES ─────────────────── -->
+        <section class="section" id="envuelo">
+            <h2><span class="icon">✈️</span> En Vuelo — Herramientas para el piloto</h2>
+            <p>El menú <strong>En Vuelo</strong> agrupa herramientas operacionales que complementan tu bitácora: un cronómetro de vuelo en vivo, cálculo de peso y balance, un computador de vuelo tipo CX-3 y un briefing meteorológico de ruta.</p>
+
+            <h3 id="envuelo-livelog">⏱ Live Log — registra tu vuelo en tiempo real</h3>
+            <p>Live Log es un cronómetro de vuelo: completas los datos antes de despegar, presionas <strong>INICIAR VUELO</strong> y al aterrizar el vuelo queda listo para guardarse en tu bitácora con la duración exacta.</p>
+            <ol>
+                <li><strong>Pre-vuelo:</strong> ingresa aeronave, matrícula y aeródromo de salida (con el botón <strong>📍</strong> el GPS te sugiere el aeródromo más cercano). Si tienes aeronaves en <em>Mi Flota</em> (de Peso y Balance), un toque rellena el formulario.</li>
+                <li><strong>En vuelo:</strong> el cronómetro corre y la pantalla se mantiene encendida. Una barra verde te acompaña por toda la app — puedes seguir usando Bitácora normalmente.</li>
+                <li><strong>Al aterrizar:</strong> presiona <strong>ATERRIZAR</strong>, completa destino y aterrizajes, y toca <strong>💾 Guardar en mi bitácora</strong>. El vuelo entra directo a tu registro — sin señal, se guarda localmente y se sube al reconectar.</li>
+            </ol>
+            <div class="callout info">
+                <span class="callout-icon">💡</span>
+                <span>Si marcas <strong>Diurno y Nocturno</strong> a la vez (vuelo que cruza el ocaso), la app te pide el desglose de horas para que la suma cuadre con la duración total.</span>
+            </div>
+            <div class="callout ok">
+                <span class="callout-icon">✓</span>
+                <span>El vuelo activo sobrevive si cierras la app o se recarga la página: al volver, el cronómetro sigue corriendo desde la hora real de inicio.</span>
+            </div>
+
+            <h3 id="envuelo-pb">⚖ Peso y Balance</h3>
+            <p>Calcula peso y centro de gravedad con la base de aeronaves incluida (Cessna 150/172/182 de club, con datos de sus informes de masa y centrado). Agrega tus aeronaves habituales a <strong>Mi Flota</strong> para tenerlas a un toque.</p>
+            <ul>
+                <li>Ingreso en <strong>lbs o kg</strong> y combustible en <strong>galones o litros</strong> — los campos se convierten solos.</li>
+                <li>Acepta sumas directas: escribe <code>80+75</code> en un campo y se calcula al salir.</li>
+                <li>Valida MTOW, límites de equipaje y envolvente CG por categoría (Normal / Utilitaria), con veredicto claro: <strong>DENTRO DE LÍMITES</strong> o <strong>NO DESPEGAR</strong>.</li>
+                <li>Muestra el <strong>combustible máximo cargable</strong> según el peso sin combustible.</li>
+                <li>Gráfica de la envolvente CG con tu punto calculado.</li>
+            </ul>
+            <div class="callout warn">
+                <span class="callout-icon">⚠</span>
+                <span>Los datos de las aeronaves son referenciales. Verifica siempre contra el <strong>último informe de masa y centrado</strong> de la matrícula que vas a volar.</span>
+            </div>
+            <div class="callout info">
+                <span class="callout-icon">💡</span>
+                <span><strong>Plan Lite:</strong> una aeronave por día (puedes recalcularla las veces que quieras). <strong>Plan Pro:</strong> sin límite.</span>
+            </div>
+
+            <h3 id="envuelo-cx3">🔢 Computador de vuelo CX-3 <span class="ev-pro">PRO</span></h3>
+            <p>Un computador de vuelo completo tipo CX-3, pensado para planificación y para practicar de cara a exámenes DGAC: altitud de presión y densidad, TAS/Mach, corrección de viento, componentes de pista, tiempo-velocidad-distancia, combustible y autonomía, rumbo compás, planeo, ascenso/descenso, patrones de espera, atmósfera estándar, base de nubes, conversiones y cronómetro.</p>
+            <ul>
+                <li>Los valores se <strong>acarrean entre funciones</strong>: la TAS que calculaste en ALT aparece sugerida en WIND.</li>
+                <li>Para corregir un dato, selecciona el campo y escribe — el solver recalcula desde tus entradas.</li>
+                <li>Funciona 100% offline una vez instalada la app.</li>
+            </ul>
+
+            <h3 id="envuelo-easyplan">🌦 EasyPlan Meteo <span class="ev-pro">PRO</span></h3>
+            <p>Briefing meteorológico de ruta: ingresa salida, destino y alternativas, y EasyPlan reúne <strong>METAR, TAF y GAMET</strong> (Chile vía MeteoChile/DGAC; Brasil vía REDEMET; cobertura mundial vía AVWX), calcula la elevación del terreno de la ruta (25 puntos SRTM) y sugiere una altitud de seguridad.</p>
+            <ul>
+                <li><strong>Análisis IA:</strong> un resumen operacional de la ruta generado con IA a partir de los datos reales del briefing.</li>
+                <li>Aeródromos sin METAR: chips con estaciones cercanas para usar como referencia.</li>
+                <li>Condición VFR/IFR por aeródromo de un vistazo.</li>
+            </ul>
+            <div class="callout warn">
+                <span class="callout-icon">⚠</span>
+                <span>EasyPlan y su análisis IA <strong>no reemplazan el briefing oficial DGAC</strong> ni la autorización ATC. Úsalo como complemento de planificación.</span>
+            </div>
+        </section>
+
+        <hr class="divider">
+
         <section class="section" id="planes">
             <h2><span class="icon">🏅</span> Plan Lite vs. Plan Pro</h2>
             <p>La aplicación ofrece dos planes. Los nuevos usuarios tienen acceso a una prueba gratuita de 14 días del Plan Pro.</p>
@@ -1222,6 +1296,8 @@
                         <li>Gestión de licencias</li>
                         <li>Importar datos desde Excel</li>
                         <li>Escanear bitácora física (IA)</li>
+                        <li>Live Log — cronómetro de vuelo</li>
+                        <li>Peso y Balance (1 aeronave/día)</li>
                     </ul>
                 </div>
                 <div class="plan-card pro-card">
@@ -1235,6 +1311,9 @@
                         <li>Filtro avanzado</li>
                         <li>Generar e imprimir reportes</li>
                         <li>Exportar Excel y CSV</li>
+                        <li>Peso y Balance ilimitado</li>
+                        <li>Computador de vuelo CX-3</li>
+                        <li>EasyPlan Meteo con análisis IA</li>
                     </ul>
                     <div class="plan-price">
                         <strong>$6.000 CLP/mes</strong> · $60.000 CLP/año
