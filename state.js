@@ -54,6 +54,19 @@ const formatHours = (val) => {
     return trimmed.endsWith('.') ? trimmed + '0' : trimmed;
 };
 
+// Estandariza el campo Aeronave (Marca y Modelo) al estilo designador corto
+// que usan los pilotos (C150, C182, PA-28): mayúsculas, colapsa el espacio
+// entre el prefijo de letras y el número de modelo (C 172 → C172) y limpia
+// espacios alrededor de guiones sin insertarlos ni quitarlos (PA - 28 → PA-28,
+// pero PA28 se deja tal cual si el piloto no usó guion).
+const normalizeAircraftModel = (raw) => {
+    let s = String(raw || '').trim().toUpperCase().replace(/\s+/g, ' ');
+    if (!s) return '';
+    s = s.replace(/^([A-Z]{1,4})\s+(\d)/, '$1$2');
+    s = s.replace(/\s*-\s*/g, '-');
+    return s;
+};
+
 // --- CONFIGURACIÓN DEL DASHBOARD ---
 const DASHBOARD_CARDS = [
     { id: 'totalHours',      label: 'Horas Totales',        dataKey: 'Duracion Total de Vuelo',                      isFixed: true,  formatFn: val => formatHours(val), customClass: 'primary-card' },

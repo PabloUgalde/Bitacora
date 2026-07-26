@@ -669,7 +669,9 @@ Responde ÚNICAMENTE con el JSON array. Sin texto adicional, sin markdown.`;
         btn.disabled = true; btn.textContent = 'Importando…';
         try {
             const toImport = this.flights.map(f => ({
-                ...f, 'Fecha': f['Fecha'] ? new Date(f['Fecha'] + 'T12:00:00Z') : null
+                ...f,
+                'Aeronave Marca y Modelo': normalizeAircraftModel(f['Aeronave Marca y Modelo']),
+                'Fecha': f['Fecha'] ? new Date(f['Fecha'] + 'T12:00:00Z') : null
             }));
             for (let i = 0; i < toImport.length; i += 50) {
                 const ok = await api.saveFlightsBatch(toImport.slice(i, i + 50));

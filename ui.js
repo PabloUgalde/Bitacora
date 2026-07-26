@@ -309,7 +309,7 @@ createFlightObject: (data) => {
     const newFlight = {
         id: logbookState.editingFlightId || Date.now().toString() + Math.random().toString().slice(2),
         "Fecha": new Date(data.fecha + 'T00:00:00Z'),
-        "Aeronave Marca y Modelo": (data.aeronave || "").toUpperCase(), "Matricula Aeronave": (data.matricula || "").toUpperCase(),
+        "Aeronave Marca y Modelo": normalizeAircraftModel(data.aeronave), "Matricula Aeronave": (data.matricula || "").toUpperCase(),
         "Desde": (data.desde || "").toUpperCase(), "Hasta": (data.hasta || "").toUpperCase(),
         "Duracion Total de Vuelo": data.duracion,
         "Aterrizajes Dia": parseInt(data.aterrizajesDia) || 0, "Aterrizajes Noche": parseInt(data.aterrizajesNoche) || 0,

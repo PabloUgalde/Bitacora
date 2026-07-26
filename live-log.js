@@ -34,6 +34,8 @@ const liveLog = {
 
         if (!state) {
             this._renderPreFlight(el);
+        } else if (state.landed && !state.landingConfirmed) {
+            this._renderLandingDialog(el, state);
         } else if (state.landed) {
             this._renderPostFlight(el, state);
         } else {
@@ -175,6 +177,11 @@ const liveLog = {
         el.querySelector('#ll-aeronave').addEventListener('input', e => {
             e.target.value = e.target.value.toUpperCase();
         });
+        // Normaliza al estilo designador (C 172 → C172) recién al salir del
+        // campo — hacerlo en 'input' saltaría el cursor mientras se escribe.
+        el.querySelector('#ll-aeronave').addEventListener('blur', e => {
+            e.target.value = normalizeAircraftModel(e.target.value);
+        });
         el.querySelector('#ll-matricula').addEventListener('input', e => {
             e.target.value = e.target.value.toUpperCase();
         });
@@ -208,7 +215,7 @@ const liveLog = {
         const state = {
             startTs: Date.now(),
             fecha: el.querySelector('#ll-fecha').value,
-            aeronave: aeronave.toUpperCase(),
+            aeronave: normalizeAircraftModel(aeronave),
             matricula: (el.querySelector('#ll-matricula').value.trim()).toUpperCase(),
             desde: desde.toUpperCase(),
             hasta: (el.querySelector('#ll-hasta')?.value.trim() || '').toUpperCase(),
@@ -280,10 +287,59 @@ const liveLog = {
         this.render();
     },
 
+    // ── Screen: Aterrizajes (paso obligatorio entre aterrizar y el resto del formulario) ──
+    // Se pregunta aparte, antes del formulario completo, para que no quede
+    // en 0 por omisión — antes vivía como campo opcional dentro de
+    // _renderPostFlight y era fácil saltárselo sin querer.
+    _renderLandingDialog(el, state) {
+        const elapsedMs = state.elapsedMs || (state.endTs - state.startTs);
+        const hhmmss = this._formatMs(elapsedMs);
+        const cond = state.condicion || [];
+        const soloNocturno = cond.includes('Nocturno') && !cond.includes('Diurno');
+        const defaultDia = soloNocturno ? '' : '1';
+        const defaultNoche = soloNocturno ? '1' : '';
+
+        el.innerHTML = `
+            <div class="ll-post-screen">
+                <div class="ll-complete-icon">✓</div>
+                <div class="ll-post-title">Aterrizaste — ${hhmmss}</div>
+                <p style="color:var(--muted);font-size:14px;margin-top:-8px">¿Cuántos aterrizajes hiciste en este vuelo?</p>
+                <div class="ll-pair" style="width:100%;max-width:320px">
+                    <div class="ll-form-group">
+                        <label>Aterriz. Día</label>
+                        <input type="number" id="lld-ater-dia" min="0" inputmode="numeric" placeholder="0" value="${defaultDia}">
+                    </div>
+                    <div class="ll-form-group">
+                        <label>Aterriz. Noche</label>
+                        <input type="number" id="lld-ater-noche" min="0" inputmode="numeric" placeholder="0" value="${defaultNoche}">
+                    </div>
+                </div>
+                <p id="lld-error" style="color:var(--red);font-size:13px;display:none">Ingresa la cantidad de aterrizajes (puede ser 0).</p>
+                <button class="ll-export-btn" id="lld-continue-btn">Continuar</button>
+            </div>`;
+
+        el.querySelector('#lld-continue-btn').addEventListener('click', () => {
+            const diaEl = el.querySelector('#lld-ater-dia');
+            const nocheEl = el.querySelector('#lld-ater-noche');
+            if (diaEl.value.trim() === '' && nocheEl.value.trim() === '') {
+                el.querySelector('#lld-error').style.display = 'block';
+                return;
+            }
+            const s = this._loadState();
+            if (!s) return;
+            s.aterrizajesDia = parseInt(diaEl.value) || 0;
+            s.aterrizajesNoche = parseInt(nocheEl.value) || 0;
+            s.landingConfirmed = true;
+            this._saveState(s);
+            this.render();
+        });
+    },
+
     // ── Screen: Post-vuelo ──
     _renderPostFlight(el, state) {
         const elapsedMs = state.elapsedMs || (state.endTs - state.startTs);
-        const decHours = Math.round((elapsedMs / 3600000) * 100) / 100;
+        const precision = this._detectDecimalPrecision();
+        const decHours = this._roundHours(elapsedMs / 3600000, precision);
         const hhmmss = this._formatMs(elapsedMs);
 
         const tiposHTML = this.TIPOS_AVION.map(t => {
@@ -370,11 +426,11 @@ const liveLog = {
                     <div class="ll-pair" id="lpp-cond-split" style="display:none">
                         <div class="ll-form-group">
                             <label>Horas Diurno</label>
-                            <input type="number" id="lpp-horas-diurno" min="0" max="${decHours}" step="0.1">
+                            <input type="number" id="lpp-horas-diurno" min="0" max="${decHours}" step="${precision === 2 ? '0.01' : '0.1'}">
                         </div>
                         <div class="ll-form-group">
                             <label>Horas Nocturno</label>
-                            <input type="number" id="lpp-horas-nocturno" min="0" max="${decHours}" step="0.1">
+                            <input type="number" id="lpp-horas-nocturno" min="0" max="${decHours}" step="${precision === 2 ? '0.01' : '0.1'}">
                         </div>
                     </div>
                     <div class="ll-pair">
@@ -410,13 +466,17 @@ const liveLog = {
         upcaseInput('#lpp-hasta');
         upcaseInput('#lpp-aeronave');
         upcaseInput('#lpp-matricula');
+        el.querySelector('#lpp-aeronave')?.addEventListener('blur', e => {
+            e.target.value = normalizeAircraftModel(e.target.value);
+            savePost();
+        });
 
         const savePost = () => {
             const s = this._loadState();
             if (!s) return;
             const checked = name => [...el.querySelectorAll(`input[name="${name}"]:checked`)].map(i => i.value);
             s.fecha = el.querySelector('#lpp-fecha')?.value || s.fecha;
-            s.aeronave = (el.querySelector('#lpp-aeronave')?.value.trim() || s.aeronave || '').toUpperCase();
+            s.aeronave = normalizeAircraftModel(el.querySelector('#lpp-aeronave')?.value.trim() || s.aeronave || '');
             s.matricula = (el.querySelector('#lpp-matricula')?.value.trim() || '').toUpperCase();
             s.desde = (el.querySelector('#lpp-desde')?.value.trim() || '').toUpperCase();
             s.hasta = (el.querySelector('#lpp-hasta')?.value.trim() || '').toUpperCase();
@@ -445,7 +505,7 @@ const liveLog = {
         const splitWrap = el.querySelector('#lpp-cond-split');
         const hDia = el.querySelector('#lpp-horas-diurno');
         const hNoc = el.querySelector('#lpp-horas-nocturno');
-        const clamp = v => Math.min(decHours, Math.max(0, Math.round(v * 100) / 100));
+        const clamp = v => Math.min(decHours, Math.max(0, this._roundHours(v, precision)));
         const updateSplitVisibility = () => {
             const both = el.querySelector('#lpp-cond-Diurno')?.checked &&
                          el.querySelector('#lpp-cond-Nocturno')?.checked;
@@ -722,6 +782,29 @@ const liveLog = {
         return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
     },
 
+    // ── Precisión decimal ──
+    // Detecta si la bitácora del usuario registra horas con 1 decimal (1.2)
+    // o 2 decimales (1.23) mirando los vuelos ya guardados, para que el
+    // tiempo calculado por el timer quede en el mismo formato que el resto
+    // de la bitácora en vez de forzar siempre 2 decimales.
+    _detectDecimalPrecision() {
+        try {
+            const durations = (typeof flightData !== 'undefined' ? flightData : [])
+                .map(f => parseFloat(f['Duracion Total de Vuelo']))
+                .filter(v => !isNaN(v) && v > 0);
+            if (!durations.length) return 1;
+            const usesTwoDecimals = durations.some(v => Math.round(v * 100) % 10 !== 0);
+            return usesTwoDecimals ? 2 : 1;
+        } catch {
+            return 1;
+        }
+    },
+
+    _roundHours(h, precision) {
+        const factor = precision === 2 ? 100 : 10;
+        return Math.round(h * factor) / factor;
+    },
+
     // ── Wake Lock ──
     async _requestWakeLock() {
         if (!('wakeLock' in navigator)) {
@@ -754,7 +837,8 @@ const liveLog = {
     // integración nativa en Bitácora para guardar el vuelo directamente.
     _buildRow(state) {
         const elapsedMs = state.elapsedMs || (state.endTs - state.startTs);
-        const dur = Math.round((elapsedMs / 3600000) * 100) / 100;
+        const precision = this._detectDecimalPrecision();
+        const dur = this._roundHours(elapsedMs / 3600000, precision);
         const tipos = Array.isArray(state.tipoAvion) ? state.tipoAvion : (state.tipoAvion ? [state.tipoAvion] : []);
         const roles = Array.isArray(state.rol) ? state.rol : (state.rol ? [state.rol] : []);
         const conds = Array.isArray(state.condicion) ? state.condicion : (state.condicion ? [state.condicion] : []);
@@ -763,7 +847,7 @@ const liveLog = {
         // usar el reparto ingresado; si no, la condición marcada lleva todo.
         const both = conds.includes('Diurno') && conds.includes('Nocturno');
         const hDia = both ? (state.horasDiurno ?? dur) : (conds.includes('Diurno') ? dur : 0);
-        const hNoc = both ? (state.horasNocturno ?? Math.round((dur - hDia) * 100) / 100)
+        const hNoc = both ? (state.horasNocturno ?? this._roundHours(dur - hDia, precision))
                           : (conds.includes('Nocturno') ? dur : 0);
 
         return {

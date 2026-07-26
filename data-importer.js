@@ -147,6 +147,9 @@ const dataImporter = {
                     switch (schemaEntry.type) {
                         case 'string':
                             newFlight[headerName] = (rawValue !== undefined && rawValue !== null) ? String(rawValue) : schemaEntry.default;
+                            if (headerName === 'Aeronave Marca y Modelo') {
+                                newFlight[headerName] = normalizeAircraftModel(newFlight[headerName]);
+                            }
                             break;
                         case 'number':
                             newFlight[headerName] = parseFloat(String(rawValue || '').replace(",", ".")) || schemaEntry.default;
