@@ -9,7 +9,7 @@ App PWA de bitácora de vuelo para pilotos chilenos. Producción: **https://bita
 - **Email:** Resend (`noreply@bitacoradevuelo.cl`)
 - **Librería gráficos:** Chart.js (CDN)
 - **Excel/CSV:** SheetJS (CDN)
-- **PWA:** Service Worker `sw.js` (cache v2.28), `manifest.json`
+- **PWA:** Service Worker `sw.js` (cache v2.32), `manifest.json`
 
 ## Estructura de archivos clave
 
@@ -18,7 +18,7 @@ App PWA de bitácora de vuelo para pilotos chilenos. Producción: **https://bita
 | `index.html` | App shell (772 líneas, carga 15+ scripts en orden específico) |
 | `landing.html` | Landing page pública (v2 HUD). CTAs apuntan a `index.html?auth=1`. Sin formularios inline — el auth vive en la app. |
 | `app.js` | Entry point: inicializa módulos, event listeners, registra SW |
-| `state.js` | Estado global: `flightData[]`, `userProfile`, `logbookState` |
+| `state.js` | Estado global: `flightData[]`, `userProfile`, `logbookState`. También expone helpers globales usados por todo el resto (`formatHours`, `normalizeAircraftModel`) — carga primero para que estén disponibles en los scripts siguientes |
 | `auth.js` | Supabase Auth: login, registro, recuperación de contraseña |
 | `api.js` | CRUD de vuelos, offline queue, sincronización con Supabase |
 | `ui.js` | Router, notificaciones, modales, utilidades UI |
@@ -159,12 +159,15 @@ Menú **En Vuelo ▼** en la nav con 4 herramientas. Origen: repo `~/Documents/G
 - **Aeronaves públicas (`is_public`, 14-jul-2026):** checkbox "🌐 Compartir con la comunidad" en el formulario (solo visible con `supabaseClient`, requiere matrícula válida). RLS: cualquier autenticado LEE las públicas; solo el dueño edita/borra. En Base de Datos aparece la sección "Comunidad" (`pesoBalance._community`); "＋ Copiar a mi flota" crea una **copia propia privada** con id nuevo (los datos de W&B no deben cambiar bajo el usuario si el dueño edita la suya).
 - **Anti-duplicados de matrícula:** índice único `wb_aircraft_public_reg_idx` (case-insensitive) sobre catálogo + públicas — dos aeronaves no pueden compartir matrícula. Chequeo en 3 capas: `_findDuplicateRegistration` (local, catálogo+comunidad ya cargada) al guardar cualquier matrícula; `_checkPublicRegistrationCloud` (round-trip a la nube) solo al marcar pública; y captura de `23505` en `_syncCustomToCloud` como resguardo final ante una carrera entre dos publicaciones simultáneas (revierte a privada localmente y avisa). Mensaje siempre dirige a **info@bitacoradevuelo.cl**.
 - **Matrícula validada** en el formulario: `XX-ABC` (prefijo OACI 1-2 letras + guion + 1-5 alfanuméricos) o `N1234AB` (EEUU, sin guion, sin cero inicial) — `_validReg()`. Obligatoria si la aeronave es pública.
-- **Marca/modelo normalizada** al guardar (`_normalizeMakeModel`): corrige la marca por distancia Levenshtein ≤2 (misma inicial) contra `_BRANDS` + alias (`beech`→Beechcraft) — "cesna/cezna/cessnna" → "Cessna"; tokens con dígitos a mayúsculas (172n→172N, pa-28→PA-28), resto capitalizado.
+- **Marca/modelo normalizada** al guardar (`_normalizeMakeModel`, solo en Peso y Balance): corrige la marca por distancia Levenshtein ≤2 (misma inicial) contra `_BRANDS` + alias (`beech`→Beechcraft) — "cesna/cezna/cessnna" → "Cessna"; tokens con dígitos a mayúsculas (172n→172N, pa-28→PA-28), resto capitalizado. Distinto de `normalizeAircraftModel` (ver abajo): éste expande a nombre de marca completo, aquél preserva el estilo designador corto que usa el resto de la bitácora.
+- **Campo Aeronave estandarizado (`normalizeAircraftModel`, `state.js`):** el resto de la app (Live Log, modal de agregar/editar vuelo, importador Excel/CSV, escáner IA) usa este helper global en vez de un simple `.toUpperCase()` — colapsa el espacio entre el prefijo de letras y el número de modelo ("C 172"→"C172") y limpia espacios alrededor de guiones sin insertarlos ni quitarlos ("PA - 28"→"PA-28", "PA28" queda igual). No convierte a nombre de marca completo — asume que el piloto ya escribe en formato designador corto (C150, C182, PA-28).
 - **Live Log guarda directo**: post-vuelo → `_saveToBitacora()` construye el vuelo desde `_buildRow()` (orden HEADERS) y llama `api.saveFlight()` → hereda cola offline. CSV queda como opción secundaria. Si el piloto marca Diurno+Nocturno, pide desglose de horas (suma = duración).
+- **Aterrizajes obligatorios al aterrizar:** al tocar ATERRIZAR se muestra `_renderLandingDialog` — una pantalla dedicada que pide aterrizajes Día/Noche (default inteligente según la condición del vuelo) antes de continuar al formulario post-vuelo completo. No deja avanzar con ambos campos vacíos (puede guardarse 0, pero no por omisión silenciosa). Antes era un campo opcional dentro de `_renderPostFlight` que quedaba en 0 si no se tocaba.
+- **Precisión decimal detectada:** `_detectDecimalPrecision()` mira los vuelos ya guardados en `flightData` y decide si la bitácora del usuario usa 1 decimal (1.2) o 2 (1.23), aplicándolo a la duración que calcula el timer de Live Log (antes siempre forzaba 2 decimales) y al desglose Diurno/Nocturno.
 - **Elementos globales:** `#live-badge` (header) y `#flight-timer-bar` (fija abajo, click → `view-live-log`, wiring en `app.init`). `liveLog.init()` y `pesoBalance.init()` corren en `app.init` (restauran vuelo activo tras recarga).
 - **Guard de páginas Pro:** lee `sb-...-auth-token`, consulta `profiles.plan` vía REST; sin token → `index.html?auth=1`; sin Pro → `index.html?upgrade=envuelo` (app.js muestra upgrade screen). Fail-open si la REST falla (offline) — lo caro se protege server-side.
 - **wx-proxy asegurado:** JWT obligatorio en todas las rutas; `/gemini` además exige plan Pro vigente, modelo pinneado, body ≤100KB, maxOutputTokens ≤1024. EasyPlan envía `Authorization` en todos sus fetch (`_authHeaders()`).
-- **SW v2.29**: app shell incluye `en-vuelo.css`, `aeronaves-db.js`, `live-log.js`, `peso-balance.js`, `cx3.html`, `easyplan.html`.
+- **SW v2.32**: app shell incluye `en-vuelo.css`, `aeronaves-db.js`, `live-log.js`, `peso-balance.js`, `cx3.html`, `easyplan.html`.
 - Manual: capítulo "En Vuelo" (`#envuelo`). Landing: herramientas agregadas a las 4 tarjetas de pricing.
 
 **⚠️ Deploy pendiente (orden importa):**
