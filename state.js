@@ -67,6 +67,28 @@ const normalizeAircraftModel = (raw) => {
     return s;
 };
 
+// Deriva el designador OACI corto (C172, C150, PA-28, SR22T, DA40) a partir
+// del nombre completo marca+modelo usado en el catálogo/flota de Peso y
+// Balance ("Cessna 172M Skyhawk", "Piper PA-28-181 Archer"). Cessna colapsa
+// la letra de variante (172M → C172); Piper trunca al número de serie
+// (PA-28-181 → PA-28); el resto de marcas ya usan el modelo como segundo
+// token (Cirrus SR22T, Diamond DA40, Bonanza F33A) así que se toma tal cual.
+const aircraftIcaoDesignator = (fullName) => {
+    const tokens = String(fullName || '').trim().split(/\s+/).filter(Boolean);
+    if (tokens.length < 2) return normalizeAircraftModel(tokens[0] || '');
+    const brand = tokens[0].toLowerCase();
+    const model = tokens[1];
+    if (brand.startsWith('cessna')) {
+        const m = model.match(/^(\d+)/);
+        return normalizeAircraftModel(m ? `C${m[1]}` : model);
+    }
+    if (brand.startsWith('piper')) {
+        const m = model.match(/^PA-?(\d+)/i);
+        return normalizeAircraftModel(m ? `PA-${m[1]}` : model);
+    }
+    return normalizeAircraftModel(model);
+};
+
 // --- CONFIGURACIÓN DEL DASHBOARD ---
 const DASHBOARD_CARDS = [
     { id: 'totalHours',      label: 'Horas Totales',        dataKey: 'Duracion Total de Vuelo',                      isFixed: true,  formatFn: val => formatHours(val), customClass: 'primary-card' },

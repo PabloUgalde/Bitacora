@@ -167,7 +167,7 @@ const liveLog = {
                 const ac = (typeof pesoBalance !== 'undefined' && pesoBalance._getAcData(chip.dataset.id))
                     || AERONAVES_DB.find(a => a.id === chip.dataset.id);
                 if (!ac) return;
-                el.querySelector('#ll-aeronave').value = ac.name;
+                el.querySelector('#ll-aeronave').value = aircraftIcaoDesignator(ac.name);
                 el.querySelector('#ll-matricula').value = ac.registration || '';
                 const tipoInput = el.querySelector(`#ll-tipo-${ac.tipoAvion}`);
                 if (tipoInput) tipoInput.checked = true;

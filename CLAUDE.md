@@ -9,7 +9,7 @@ App PWA de bitácora de vuelo para pilotos chilenos. Producción: **https://bita
 - **Email:** Resend (`noreply@bitacoradevuelo.cl`)
 - **Librería gráficos:** Chart.js (CDN)
 - **Excel/CSV:** SheetJS (CDN)
-- **PWA:** Service Worker `sw.js` (cache v2.32), `manifest.json`
+- **PWA:** Service Worker `sw.js` (cache v2.33), `manifest.json`
 
 ## Estructura de archivos clave
 
@@ -161,13 +161,14 @@ Menú **En Vuelo ▼** en la nav con 4 herramientas. Origen: repo `~/Documents/G
 - **Matrícula validada** en el formulario: `XX-ABC` (prefijo OACI 1-2 letras + guion + 1-5 alfanuméricos) o `N1234AB` (EEUU, sin guion, sin cero inicial) — `_validReg()`. Obligatoria si la aeronave es pública.
 - **Marca/modelo normalizada** al guardar (`_normalizeMakeModel`, solo en Peso y Balance): corrige la marca por distancia Levenshtein ≤2 (misma inicial) contra `_BRANDS` + alias (`beech`→Beechcraft) — "cesna/cezna/cessnna" → "Cessna"; tokens con dígitos a mayúsculas (172n→172N, pa-28→PA-28), resto capitalizado. Distinto de `normalizeAircraftModel` (ver abajo): éste expande a nombre de marca completo, aquél preserva el estilo designador corto que usa el resto de la bitácora.
 - **Campo Aeronave estandarizado (`normalizeAircraftModel`, `state.js`):** el resto de la app (Live Log, modal de agregar/editar vuelo, importador Excel/CSV, escáner IA) usa este helper global en vez de un simple `.toUpperCase()` — colapsa el espacio entre el prefijo de letras y el número de modelo ("C 172"→"C172") y limpia espacios alrededor de guiones sin insertarlos ni quitarlos ("PA - 28"→"PA-28", "PA28" queda igual). No convierte a nombre de marca completo — asume que el piloto ya escribe en formato designador corto (C150, C182, PA-28).
+- **Designador OACI derivado (`aircraftIcaoDesignator`, `state.js`):** convierte el nombre completo marca+modelo del catálogo/flota de Peso y Balance ("Cessna 172M Skyhawk") al designador corto ("C172") — Cessna colapsa la letra de variante, Piper trunca al número de serie (PA-28-181→PA-28), el resto de marcas ya usan el modelo como segundo token (Cirrus SR22T, Diamond DA40) y se toma tal cual. Usado al hacer click en un chip de la flota en Live Log, para no llenar el campo Aeronave con el nombre descriptivo largo del catálogo.
 - **Live Log guarda directo**: post-vuelo → `_saveToBitacora()` construye el vuelo desde `_buildRow()` (orden HEADERS) y llama `api.saveFlight()` → hereda cola offline. CSV queda como opción secundaria. Si el piloto marca Diurno+Nocturno, pide desglose de horas (suma = duración).
 - **Aterrizajes obligatorios al aterrizar:** al tocar ATERRIZAR se muestra `_renderLandingDialog` — una pantalla dedicada que pide aterrizajes Día/Noche (default inteligente según la condición del vuelo) antes de continuar al formulario post-vuelo completo. No deja avanzar con ambos campos vacíos (puede guardarse 0, pero no por omisión silenciosa). Antes era un campo opcional dentro de `_renderPostFlight` que quedaba en 0 si no se tocaba.
 - **Precisión decimal detectada:** `_detectDecimalPrecision()` mira los vuelos ya guardados en `flightData` y decide si la bitácora del usuario usa 1 decimal (1.2) o 2 (1.23), aplicándolo a la duración que calcula el timer de Live Log (antes siempre forzaba 2 decimales) y al desglose Diurno/Nocturno.
 - **Elementos globales:** `#live-badge` (header) y `#flight-timer-bar` (fija abajo, click → `view-live-log`, wiring en `app.init`). `liveLog.init()` y `pesoBalance.init()` corren en `app.init` (restauran vuelo activo tras recarga).
 - **Guard de páginas Pro:** lee `sb-...-auth-token`, consulta `profiles.plan` vía REST; sin token → `index.html?auth=1`; sin Pro → `index.html?upgrade=envuelo` (app.js muestra upgrade screen). Fail-open si la REST falla (offline) — lo caro se protege server-side.
 - **wx-proxy asegurado:** JWT obligatorio en todas las rutas; `/gemini` además exige plan Pro vigente, modelo pinneado, body ≤100KB, maxOutputTokens ≤1024. EasyPlan envía `Authorization` en todos sus fetch (`_authHeaders()`).
-- **SW v2.32**: app shell incluye `en-vuelo.css`, `aeronaves-db.js`, `live-log.js`, `peso-balance.js`, `cx3.html`, `easyplan.html`.
+- **SW v2.33**: app shell incluye `en-vuelo.css`, `aeronaves-db.js`, `live-log.js`, `peso-balance.js`, `cx3.html`, `easyplan.html`.
 - Manual: capítulo "En Vuelo" (`#envuelo`). Landing: herramientas agregadas a las 4 tarjetas de pricing.
 
 **⚠️ Deploy pendiente (orden importa):**
