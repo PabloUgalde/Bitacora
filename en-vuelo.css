@@ -79,6 +79,9 @@
     flex-shrink: 0;
     animation: ftb-blink 1.6s ease-in-out infinite;
 }
+.flight-timer-bar.ftb-paused { border-top-color: #94a3b8; }
+.flight-timer-bar.ftb-paused .ftb-dot { background: #94a3b8; box-shadow: none; animation: none; }
+.flight-timer-bar.ftb-paused .ftb-time { color: #cbd5e1; }
 
 @keyframes ftb-blink { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
 .ftb-time {
@@ -549,6 +552,14 @@
     line-height: 1;
     text-shadow: 0 0 40px rgba(212,175,55,0.4);
 }
+.ll-timer.ll-timer-paused { opacity: 0.5; }
+.ll-paused-note {
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    color: var(--gold);
+    margin-top: -12px;
+}
 .ll-active-badges { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
 .ll-badge {
     font-size: 11px;
@@ -579,6 +590,23 @@
     transition: transform 0.1s, box-shadow 0.1s;
 }
 .ll-land-btn:active { transform: scale(0.97); box-shadow: 0 2px 12px rgba(220,38,38,0.25); }
+.ll-pause-btn {
+    width: 100%;
+    max-width: 320px;
+    font-family: var(--font);
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    color: var(--gold);
+    background: var(--surface2);
+    border: 1.5px solid var(--gold);
+    border-radius: var(--radius-lg);
+    padding: 14px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.1s;
+}
+.ll-pause-btn:active { transform: scale(0.97); }
 .ll-cancel-btn {
     background: none;
     border: none;

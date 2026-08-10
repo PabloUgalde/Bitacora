@@ -9,7 +9,7 @@ App PWA de bitácora de vuelo para pilotos chilenos. Producción: **https://bita
 - **Email:** Resend (`noreply@bitacoradevuelo.cl`)
 - **Librería gráficos:** Chart.js (CDN)
 - **Excel/CSV:** SheetJS (CDN)
-- **PWA:** Service Worker `sw.js` (cache v2.33), `manifest.json`
+- **PWA:** Service Worker `sw.js` (cache v2.34), `manifest.json`
 
 ## Estructura de archivos clave
 
@@ -165,6 +165,7 @@ Menú **En Vuelo ▼** en la nav con 4 herramientas. Origen: repo `~/Documents/G
 - **Live Log guarda directo**: post-vuelo → `_saveToBitacora()` construye el vuelo desde `_buildRow()` (orden HEADERS) y llama `api.saveFlight()` → hereda cola offline. CSV queda como opción secundaria. Si el piloto marca Diurno+Nocturno, pide desglose de horas (suma = duración).
 - **Aterrizajes obligatorios al aterrizar:** al tocar ATERRIZAR se muestra `_renderLandingDialog` — una pantalla dedicada que pide aterrizajes Día/Noche (default inteligente según la condición del vuelo) antes de continuar al formulario post-vuelo completo. No deja avanzar con ambos campos vacíos (puede guardarse 0, pero no por omisión silenciosa). Antes era un campo opcional dentro de `_renderPostFlight` que quedaba en 0 si no se tocaba.
 - **Precisión decimal detectada:** `_detectDecimalPrecision()` mira los vuelos ya guardados en `flightData` y decide si la bitácora del usuario usa 1 decimal (1.2) o 2 (1.23), aplicándolo a la duración que calcula el timer de Live Log (antes siempre forzaba 2 decimales) y al desglose Diurno/Nocturno.
+- **Pausar/Reanudar (10-ago-2026):** botón `⏸ Pausar` / `▶ Reanudar` en la pantalla de vuelo activo — el vuelo sigue corriendo (no aterriza, no cancela), solo se congela el conteo. `_elapsedMs(state)` es la única fuente de verdad del tiempo transcurrido: resta a `now - startTs` la suma de intervalos en pausa (`pausedMs` acumulado + el intervalo en curso vía `pauseStartTs`) — la usan el timer en vivo, la barra global inferior y el cálculo final al aterrizar (`_handleLand`). La barra inferior (`flight-timer-bar`) se atenúa con la clase `ftb-paused` mientras está en pausa; el `setInterval` de 1s sigue corriendo sin lógica especial porque el cálculo se congela solo.
 - **Elementos globales:** `#live-badge` (header) y `#flight-timer-bar` (fija abajo, click → `view-live-log`, wiring en `app.init`). `liveLog.init()` y `pesoBalance.init()` corren en `app.init` (restauran vuelo activo tras recarga).
 - **Guard de páginas Pro:** lee `sb-...-auth-token`, consulta `profiles.plan` vía REST; sin token → `index.html?auth=1`; sin Pro → `index.html?upgrade=envuelo` (app.js muestra upgrade screen). Fail-open si la REST falla (offline) — lo caro se protege server-side.
 - **wx-proxy asegurado:** JWT obligatorio en todas las rutas; `/gemini` además exige plan Pro vigente, modelo pinneado, body ≤100KB, maxOutputTokens ≤1024. EasyPlan envía `Authorization` en todos sus fetch (`_authHeaders()`).

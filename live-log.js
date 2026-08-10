@@ -244,13 +244,15 @@ const liveLog = {
                     <div class="ll-active-ac">${this._esc(acLabel)}</div>
                     <div class="ll-active-route">${this._esc(state.desde)} → ${state.hasta ? this._esc(state.hasta) : '?'}</div>
                 </div>
-                <div class="ll-timer" id="ll-timer-display">00:00:00</div>
+                <div class="ll-timer${state.paused ? ' ll-timer-paused' : ''}" id="ll-timer-display">00:00:00</div>
+                ${state.paused ? `<div class="ll-paused-note">⏸ EN PAUSA</div>` : ''}
                 <div class="ll-active-badges">
                     ${(state.rol||[]).map(r => `<span class="ll-badge">${this._esc(r)}</span>`).join('')}
                     ${(state.condicion||[]).map(c => `<span class="ll-badge">${this._esc(c)}</span>`).join('')}
                     ${(state.tipoAvion||[]).map(t => `<span class="ll-badge">${this._esc(t)}</span>`).join('')}
                     ${state.travesia ? `<span class="ll-badge">XC</span>` : ''}
                 </div>
+                <button class="ll-pause-btn" id="ll-pause-btn">${state.paused ? '▶ Reanudar' : '⏸ Pausar'}</button>
                 <button class="ll-land-btn" id="ll-land-btn">ATERRIZAR</button>
                 <button class="ll-cancel-btn" id="ll-cancel-btn">Cancelar vuelo</button>
                 <span class="ll-wake-note" id="ll-wake-note"></span>
@@ -258,10 +260,30 @@ const liveLog = {
 
         this._updateTimerDisplay(state);
 
+        const bar = document.getElementById('flight-timer-bar');
+        if (bar) bar.classList.toggle('ftb-paused', !!state.paused);
+
+        el.querySelector('#ll-pause-btn').addEventListener('click', () => this._handlePauseToggle());
         el.querySelector('#ll-land-btn').addEventListener('click', () => this._handleLand());
         el.querySelector('#ll-cancel-btn').addEventListener('click', () => {
             if (confirm('¿Cancelar el vuelo? Se perderán los datos del timer.')) this._handleCancel();
         });
+    },
+
+    // ── Pausar/Reanudar (el vuelo sigue activo; solo se detiene el conteo) ──
+    _handlePauseToggle() {
+        const state = this._loadState();
+        if (!state || state.landed) return;
+        if (state.paused) {
+            state.pausedMs = (state.pausedMs || 0) + (Date.now() - state.pauseStartTs);
+            state.paused = false;
+            state.pauseStartTs = null;
+        } else {
+            state.paused = true;
+            state.pauseStartTs = Date.now();
+        }
+        this._saveState(state);
+        this.render();
     },
 
     _handleLand() {
@@ -269,7 +291,7 @@ const liveLog = {
         if (!state) return;
         state.endTs = Date.now();
         state.landed = true;
-        state.elapsedMs = state.endTs - state.startTs;
+        state.elapsedMs = this._elapsedMs(state);
         this._saveState(state);
         this._stopInterval();
         this._releaseWakeLock();
@@ -607,11 +629,22 @@ const liveLog = {
     },
 
     _updateTimerDisplay(state) {
-        const elapsed = this._formatMs(Date.now() - state.startTs);
+        const elapsed = this._formatMs(this._elapsedMs(state));
         const el = document.getElementById('ll-timer-display');
         if (el) el.textContent = elapsed;
         const bar = document.getElementById('ftb-time');
         if (bar) bar.textContent = elapsed;
+    },
+
+    // Tiempo transcurrido real, descontando el o los intervalos en pausa.
+    // Mientras está en pausa, (now - pauseStartTs) crece al mismo ritmo que
+    // (now - startTs), así que el resultado queda congelado sin lógica extra.
+    _elapsedMs(state) {
+        const now = Date.now();
+        const end = state.endTs || now;
+        let paused = state.pausedMs || 0;
+        if (state.paused && state.pauseStartTs) paused += end - state.pauseStartTs;
+        return end - state.startTs - paused;
     },
 
     _showGlobalBar(state) {
