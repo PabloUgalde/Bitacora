@@ -1,0 +1,26 @@
+-- ============================================================
+-- Habilitar RLS en public._debug_log
+-- ============================================================
+-- Corrige la alerta de Supabase "Table publicly accessible /
+-- rls_disabled_in_public" (11-ago-2026).
+--
+-- _debug_log es la tabla de diagnóstico temporal creada para
+-- flow-subscription-return (ver CLAUDE.md, "Debug temporal
+-- activo") — se creó por SQL directo y quedó sin RLS, por lo
+-- que era leíble/escribible por cualquiera vía la API REST
+-- (anon/authenticated), a diferencia del resto de las tablas
+-- (flights, profiles, anotaciones, aircraft, wb_aircraft) que
+-- ya tenían RLS verificado.
+--
+-- No se agrega ninguna policy a propósito: con RLS activado y
+-- cero policies, anon/authenticated quedan bloqueados por
+-- defecto (deny-all), pero las Edge Functions siguen
+-- funcionando igual porque usan el service_role key, que
+-- siempre bypassea RLS.
+--
+-- Cuando se confirme la renovación mensual real (~05-sep-2026)
+-- y se saque el debug del código, esta tabla se puede borrar
+-- directamente (DROP TABLE public._debug_log) — no hace falta
+-- mantener esta migración viva más allá de eso.
+
+ALTER TABLE public._debug_log ENABLE ROW LEVEL SECURITY;
