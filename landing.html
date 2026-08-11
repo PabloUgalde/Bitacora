@@ -1119,11 +1119,13 @@ footer{
       <!-- PRO ANUAL -->
       <div class="pcard">
         <div class="pname">Pro Anual</div>
-        <div class="pprice">$60.000</div>
-        <div class="pperiod">CLP / año · = $5.000/mes</div>
-        <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border2);border-radius:5px;padding:8px 12px;margin-bottom:20px;">
-          <p style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;">2 MESES GRATIS VS PLAN MENSUAL</p>
+        <div id="annual-price-1">
+        <div class="pprice"><span style="font-size:22px;font-weight:400;color:var(--muted);text-decoration:line-through;vertical-align:middle;margin-right:6px;">$60.000</span>$51.000</div>
+        <div class="pperiod">CLP / año · = $4.250/mes</div>
+        <div style="background:var(--gold-dim);border:1px solid rgba(212,175,55,0.25);border-radius:5px;padding:8px 12px;margin-bottom:20px;">
+          <p style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--gold);letter-spacing:1px;">-15% POR TIEMPO LIMITADO · HASTA EL 31-AGO</p>
           <p style="font-size:11px;color:var(--muted);margin-top:3px;">Pagas 10 meses, usas 12.</p>
+        </div>
         </div>
         <ul class="plist">
           <li>Todo lo de Pro mensual</li>
@@ -1183,13 +1185,15 @@ footer{
 
       <!-- PRO ANUAL — destacado -->
       <div class="pcard feat">
-        <div class="pfeat-badge">Mejor valor · 2 meses gratis</div>
+        <div id="annual-price-2">
+        <div class="pfeat-badge">-15% esta semana</div>
         <div class="pname">Pro Anual</div>
-        <div class="pprice">$60.000</div>
-        <div class="pperiod">CLP / año · = $5.000/mes · IVA incluido</div>
+        <div class="pprice"><span style="font-size:22px;font-weight:400;color:var(--muted);text-decoration:line-through;vertical-align:middle;margin-right:6px;">$60.000</span>$51.000</div>
+        <div class="pperiod">CLP / año · = $4.250/mes · IVA incluido</div>
         <div style="background:var(--gold-dim);border:1px solid rgba(212,175,55,0.25);border-radius:5px;padding:8px 12px;margin-bottom:20px;">
-          <p style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--gold);letter-spacing:1px;">AHORRAS $12.000 VS PLAN MENSUAL</p>
-          <p style="font-size:11px;color:var(--muted);margin-top:3px;">14 días gratis → luego $60.000/año.</p>
+          <p style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--gold);letter-spacing:1px;">OFERTA VÁLIDA HASTA EL 31-AGO</p>
+          <p style="font-size:11px;color:var(--muted);margin-top:3px;">14 días gratis → luego $51.000/año (precio normal $60.000).</p>
+        </div>
         </div>
         <ul class="plist">
           <li>Todo lo de Pro mensual</li>
@@ -1204,6 +1208,36 @@ footer{
     <p class="pricing-note">¿Tienes dudas? Escríbenos — respondemos rápido.</p>
   </div>
 </section>
+
+<script>
+// Promo -15% en el plan Pro Anual: vigente hasta el 31-ago-2026 23:59 hora
+// Chile (≈ 2026-09-01 06:00 UTC). Pasada esa fecha esta misma carga de página
+// restaura el precio normal sola — no requiere volver a subir el archivo.
+(function() {
+  var PROMO_ENDS = new Date('2026-09-01T06:00:00Z');
+  if (new Date() < PROMO_ENDS) return;
+
+  var block1 = document.getElementById('annual-price-1');
+  if (block1) block1.innerHTML =
+    '<div class="pprice">$60.000</div>' +
+    '<div class="pperiod">CLP / año · = $5.000/mes</div>' +
+    '<div style="background:rgba(255,255,255,0.03);border:1px solid var(--border2);border-radius:5px;padding:8px 12px;margin-bottom:20px;">' +
+      '<p style="font-family:\'Share Tech Mono\',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;">2 MESES GRATIS VS PLAN MENSUAL</p>' +
+      '<p style="font-size:11px;color:var(--muted);margin-top:3px;">Pagas 10 meses, usas 12.</p>' +
+    '</div>';
+
+  var block2 = document.getElementById('annual-price-2');
+  if (block2) block2.innerHTML =
+    '<div class="pfeat-badge">Mejor valor · 2 meses gratis</div>' +
+    '<div class="pname">Pro Anual</div>' +
+    '<div class="pprice">$60.000</div>' +
+    '<div class="pperiod">CLP / año · = $5.000/mes · IVA incluido</div>' +
+    '<div style="background:var(--gold-dim);border:1px solid rgba(212,175,55,0.25);border-radius:5px;padding:8px 12px;margin-bottom:20px;">' +
+      '<p style="font-family:\'Share Tech Mono\',monospace;font-size:9px;color:var(--gold);letter-spacing:1px;">AHORRAS $12.000 VS PLAN MENSUAL</p>' +
+      '<p style="font-size:11px;color:var(--muted);margin-top:3px;">14 días gratis → luego $60.000/año.</p>' +
+    '</div>';
+})();
+</script>
 
 <!-- TESTIMONIALS -->
 <section class="sec testi-sec">

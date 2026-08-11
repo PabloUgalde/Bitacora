@@ -35,6 +35,7 @@ async function flowGet(endpoint: string, params: Record<string, string>) {
 function emailPagoExitoso(opts: {
   name: string; amount: string; planLabel: string
   startDate: string; expiryDate: string; orderId: string
+  originalAmount?: string; discountLabel?: string
 }): string {
   return `<!DOCTYPE html>
 <html lang="es">
@@ -77,7 +78,9 @@ function emailPagoExitoso(opts: {
               <p style="margin:0;color:#4CAF50;font-size:12px;">Vence el <strong>${opts.expiryDate}</strong></p>
             </td>
             <td style="vertical-align:middle;text-align:right;white-space:nowrap;">
+              ${opts.originalAmount ? `<div style="color:#9E9E9E;font-size:12px;text-decoration:line-through;margin-bottom:2px;">${opts.originalAmount}</div>` : ''}
               <span style="display:block;color:#D4AF37;font-size:20px;font-weight:600;">${opts.amount}</span>
+              ${opts.discountLabel ? `<div style="color:#4CAF50;font-size:11px;font-weight:600;margin-top:2px;">${opts.discountLabel}</div>` : ''}
             </td>
           </tr></table>
         </td></tr>
@@ -191,7 +194,15 @@ serve(async (req) => {
     const email = profile?.email || payment.payer
     if (email) {
       const planLabel = plan === 'annual' ? 'Plan Pro Anual' : 'Plan Pro Mensual'
-      const amount    = plan === 'annual' ? '$60.000 CLP' : '$6.000 CLP'
+
+      // Promo -15% en el plan anual: se apaga sola por fecha, mismo corte
+      // que ANNUAL_PROMO_ENDS en create-checkout/index.ts.
+      const ANNUAL_PROMO_ENDS = new Date('2026-09-01T06:00:00Z')
+      const isAnnualPromo = plan === 'annual' && new Date() < ANNUAL_PROMO_ENDS
+
+      const amount         = plan === 'annual' ? (isAnnualPromo ? '$51.000 CLP' : '$60.000 CLP') : '$6.000 CLP'
+      const originalAmount = isAnnualPromo ? '$60.000 CLP' : undefined
+      const discountLabel  = isAnnualPromo ? '-15% promo · válido hasta el 31-ago-2026' : undefined
 
       await fetch('https://api.resend.com/emails', {
         method: 'POST',
@@ -203,6 +214,8 @@ serve(async (req) => {
           html: emailPagoExitoso({
             name:       profile?.full_name || 'Piloto',
             amount,
+            originalAmount,
+            discountLabel,
             planLabel,
             startDate:  formatDate(now),
             expiryDate: formatDate(expiresAt),

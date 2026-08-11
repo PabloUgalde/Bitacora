@@ -93,11 +93,17 @@ serve(async (req) => {
     const isAnnual = plan === 'annual'
     const commerceOrder = `${plan}-${user.id.slice(0, 8)}-${Date.now()}`
 
+    // Promo -15% en el plan anual (precio normal $60.000): se apaga sola por
+    // fecha, sin tocar código ni redeploy. 31-ago-2026 23:59 hora Chile
+    // (UTC-4 en invierno) + margen ≈ 2026-09-01 06:00 UTC.
+    const ANNUAL_PROMO_ENDS = new Date('2026-09-01T06:00:00Z')
+    const annualAmount = new Date() < ANNUAL_PROMO_ENDS ? '51000' : '60000'
+
     const payment = await flowPost('payment/create', {
       commerceOrder,
       subject:         isAnnual ? 'Bitácora Pro — Plan Anual' : 'Bitácora Pro — Plan Mensual',
       currency:        'CLP',
-      amount:          isAnnual ? '60000' : '6000',
+      amount:          isAnnual ? annualAmount : '6000',
       email:           user.email!,
       urlConfirmation: `${SUPABASE_URL}/functions/v1/flow-webhook`,
       urlReturn:       successUrl,
