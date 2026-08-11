@@ -1,0 +1,21 @@
+-- ============================================================
+-- Quitar acceso público a public.handle_new_user()
+-- ============================================================
+-- Corrige dos warnings de Supabase Security Advisor (11-ago-2026):
+--   • "Public Can Execute SECURITY DEFINER Function" (rol anon)
+--   • "Signed-In Users Can Execute SECURITY DEFINER Function" (rol authenticated)
+--
+-- handle_new_user() es la función SECURITY DEFINER del trigger
+-- "AFTER INSERT ON auth.users" que crea la fila en public.profiles
+-- al registrarse un usuario nuevo. Al estar en el schema public,
+-- PostgREST la expone automáticamente como RPC pública en
+-- /rest/v1/rpc/handle_new_user — cualquiera podía intentar
+-- ejecutarla directo vía la API REST, sin pasar por auth.users.
+--
+-- Quitarle EXECUTE a PUBLIC (y por herencia a anon/authenticated)
+-- NO afecta el trigger: Postgres invoca las funciones de trigger
+-- internamente desde el executor, sin chequear el privilegio
+-- EXECUTE de la función — solo se necesita para llamarla como RPC
+-- normal, que es justo lo que queremos bloquear.
+
+REVOKE EXECUTE ON FUNCTION public.handle_new_user() FROM PUBLIC, anon, authenticated;
