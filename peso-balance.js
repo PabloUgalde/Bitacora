@@ -118,10 +118,12 @@ const pesoBalance = {
         if (!flota.find(f => f.id === id)) {
             flota.push({ id, source: 'db' });
             this._saveFlota(flota);
+            this._syncFleetAddToCloud(id);
         }
     },
     _removeFromFlota(id) {
         this._saveFlota(this._getFlota().filter(f => f.id !== id));
+        this._syncFleetRemoveFromCloud(id);
     },
     _getAcData(id) {
         const custom = this._getFlota().find(f => f.id === id && f.source === 'custom');
@@ -183,8 +185,51 @@ const pesoBalance = {
             for (const f of flota) {
                 if (f.source === 'custom' && !cloudIds.has(f.id)) this._syncCustomToCloud(f);
             }
+
+            // Picks simples del catálogo/comunidad ("agregar a mi flota", source:'db') → wb_fleet
+            const { data: fleetRows, error: fleetErr } = await supabaseClient.from('wb_fleet')
+                .select('aircraft_id').eq('user_id', userId);
+            if (!fleetErr && fleetRows) {
+                const flota2 = this._getFlota();
+                let changed = false;
+                for (const row of fleetRows) {
+                    if (!flota2.some(f => f.id === row.aircraft_id)) {
+                        flota2.push({ id: row.aircraft_id, source: 'db' });
+                        changed = true;
+                    }
+                }
+                if (changed) this._saveFlota(flota2);
+                // picks locales que no están en la nube (agregados sin conexión) → subir
+                const cloudFleetIds = new Set(fleetRows.map(r => r.aircraft_id));
+                for (const f of flota2) {
+                    if (f.source !== 'custom' && !cloudFleetIds.has(f.id)) this._syncFleetAddToCloud(f.id);
+                }
+            }
+
             if (this._screen === 'flota' || this._screen === 'db') this.render();
         } catch (e) { console.warn('[P&B] carga de aeronaves desde la nube falló:', e); }
+    },
+
+    async _syncFleetAddToCloud(id) {
+        if (typeof supabaseClient === 'undefined' || !supabaseClient || !navigator.onLine) return;
+        const userId = api._getUserId?.();
+        if (!userId) return;
+        try {
+            const { error } = await supabaseClient.from('wb_fleet')
+                .upsert({ user_id: userId, aircraft_id: id }, { onConflict: 'user_id,aircraft_id' });
+            if (error) console.warn('[P&B] sync de flota (agregar) a la nube falló:', error);
+        } catch (e) { console.warn('[P&B] sync de flota (agregar) a la nube falló:', e); }
+    },
+
+    async _syncFleetRemoveFromCloud(id) {
+        if (typeof supabaseClient === 'undefined' || !supabaseClient || !navigator.onLine) return;
+        const userId = api._getUserId?.();
+        if (!userId) return;
+        try {
+            const { error } = await supabaseClient.from('wb_fleet')
+                .delete().eq('user_id', userId).eq('aircraft_id', id);
+            if (error) console.warn('[P&B] sync de flota (quitar) a la nube falló:', error);
+        } catch (e) { console.warn('[P&B] sync de flota (quitar) a la nube falló:', e); }
     },
 
     async _syncCustomToCloud(ac) {
