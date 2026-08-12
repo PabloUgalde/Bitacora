@@ -4,12 +4,13 @@ const liveLog = {
     _STORAGE_KEY: '_liveLog',
     _timerInterval: null,
     _wakeLock: null,
+    _cloudSyncTimer: null,
 
     TIPOS_AVION: ['Monomotor','Multimotor','Turbo Helice','Turbo Jet','LSA','Ultraliviano','Helicoptero','Planeador'],
     ROLES: ['PIC','SIC','Solo','Instruccion','Instructor'],
     CONDICIONES: ['Diurno','Nocturno','IFR'],
 
-    init() {
+    async init() {
         const state = this._loadState();
         if (state && !state.landed) {
             document.getElementById('live-badge').classList.remove('hidden');
@@ -24,6 +25,10 @@ const liveLog = {
             }
         });
         this.render();
+        // Sin vuelo activo en este dispositivo: puede ser que el localStorage
+        // se haya perdido (app cerrada por error, cambio de dispositivo) —
+        // revisa si quedó un respaldo en la nube antes de asumir que no había nada.
+        if (!state) await this._recoverFromCloud();
     },
 
     render() {
@@ -50,8 +55,66 @@ const liveLog = {
         try { return JSON.parse(localStorage.getItem(this._STORAGE_KEY)); }
         catch { return null; }
     },
-    _saveState(s) { localStorage.setItem(this._STORAGE_KEY, JSON.stringify(s)); },
-    _clearState() { localStorage.removeItem(this._STORAGE_KEY); },
+    _saveState(s) {
+        localStorage.setItem(this._STORAGE_KEY, JSON.stringify(s));
+        this._syncStateToCloud(s);
+    },
+    _clearState() {
+        localStorage.removeItem(this._STORAGE_KEY);
+        this._clearCloudState();
+    },
+
+    // ── Respaldo en la nube del vuelo activo (live_log_sessions) ──
+    // localStorage es el único lugar donde vivía el vuelo en curso — si la
+    // app se cierra por un error (o iOS mata el proceso en segundo plano y
+    // el usuario reabre desde el ícono de inicio, cayendo a veces en otra
+    // partición de storage) se pierde todo sin dejar rastro: hora de
+    // despegue, tipo, condición, aterrizajes. Este respaldo es solo eso —un
+    // respaldo temporal para recuperar un vuelo a medias— NUNCA la fuente de
+    // verdad del vuelo guardado (esa sigue siendo `flights`, vía
+    // _saveToBitacora). Best-effort: si falla (sin red, sin sesión) no
+    // bloquea nada del flujo local.
+    _syncStateToCloud(s) {
+        if (typeof supabaseClient === 'undefined' || typeof api === 'undefined') return;
+        const userId = api._getUserId();
+        if (!userId) return;
+        clearTimeout(this._cloudSyncTimer);
+        this._cloudSyncTimer = setTimeout(() => {
+            supabaseClient.from('live_log_sessions')
+                .upsert({ user_id: userId, state: s, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
+                .then(({ error }) => { if (error) console.warn('[liveLog] no se pudo respaldar el vuelo en la nube:', error); });
+        }, 800);
+    },
+
+    _clearCloudState() {
+        clearTimeout(this._cloudSyncTimer);
+        if (typeof supabaseClient === 'undefined' || typeof api === 'undefined') return;
+        const userId = api._getUserId();
+        if (!userId) return;
+        supabaseClient.from('live_log_sessions').delete().eq('user_id', userId)
+            .then(({ error }) => { if (error) console.warn('[liveLog] no se pudo limpiar el respaldo en la nube:', error); });
+    },
+
+    async _recoverFromCloud() {
+        if (typeof supabaseClient === 'undefined' || typeof api === 'undefined') return;
+        const userId = api._getUserId();
+        if (!userId) return;
+        try {
+            const { data, error } = await supabaseClient.from('live_log_sessions')
+                .select('state').eq('user_id', userId).maybeSingle();
+            if (error || !data?.state) return;
+            // Por si en el tiempo que tardó la respuesta se inició un vuelo
+            // real en este dispositivo — no pisarlo con el respaldo viejo.
+            if (this._loadState()) return;
+            localStorage.setItem(this._STORAGE_KEY, JSON.stringify(data.state));
+            if (typeof ui !== 'undefined') {
+                ui.showNotification('Se recuperó un vuelo que había quedado sin guardar. Revisa los datos antes de continuar.', 'info');
+            }
+            this.render();
+        } catch (e) {
+            console.warn('[liveLog] no se pudo revisar el respaldo en la nube:', e);
+        }
+    },
 
     // ── Flota (shared with P&B) ──
     _getFlota() {
@@ -289,6 +352,16 @@ const liveLog = {
     _handleLand() {
         const state = this._loadState();
         if (!state) return;
+        // Si aterriza sin haber reanudado, el intervalo en pausa quedaría
+        // abierto hasta este instante y _elapsedMs() lo descontaría entero —
+        // vaciando la duración del vuelo (y con ella tipo/rol/condición,
+        // todos derivados de dur) aunque el piloto sí voló ese tiempo.
+        // Se cierra la pausa sin sumarla a pausedMs: perdona el tramo final
+        // en pausa en vez de excluirlo del cálculo.
+        if (state.paused) {
+            state.paused = false;
+            state.pauseStartTs = null;
+        }
         state.endTs = Date.now();
         state.landed = true;
         state.elapsedMs = this._elapsedMs(state);
@@ -361,7 +434,9 @@ const liveLog = {
     _renderPostFlight(el, state) {
         const elapsedMs = state.elapsedMs || (state.endTs - state.startTs);
         const precision = this._detectDecimalPrecision();
-        const decHours = this._roundHours(elapsedMs / 3600000, precision);
+        const timerHours = this._roundHours(elapsedMs / 3600000, precision);
+        const decHours = (state.manualDuration != null && !isNaN(state.manualDuration))
+            ? state.manualDuration : timerHours;
         const hhmmss = this._formatMs(elapsedMs);
 
         const tiposHTML = this.TIPOS_AVION.map(t => {
@@ -386,9 +461,23 @@ const liveLog = {
             <div class="ll-post-screen">
                 <div class="ll-complete-icon">✓</div>
                 <div class="ll-post-title">Vuelo completado</div>
-                <div class="ll-sum-duration-badge">${decHours} h · ${hhmmss}</div>
+                <div class="ll-sum-duration-badge">${decHours} h${state.manualDuration != null ? ' (editado)' : ' · ' + hhmmss}</div>
 
                 <div class="ll-post-form">
+                    <div class="ll-pair">
+                        <div class="ll-form-group">
+                            <label>Despegue</label>
+                            <input type="time" id="lpp-despegue" value="${this._msToLocalHHMM(state.startTs)}">
+                        </div>
+                        <div class="ll-form-group">
+                            <label>Aterrizaje</label>
+                            <input type="time" id="lpp-aterrizaje" value="${this._msToLocalHHMM(state.endTs)}">
+                        </div>
+                    </div>
+                    <div class="ll-form-group">
+                        <label>Duración (h) <span style="color:var(--muted);font-weight:400">— corrígela si el cronómetro quedó mal</span></label>
+                        <input type="number" id="lpp-duracion" min="0" step="${precision === 2 ? '0.01' : '0.1'}" value="${decHours}">
+                    </div>
                     <div class="ll-pair">
                         <div class="ll-form-group">
                             <label>Fecha</label>
@@ -521,6 +610,40 @@ const liveLog = {
         el.querySelectorAll('input[name="ll-post-tipo"],input[name="ll-post-rol"],input[name="ll-post-cond"]')
           .forEach(cb => cb.addEventListener('change', savePost));
 
+        // ── Despegue/Aterrizaje/Duración: respaldo editable por si el
+        //    cronómetro perdió continuidad (pantalla bloqueada, app
+        //    recargada en segundo plano). Editar una hora hace que la app
+        //    recalcule la duración; editar la duración la sobreescribe
+        //    directamente (state.manualDuration) sin tocar las horas.
+        el.querySelector('#lpp-despegue')?.addEventListener('change', e => {
+            savePost();
+            const s = this._loadState();
+            if (!s) return;
+            s.startTs = this._hhmmToMs(e.target.value, s.startTs);
+            this._recomputeFromTimes(s);
+            this._saveState(s);
+            this.render();
+        });
+        el.querySelector('#lpp-aterrizaje')?.addEventListener('change', e => {
+            savePost();
+            const s = this._loadState();
+            if (!s) return;
+            s.endTs = this._hhmmToMs(e.target.value, s.endTs);
+            if (s.endTs < s.startTs) s.endTs += 24 * 3600 * 1000; // cruzó medianoche
+            this._recomputeFromTimes(s);
+            this._saveState(s);
+            this.render();
+        });
+        el.querySelector('#lpp-duracion')?.addEventListener('change', e => {
+            savePost();
+            const s = this._loadState();
+            if (!s) return;
+            const v = parseFloat(e.target.value);
+            s.manualDuration = (isNaN(v) || v < 0) ? null : v;
+            this._saveState(s);
+            this.render();
+        });
+
         // ── Desglose Diurno/Nocturno: si ambas condiciones están marcadas,
         //    pedir el reparto de horas (antes se exportaba la duración
         //    completa en AMBAS columnas → suma > duración total).
@@ -584,6 +707,23 @@ const liveLog = {
         if (btn) { btn.disabled = true; btn.textContent = 'Guardando…'; }
         try {
             const row = this._buildRow(state);
+
+            // Aviso si la duración quedó en 0 — típicamente el cronómetro
+            // perdió continuidad (pantalla bloqueada, app recargada en
+            // segundo plano) y de lo contrario se guardaría en silencio un
+            // vuelo sin horas, arrastrando en 0 también tipo/rol/condición.
+            if (!(row["Duracion Total de Vuelo"] > 0)) {
+                const proceed = confirm(
+                    'La duración de este vuelo quedó en 0 horas.\n\n' +
+                    'Esto puede pasar si el cronómetro perdió continuidad (pantalla bloqueada, app recargada). ' +
+                    'Revisa los campos "Despegue", "Aterrizaje" y "Duración" antes de continuar.\n\n' +
+                    '¿Guardar de todas formas?'
+                );
+                if (!proceed) {
+                    if (btn) { btn.disabled = false; btn.textContent = '💾 Guardar en mi bitácora'; }
+                    return;
+                }
+            }
 
             // Página: misma regla que createFlightObject (8 vuelos por página)
             const lastPage = ui.getLastPageNumber();
@@ -815,6 +955,31 @@ const liveLog = {
         return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
     },
 
+    // ── Hora de despegue/aterrizaje (log editable) ──
+    // Registro legible de cuándo despegó y aterrizó, además del cronómetro:
+    // si el timer pierde continuidad (pantalla bloqueada, app recargada en
+    // segundo plano), estas horas quedan como respaldo para recalcular la
+    // duración a mano o dejar que la app la recalcule al editarlas.
+    _msToLocalHHMM(ts) {
+        const d = new Date(ts);
+        return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    },
+
+    _hhmmToMs(hhmm, refTs) {
+        const [h, m] = (hhmm || '').split(':').map(Number);
+        if (isNaN(h) || isNaN(m)) return refTs;
+        const d = new Date(refTs);
+        d.setHours(h, m, 0, 0);
+        return d.getTime();
+    },
+
+    // Recalcula la duración desde startTs/endTs (tras editar Despegue o
+    // Aterrizaje a mano) y descarta cualquier duración manual previa.
+    _recomputeFromTimes(state) {
+        state.elapsedMs = Math.max(0, (state.endTs || 0) - (state.startTs || 0));
+        state.manualDuration = null;
+    },
+
     // ── Precisión decimal ──
     // Detecta si la bitácora del usuario registra horas con 1 decimal (1.2)
     // o 2 decimales (1.23) mirando los vuelos ya guardados, para que el
@@ -871,7 +1036,9 @@ const liveLog = {
     _buildRow(state) {
         const elapsedMs = state.elapsedMs || (state.endTs - state.startTs);
         const precision = this._detectDecimalPrecision();
-        const dur = this._roundHours(elapsedMs / 3600000, precision);
+        const dur = (state.manualDuration != null && !isNaN(state.manualDuration))
+            ? this._roundHours(state.manualDuration, precision)
+            : this._roundHours(elapsedMs / 3600000, precision);
         const tipos = Array.isArray(state.tipoAvion) ? state.tipoAvion : (state.tipoAvion ? [state.tipoAvion] : []);
         const roles = Array.isArray(state.rol) ? state.rol : (state.rol ? [state.rol] : []);
         const conds = Array.isArray(state.condicion) ? state.condicion : (state.condicion ? [state.condicion] : []);

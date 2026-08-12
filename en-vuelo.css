@@ -107,7 +107,7 @@
     opacity: 0.75;
     flex-shrink: 0;
 }
-#view-live-log input[type="text"], #view-peso-balance input[type="text"], #view-live-log input[type="number"], #view-peso-balance input[type="number"], #view-live-log input[type="date"], #view-peso-balance input[type="date"], #view-live-log textarea, #view-peso-balance textarea, #view-live-log select, #view-peso-balance select {
+#view-live-log input[type="text"], #view-peso-balance input[type="text"], #view-live-log input[type="number"], #view-peso-balance input[type="number"], #view-live-log input[type="date"], #view-peso-balance input[type="date"], #view-live-log input[type="time"], #view-peso-balance input[type="time"], #view-live-log textarea, #view-peso-balance textarea, #view-live-log select, #view-peso-balance select {
     font-family: var(--font);
     font-size: 15px;
     color: var(--text);
