@@ -822,6 +822,7 @@ const EasyPlan = {
             const h = lines[0].split(',').map(f => f.replace(/"/g, ''));
             const iI    = h.indexOf('ident');
             const iC    = h.indexOf('icao_code');
+            const iGps  = h.indexOf('gps_code');
             const iLat  = h.indexOf('latitude_deg');
             const iLon  = h.indexOf('longitude_deg');
             const iName = h.indexOf('name');
@@ -833,11 +834,15 @@ const EasyPlan = {
                 if (!needed.size) break;
                 const f = line.split(',');
                 // Algunos aeródromos chicos (ej. SCPD/Peldehue) tienen un "ident" interno
-                // no-ICAO (ej. "CL-0017") y el código ICAO real solo vive en icao_code —
-                // hay que probar ambas columnas, no solo caer a icao_code cuando ident viene vacío.
+                // no-ICAO (ej. "CL-0017"), icao_code vacío, y el código real solo vive en
+                // gps_code — hay que probar las tres columnas, no asumir cuál lo tiene.
                 const identVal = (f[iI] || '').replace(/"/g, '').trim();
-                const icaoVal  = iC >= 0 ? (f[iC] || '').replace(/"/g, '').trim() : '';
-                const icao = needed.has(identVal) ? identVal : (needed.has(icaoVal) ? icaoVal : '');
+                const icaoVal  = iC   >= 0 ? (f[iC]   || '').replace(/"/g, '').trim() : '';
+                const gpsVal   = iGps >= 0 ? (f[iGps] || '').replace(/"/g, '').trim() : '';
+                const icao = needed.has(identVal) ? identVal
+                           : needed.has(icaoVal)  ? icaoVal
+                           : needed.has(gpsVal)   ? gpsVal
+                           : '';
                 if (!icao) continue;
                 const lat = parseFloat(f[iLat]);
                 const lon = parseFloat(f[iLon]);
