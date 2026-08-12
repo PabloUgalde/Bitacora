@@ -576,9 +576,12 @@ const pesoBalance = {
         // peso/fwd_in/aft_in (aeronaves creadas antes de este formulario).
         const envNormalRaw = ac?.limits?.cgEnvelopeNormal || [];
         const envUtilRaw = ac?.limits?.cgEnvelopeUtility || [];
+        const envAcroRaw = ac?.limits?.cgEnvelopeAcrobatic || [];
         const envNormalData = envNormalRaw.length ? this._polygonFor(envNormalRaw, mode) : [];
         const envUtilData = envUtilRaw.length ? this._polygonFor(envUtilRaw, mode) : [];
+        const envAcroData = envAcroRaw.length ? this._polygonFor(envAcroRaw, mode) : [];
         const hasUtil = envUtilData.length > 0;
+        const hasAcro = envAcroData.length > 0;
         const emptyCg = ac ? (ac.emptyMoment_lb_in / ac.emptyWeight_lbs) : null;
         const lbPerGal = ac ? Math.round(1 / ac.fuel_gallons_per_lbs * 10) / 10 : 6;
 
@@ -589,6 +592,7 @@ const pesoBalance = {
         ];
         const envNormalRows = envNormalData.length ? envNormalData : [{ x: '', y: '' }, { x: '', y: '' }, { x: '', y: '' }];
         const envUtilRows = envUtilData.length ? envUtilData : [{ x: '', y: '' }, { x: '', y: '' }, { x: '', y: '' }];
+        const envAcroRows = envAcroData.length ? envAcroData : [{ x: '', y: '' }, { x: '', y: '' }, { x: '', y: '' }];
 
         const stRow = (st = {}) => `
             <div class="pbf-st-row" style="display:flex;gap:6px;margin-bottom:6px;align-items:flex-end;flex-wrap:wrap">
@@ -714,9 +718,10 @@ const pesoBalance = {
                         también envolventes con más de dos límites por peso, como suele pasar en
                         categoría Utilitaria. Si el manual solo trae una tabla peso/delantero/trasero,
                         agrega igual dos vértices por fila (uno con cada límite) respetando el orden.
-                        Muchos manuales traen dos gráficos — Normal y Utilitaria (esta última con
-                        límites más estrictos, ej: sin pasajeros traseros) — carga los que tenga
-                        tu avión; el gráfico los dibuja juntos para que veas en cuál queda tu carga.
+                        Muchos manuales traen dos o tres gráficos — Normal, Utilitaria (límites
+                        más estrictos, ej: sin pasajeros traseros) y Acrobática (categoría FAA
+                        para maniobras, la más restrictiva) — carga los que tenga tu avión; el
+                        gráfico los dibuja juntos para que veas en cuál queda tu carga.
                         La vista previa se va dibujando desde el primer vértice que ingreses.</p>
 
                     <p style="font-size:12px;font-weight:600;margin-bottom:8px">Categoría Normal</p>
@@ -743,6 +748,23 @@ const pesoBalance = {
                         </div>
                         <div id="pbf-env-utility">${envUtilRows.map(p => envRow(p, mode)).join('')}</div>
                         <button type="button" class="btn-link" id="pbf-add-env-utility">+ Agregar vértice</button>
+                    </div>
+
+                    <div class="ll-checkbox-row" style="margin:16px 0 4px">
+                        <input type="checkbox" id="pbf-has-acro" ${hasAcro ? 'checked' : ''}>
+                        <label for="pbf-has-acro">Este avión también tiene categoría Acrobática (opcional)</label>
+                    </div>
+                    <div id="pbf-env-acro-block" style="${hasAcro ? '' : 'display:none'};margin-top:10px">
+                        <p style="font-size:12px;font-weight:600;margin-bottom:8px">Categoría Acrobática</p>
+                        <div class="pb-input-group"><label>Peso máx. en Acrobática (lbs, opcional si es igual al MTOW)</label>
+                            <input type="number" id="pbf-acro-maxw" step="1" value="${ac?.limits?.maxAcrobaticWeight_lbs ?? ''}"></div>
+                        <div class="pbf-env-head pbf-env-head-acro" style="display:flex;gap:6px;margin-bottom:6px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em">
+                            <span style="flex:1">Peso (lbs)</span>
+                            <span class="pbf-env-head-x" style="flex:1.4">${envXLabel(mode)}</span>
+                            <span style="width:22px"></span>
+                        </div>
+                        <div id="pbf-env-acrobatic">${envAcroRows.map(p => envRow(p, mode)).join('')}</div>
+                        <button type="button" class="btn-link" id="pbf-add-env-acrobatic">+ Agregar vértice</button>
                     </div>
 
                     <div style="margin-top:14px">
@@ -773,8 +795,23 @@ const pesoBalance = {
             this._updateEnvPreview(el);
         }));
         const wireRowDel = () => {
-            el.querySelectorAll('.pbf-st-del, .pbf-env-del').forEach(b => {
-                b.onclick = () => { b.parentElement.remove(); this._updateEnvPreview(el); };
+            el.querySelectorAll('.pbf-st-del').forEach(b => {
+                b.onclick = () => { b.parentElement.remove(); };
+            });
+            el.querySelectorAll('.pbf-env-del').forEach(b => {
+                b.onclick = () => {
+                    const container = b.closest('.pbf-env-row').parentElement;
+                    b.parentElement.remove();
+                    // nunca deja la lista en 0 filas: sin ninguna fila visible, el
+                    // link "+ Agregar vértice" (debajo del contenedor) queda pegado
+                    // al checkbox/leyenda de arriba y es fácil no verlo — se repone
+                    // una fila vacía en su lugar, siempre queda algo para borrar/editar.
+                    if (!container.querySelector('.pbf-env-row')) {
+                        container.insertAdjacentHTML('beforeend', envRow({}, liveMode()));
+                        wireRowDel();
+                    }
+                    this._updateEnvPreview(el);
+                };
             });
         };
         wireRowDel();
@@ -793,12 +830,22 @@ const pesoBalance = {
             wireRowDel();
             this._updateEnvPreview(el);
         });
+        el.querySelector('#pbf-add-env-acrobatic').addEventListener('click', () => {
+            el.querySelector('#pbf-env-acrobatic').insertAdjacentHTML('beforeend', envRow({}, liveMode()));
+            wireRowDel();
+            this._updateEnvPreview(el);
+        });
         el.querySelector('#pbf-has-util').addEventListener('change', (e) => {
             el.querySelector('#pbf-env-util-block').style.display = e.target.checked ? '' : 'none';
             this._updateEnvPreview(el);
         });
+        el.querySelector('#pbf-has-acro').addEventListener('change', (e) => {
+            el.querySelector('#pbf-env-acro-block').style.display = e.target.checked ? '' : 'none';
+            this._updateEnvPreview(el);
+        });
         el.querySelector('#pbf-env-normal').addEventListener('input', () => this._updateEnvPreview(el));
         el.querySelector('#pbf-env-utility').addEventListener('input', () => this._updateEnvPreview(el));
+        el.querySelector('#pbf-env-acrobatic').addEventListener('input', () => this._updateEnvPreview(el));
         el.querySelector('#pbf-save').addEventListener('click', () => this._saveForm(el));
         this._updateEnvPreview(el);
     },
@@ -823,6 +870,7 @@ const pesoBalance = {
     _updateEnvPreview(el) {
         const envNormal = this._readEnvTable(el, '#pbf-env-normal');
         const envUtil = el.querySelector('#pbf-has-util').checked ? this._readEnvTable(el, '#pbf-env-utility') : [];
+        const envAcro = el.querySelector('#pbf-has-acro').checked ? this._readEnvTable(el, '#pbf-env-acrobatic') : [];
 
         const wrap = el.querySelector('#pbf-env-chart-wrap');
         const empty = el.querySelector('#pbf-env-empty');
@@ -834,6 +882,13 @@ const pesoBalance = {
         const ctx = canvas.getContext('2d');
         const previewData = poly => poly.length >= 3 ? [...poly, poly[0]] : poly;
 
+        if (envAcro.length >= 1) {
+            const g = ctx.createLinearGradient(0, 0, 0, 180);
+            g.addColorStop(0, 'rgba(248,113,113,0.30)'); g.addColorStop(1, 'rgba(248,113,113,0.04)');
+            datasets.push({ label: 'Cat. Acrobática', data: previewData(envAcro),
+                borderColor: '#f87171', backgroundColor: g, borderWidth: 2, fill: envAcro.length >= 3,
+                pointRadius: 4, pointBackgroundColor: '#f87171', tension: 0 });
+        }
         if (envUtil.length >= 1) {
             const g = ctx.createLinearGradient(0, 0, 0, 180);
             g.addColorStop(0, 'rgba(212,175,55,0.30)'); g.addColorStop(1, 'rgba(212,175,55,0.04)');
@@ -962,21 +1017,29 @@ const pesoBalance = {
             return rows;
         };
         const hasUtilChecked = el.querySelector('#pbf-has-util').checked;
-        let envNormal, envUtil = [];
+        const hasAcroChecked = el.querySelector('#pbf-has-acro').checked;
+        let envNormal, envUtil = [], envAcro = [];
         try {
             envNormal = parseEnvTable('#pbf-env-normal', 'Normal');
             if (hasUtilChecked) envUtil = parseEnvTable('#pbf-env-utility', 'Utilitaria');
+            if (hasAcroChecked) envAcro = parseEnvTable('#pbf-env-acrobatic', 'Acrobática');
         } catch (e) {
             return err(e.message);
         }
         if (envNormal.length < 3) return err('La envolvente Normal necesita al menos 3 vértices para formar un polígono (ej: peso mínimo delantero, peso máximo delantero, peso máximo trasero).');
         if (hasUtilChecked && envUtil.length < 3) return err('Marcaste categoría Utilitaria pero le faltan vértices — agrega al menos 3, o desmarca la casilla.');
+        if (hasAcroChecked && envAcro.length < 3) return err('Marcaste categoría Acrobática pero le faltan vértices — agrega al menos 3, o desmarca la casilla.');
 
         const limits = { maxTakeOffWeight_lbs: mtow, cgEnvelopeNormal: envNormal, defaultCategory: 'Normal' };
         if (envUtil.length >= 3) {
             limits.cgEnvelopeUtility = envUtil;
             const utilMaxW = num('#pbf-util-maxw');
             if (utilMaxW > 0) limits.maxUtilityWeight_lbs = utilMaxW;
+        }
+        if (envAcro.length >= 3) {
+            limits.cgEnvelopeAcrobatic = envAcro;
+            const acroMaxW = num('#pbf-acro-maxw');
+            if (acroMaxW > 0) limits.maxAcrobaticWeight_lbs = acroMaxW;
         }
 
         const ac = {
@@ -1299,7 +1362,14 @@ const pesoBalance = {
             }
         };
 
-        if (ac.limits.cgEnvelopeUtility) {
+        if (ac.limits.cgEnvelopeAcrobatic) {
+            const withinWeight = !ac.limits.maxAcrobaticWeight_lbs || weight <= ac.limits.maxAcrobaticWeight_lbs;
+            if (withinWeight && tryEnvelope(ac.limits.cgEnvelopeAcrobatic, 'Acrobática')) {
+                category = 'Acrobática'; ok = true;
+            }
+        }
+
+        if (!ok && ac.limits.cgEnvelopeUtility) {
             const withinWeight = !ac.limits.maxUtilityWeight_lbs || weight <= ac.limits.maxUtilityWeight_lbs;
             if (withinWeight && tryEnvelope(ac.limits.cgEnvelopeUtility, 'Utilitaria')) {
                 category = 'Utilitaria'; ok = true;
@@ -1374,11 +1444,20 @@ const pesoBalance = {
         // si existe; si no, se usa el polígono de vértices — o la tabla peso/fwd/aft
         // legada convertida — de cgEnvelope{Normal,Utility}, cerrado sobre el primer vértice.
         const closePoly = poly => (poly && poly.length ? [...poly, poly[0]] : poly);
+        const acroPoly = ac.limits.cgEnvelopeGraphAcrobatic
+            || (ac.limits.cgEnvelopeAcrobatic && closePoly(this._polygonFor(ac.limits.cgEnvelopeAcrobatic, mode)));
         const utilPoly = ac.limits.cgEnvelopeGraphUtility
             || (ac.limits.cgEnvelopeUtility && closePoly(this._polygonFor(ac.limits.cgEnvelopeUtility, mode)));
         const normPoly = ac.limits.cgEnvelopeGraphNormal
             || (ac.limits.cgEnvelopeNormal && closePoly(this._polygonFor(ac.limits.cgEnvelopeNormal, mode)));
 
+        if (acroPoly) {
+            track(acroPoly);
+            const g = ctx.createLinearGradient(0, 0, 0, 260);
+            g.addColorStop(0, 'rgba(248,113,113,0.30)'); g.addColorStop(1, 'rgba(248,113,113,0.04)');
+            datasets.push({ label:'Cat. Acrobática', data: acroPoly,
+                borderColor:'#f87171', backgroundColor: g, borderWidth:2, fill:true, pointRadius:0, tension:0 });
+        }
         if (utilPoly) {
             track(utilPoly);
             const g = ctx.createLinearGradient(0, 0, 0, 260);
