@@ -832,9 +832,13 @@ const EasyPlan = {
             for (const line of lines.slice(1)) {
                 if (!needed.size) break;
                 const f = line.split(',');
-                const icao = (f[iI] || '').replace(/"/g, '').trim()
-                          || (iC >= 0 ? (f[iC] || '').replace(/"/g, '').trim() : '');
-                if (!icao || !needed.has(icao)) continue;
+                // Algunos aeródromos chicos (ej. SCPD/Peldehue) tienen un "ident" interno
+                // no-ICAO (ej. "CL-0017") y el código ICAO real solo vive en icao_code —
+                // hay que probar ambas columnas, no solo caer a icao_code cuando ident viene vacío.
+                const identVal = (f[iI] || '').replace(/"/g, '').trim();
+                const icaoVal  = iC >= 0 ? (f[iC] || '').replace(/"/g, '').trim() : '';
+                const icao = needed.has(identVal) ? identVal : (needed.has(icaoVal) ? icaoVal : '');
+                if (!icao) continue;
                 const lat = parseFloat(f[iLat]);
                 const lon = parseFloat(f[iLon]);
                 if (!isNaN(lat) && !isNaN(lon)) {
