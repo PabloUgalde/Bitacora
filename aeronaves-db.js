@@ -17,8 +17,7 @@ const AERONAVES_DB = [
         ],
         limits: {
             maxTakeOffWeight_lbs: 1500, maxLandingWeight_lbs: 1500,
-            cgEnvelopeGraphUtility: [ {x:32.20,y:1000},{x:40.25,y:1250},{x:50.10,y:1500},{x:54.00,y:1500},{x:45.00,y:1250},{x:36.00,y:1000},{x:32.20,y:1000} ],
-            cgEnvelopeUtility: [ {weight:1000,fwd_in:32.2,aft_in:36.0},{weight:1250,fwd_in:32.2,aft_in:36.0},{weight:1500,fwd_in:33.4,aft_in:36.0} ],
+            cgEnvelopeUtility: [ {x:32.20,y:1000},{x:40.25,y:1250},{x:50.10,y:1500},{x:54.00,y:1500},{x:45.00,y:1250},{x:36.00,y:1000} ],
             maxCombinedBaggage_lbs: 120, defaultCategory: "Utilitaria"
         }
     },
@@ -38,8 +37,7 @@ const AERONAVES_DB = [
         ],
         limits: {
             maxTakeOffWeight_lbs: 1600, maxLandingWeight_lbs: 1600,
-            cgEnvelopeGraphUtility: [ {x:36.1,y:1150},{x:40.5,y:1285},{x:52.8,y:1600},{x:60.0,y:1600},{x:49.48,y:1285},{x:44.97,y:1150},{x:36.1,y:1150} ],
-            cgEnvelopeUtility: [ {weight:1150,fwd_in:31.39,aft_in:39.10},{weight:1285,fwd_in:31.52,aft_in:38.51},{weight:1600,fwd_in:33.00,aft_in:37.50} ],
+            cgEnvelopeUtility: [ {x:36.1,y:1150},{x:40.5,y:1285},{x:52.8,y:1600},{x:60.0,y:1600},{x:49.48,y:1285},{x:44.97,y:1150} ],
             maxCombinedBaggage_lbs: 120, defaultCategory: "Utilitaria"
         }
     },
@@ -59,8 +57,7 @@ const AERONAVES_DB = [
         ],
         limits: {
             maxTakeOffWeight_lbs: 1600, maxLandingWeight_lbs: 1600,
-            cgEnvelopeGraphUtility: [ {x:34.5,y:1100},{x:40.0,y:1320},{x:52.5,y:1600},{x:60.0,y:1600},{x:49.53,y:1320},{x:41.3,y:1100},{x:34.5,y:1100} ],
-            cgEnvelopeUtility: [ {weight:1100,fwd_in:31.36,aft_in:37.55},{weight:1320,fwd_in:30.30,aft_in:37.52},{weight:1600,fwd_in:32.81,aft_in:37.50} ],
+            cgEnvelopeUtility: [ {x:34.5,y:1100},{x:40.0,y:1320},{x:52.5,y:1600},{x:60.0,y:1600},{x:49.53,y:1320},{x:41.3,y:1100} ],
             maxCombinedBaggage_lbs: 120, defaultCategory: "Utilitaria"
         }
     },
@@ -80,8 +77,7 @@ const AERONAVES_DB = [
         ],
         limits: {
             maxTakeOffWeight_lbs: 1600, maxLandingWeight_lbs: 1600,
-            cgEnvelopeGraphUtility: [ {x:34.5,y:1100},{x:40.0,y:1320},{x:52.5,y:1600},{x:60.0,y:1600},{x:49.53,y:1320},{x:41.3,y:1100},{x:34.5,y:1100} ],
-            cgEnvelopeUtility: [ {weight:1100,fwd_in:31.36,aft_in:37.55},{weight:1320,fwd_in:30.30,aft_in:37.52},{weight:1600,fwd_in:32.81,aft_in:37.50} ],
+            cgEnvelopeUtility: [ {x:34.5,y:1100},{x:40.0,y:1320},{x:52.5,y:1600},{x:60.0,y:1600},{x:49.53,y:1320},{x:41.3,y:1100} ],
             maxCombinedBaggage_lbs: 120, defaultCategory: "Utilitaria"
         }
     },
@@ -102,11 +98,9 @@ const AERONAVES_DB = [
         ],
         limits: {
             maxRampWeight_lbs: 2307.5, maxTakeOffWeight_lbs: 2300, maxLandingWeight_lbs: 2300,
-            cgEnvelopeGraphNormal: [ {x:52.5,y:1500},{x:68.25,y:1950},{x:88.5,y:2300},{x:108.8,y:2300},{x:92.3,y:1950},{x:71.0,y:1500},{x:52.5,y:1500} ],
-            cgEnvelopeNormal: [ {weight:1500,fwd_in:35.0,aft_in:47.33},{weight:1950,fwd_in:35.0,aft_in:47.33},{weight:2300,fwd_in:38.48,aft_in:47.30} ],
+            cgEnvelopeNormal: [ {x:52.5,y:1500},{x:68.25,y:1950},{x:88.5,y:2300},{x:108.8,y:2300},{x:92.3,y:1950},{x:71.0,y:1500} ],
             maxUtilityWeight_lbs: 2000,
-            cgEnvelopeGraphUtility: [ {x:52.5,y:1500},{x:68.25,y:1950},{x:71.2,y:2000},{x:81.5,y:2000},{x:60.6,y:1500},{x:52.5,y:1500} ],
-            cgEnvelopeUtility: [ {weight:1500,fwd_in:35.0,aft_in:40.4},{weight:1950,fwd_in:35.0,aft_in:40.72},{weight:2000,fwd_in:35.6,aft_in:40.75} ],
+            cgEnvelopeUtility: [ {x:52.5,y:1500},{x:68.25,y:1950},{x:71.2,y:2000},{x:81.5,y:2000},{x:60.6,y:1500} ],
             maxCombinedBaggage_lbs: 120
         }
     },
@@ -126,8 +120,7 @@ const AERONAVES_DB = [
         ],
         limits: {
             maxTakeOffWeight_lbs: 2800, maxLandingWeight_lbs: 2800,
-            cgEnvelopeGraphNormal: [ {x:59.0,y:1800},{x:74.0,y:2250},{x:107.5,y:2800},{x:133.5,y:2800},{x:107.1,y:2250},{x:85.5,y:1800},{x:59.0,y:1800} ],
-            cgEnvelopeNormal: [ {weight:1800,fwd_in:32.78,aft_in:47.50},{weight:2250,fwd_in:32.89,aft_in:47.60},{weight:2800,fwd_in:38.39,aft_in:47.68} ],
+            cgEnvelopeNormal: [ {x:59.0,y:1800},{x:74.0,y:2250},{x:107.5,y:2800},{x:133.5,y:2800},{x:107.1,y:2250},{x:85.5,y:1800} ],
             defaultCategory: "Normal"
         }
     }

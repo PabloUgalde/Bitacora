@@ -565,14 +565,19 @@ const pesoBalance = {
     // ── Screen: Crear / editar aeronave propia ──
     // Los datos se copian del manual de vuelo (POH): peso vacío y momento (o
     // CG) del informe de masa y centrado, brazos de la sección Weight &
-    // Balance, y la envolvente desde la TABLA de límites de CG (o leyendo
-    // 3-4 puntos del gráfico del manual). El gráfico se dibuja solo.
+    // Balance, y la envolvente como lista de VÉRTICES (peso + posición) leídos
+    // directamente del gráfico del manual, en el orden en que se recorren. El
+    // gráfico de preview se dibuja solo, trazando esos vértices en vivo.
     _renderForm(el) {
         const ac = this._formAc;
         const isEdit = !!ac;
         const mode = ac?.envelopeMode || 'moment';
-        const envNormalData = ac?.limits?.cgEnvelopeNormal || [];
-        const envUtilData = ac?.limits?.cgEnvelopeUtility || [];
+        // _polygonFor normaliza tanto vértices nuevos {x,y} como la tabla legada
+        // peso/fwd_in/aft_in (aeronaves creadas antes de este formulario).
+        const envNormalRaw = ac?.limits?.cgEnvelopeNormal || [];
+        const envUtilRaw = ac?.limits?.cgEnvelopeUtility || [];
+        const envNormalData = envNormalRaw.length ? this._polygonFor(envNormalRaw, mode) : [];
+        const envUtilData = envUtilRaw.length ? this._polygonFor(envUtilRaw, mode) : [];
         const hasUtil = envUtilData.length > 0;
         const emptyCg = ac ? (ac.emptyMoment_lb_in / ac.emptyWeight_lbs) : null;
         const lbPerGal = ac ? Math.round(1 / ac.fuel_gallons_per_lbs * 10) / 10 : 6;
@@ -582,14 +587,8 @@ const pesoBalance = {
             { name: 'Combustible Usable (Gal)', arm_in: 48.0, id: 'fuel', type: 'paired_fuel', max_gallons: 40 },
             { name: 'Equipaje', arm_in: 95.0, id: 'baggage1', type: 'paired_weight', max_lbs: 120 },
         ];
-        const envNormalRows = envNormalData.length ? envNormalData : [
-            { weight: '', fwd_in: '', aft_in: '' },
-            { weight: '', fwd_in: '', aft_in: '' },
-        ];
-        const envUtilRows = envUtilData.length ? envUtilData : [
-            { weight: '', fwd_in: '', aft_in: '' },
-            { weight: '', fwd_in: '', aft_in: '' },
-        ];
+        const envNormalRows = envNormalData.length ? envNormalData : [{ x: '', y: '' }, { x: '', y: '' }, { x: '', y: '' }];
+        const envUtilRows = envUtilData.length ? envUtilData : [{ x: '', y: '' }, { x: '', y: '' }, { x: '', y: '' }];
 
         const stRow = (st = {}) => `
             <div class="pbf-st-row" style="display:flex;gap:6px;margin-bottom:6px;align-items:flex-end;flex-wrap:wrap">
@@ -618,19 +617,17 @@ const pesoBalance = {
                 <button type="button" class="btn-link pbf-st-del" style="color:var(--red)">✕</button>
             </div>`;
 
-        const envRow = (p = {}) => `
+        const envXLabel = m => m === 'cg' ? 'Posición CG (in)' : 'Momento/1000 (lb·in)';
+        const envXPlaceholder = m => m === 'cg' ? 'CG in' : 'Momento/1000';
+        const envRow = (p = {}, rowMode) => `
             <div class="pbf-env-row" style="display:flex;gap:6px;margin-bottom:6px;align-items:flex-end;flex-wrap:wrap">
                 <div class="pbf-field" style="flex:1;min-width:100px">
                     <label class="pbf-mini-label">Peso (lbs)</label>
-                    <input type="number" class="pbf-env-w" placeholder="Peso lbs" step="1" value="${p.weight ?? ''}" style="width:100%;min-width:0">
+                    <input type="number" class="pbf-env-w" placeholder="Peso lbs" step="1" value="${p.y ?? ''}" style="width:100%;min-width:0">
                 </div>
-                <div class="pbf-field" style="flex:1;min-width:100px">
-                    <label class="pbf-mini-label">Lím. delantero (in)</label>
-                    <input type="number" class="pbf-env-f" placeholder="Lím. delantero in" step="0.01" value="${p.fwd_in ?? ''}" style="width:100%;min-width:0">
-                </div>
-                <div class="pbf-field" style="flex:1;min-width:100px">
-                    <label class="pbf-mini-label">Lím. trasero (in)</label>
-                    <input type="number" class="pbf-env-a" placeholder="Lím. trasero in" step="0.01" value="${p.aft_in ?? ''}" style="width:100%;min-width:0">
+                <div class="pbf-field" style="flex:1.4;min-width:150px">
+                    <label class="pbf-mini-label pbf-env-x-label">${envXLabel(rowMode)}</label>
+                    <input type="number" class="pbf-env-x" placeholder="${envXPlaceholder(rowMode)}" step="0.01" value="${p.x ?? ''}" style="width:100%;min-width:0">
                 </div>
                 <button type="button" class="btn-link pbf-env-del" style="color:var(--red)">✕</button>
             </div>`;
@@ -708,24 +705,28 @@ const pesoBalance = {
                 </fieldset>
 
                 <fieldset class="pb-fieldset">
-                    <legend>Envolvente CG (tabla de límites del manual)</legend>
+                    <legend>Envolvente CG (vértices del gráfico del manual)</legend>
                     <p style="font-size:12px;color:var(--muted);margin-bottom:10px">
-                        Copia la tabla "C.G. Limits" del manual: para cada peso, el límite
-                        delantero y trasero <strong>en pulgadas</strong>. Si el manual solo trae
-                        gráfico, lee 3–4 puntos (pesos bajo, medio y máximo). Muchos manuales
-                        traen dos tablas — Normal y Utilitaria (esta última con límites más
-                        estrictos, ej: sin pasajeros traseros) — carga las que tenga tu avión;
-                        el gráfico las dibuja juntas para que veas en cuál queda tu carga.</p>
+                        Lee los vértices del gráfico "C.G. Envelope" del manual, <strong>en el
+                        orden en que los recorre el contorno</strong> (ej: subiendo por el límite
+                        delantero y bajando por el trasero), y anota el peso y la posición de
+                        cada uno — un punto por vértice, no dos por peso. Así se representan
+                        también envolventes con más de dos límites por peso, como suele pasar en
+                        categoría Utilitaria. Si el manual solo trae una tabla peso/delantero/trasero,
+                        agrega igual dos vértices por fila (uno con cada límite) respetando el orden.
+                        Muchos manuales traen dos gráficos — Normal y Utilitaria (esta última con
+                        límites más estrictos, ej: sin pasajeros traseros) — carga los que tenga
+                        tu avión; el gráfico los dibuja juntos para que veas en cuál queda tu carga.
+                        La vista previa se va dibujando desde el primer vértice que ingreses.</p>
 
                     <p style="font-size:12px;font-weight:600;margin-bottom:8px">Categoría Normal</p>
-                    <div class="pbf-env-head" style="display:flex;gap:6px;margin-bottom:6px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em">
+                    <div class="pbf-env-head pbf-env-head-normal" style="display:flex;gap:6px;margin-bottom:6px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em">
                         <span style="flex:1">Peso (lbs)</span>
-                        <span style="flex:1">Lím. delantero (in)</span>
-                        <span style="flex:1">Lím. trasero (in)</span>
+                        <span class="pbf-env-head-x" style="flex:1.4">${envXLabel(mode)}</span>
                         <span style="width:22px"></span>
                     </div>
-                    <div id="pbf-env-normal">${envNormalRows.map(envRow).join('')}</div>
-                    <button type="button" class="btn-link" id="pbf-add-env-normal">+ Agregar punto</button>
+                    <div id="pbf-env-normal">${envNormalRows.map(p => envRow(p, mode)).join('')}</div>
+                    <button type="button" class="btn-link" id="pbf-add-env-normal">+ Agregar vértice</button>
 
                     <div class="ll-checkbox-row" style="margin:16px 0 4px">
                         <input type="checkbox" id="pbf-has-util" ${hasUtil ? 'checked' : ''}>
@@ -735,14 +736,13 @@ const pesoBalance = {
                         <p style="font-size:12px;font-weight:600;margin-bottom:8px">Categoría Utilitaria</p>
                         <div class="pb-input-group"><label>Peso máx. en Utilitaria (lbs, opcional si es igual al MTOW)</label>
                             <input type="number" id="pbf-util-maxw" step="1" value="${ac?.limits?.maxUtilityWeight_lbs ?? ''}"></div>
-                        <div class="pbf-env-head" style="display:flex;gap:6px;margin-bottom:6px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em">
+                        <div class="pbf-env-head pbf-env-head-util" style="display:flex;gap:6px;margin-bottom:6px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em">
                             <span style="flex:1">Peso (lbs)</span>
-                            <span style="flex:1">Lím. delantero (in)</span>
-                            <span style="flex:1">Lím. trasero (in)</span>
+                            <span class="pbf-env-head-x" style="flex:1.4">${envXLabel(mode)}</span>
                             <span style="width:22px"></span>
                         </div>
-                        <div id="pbf-env-utility">${envUtilRows.map(envRow).join('')}</div>
-                        <button type="button" class="btn-link" id="pbf-add-env-utility">+ Agregar punto</button>
+                        <div id="pbf-env-utility">${envUtilRows.map(p => envRow(p, mode)).join('')}</div>
+                        <button type="button" class="btn-link" id="pbf-add-env-utility">+ Agregar vértice</button>
                     </div>
 
                     <div style="margin-top:14px">
@@ -750,7 +750,7 @@ const pesoBalance = {
                         <div id="pbf-env-chart-wrap" style="position:relative;height:180px;display:none">
                             <canvas id="pbf-env-canvas"></canvas>
                         </div>
-                        <p id="pbf-env-empty" style="font-size:12px;color:var(--muted);text-align:center">Agrega al menos 2 puntos (Normal o Utilitaria) para ver el gráfico.</p>
+                        <p id="pbf-env-empty" style="font-size:12px;color:var(--muted);text-align:center">Agrega el primer vértice (Normal o Utilitaria) para ver la vista previa.</p>
                     </div>
                 </fieldset>
 
@@ -767,6 +767,9 @@ const pesoBalance = {
             const cg = el.querySelector('input[name="pbf-mode"]:checked').value === 'cg';
             el.querySelector('#pbf-moment-wrap').style.display = cg ? 'none' : '';
             el.querySelector('#pbf-cg-wrap').style.display = cg ? '' : 'none';
+            const liveMode = cg ? 'cg' : 'moment';
+            el.querySelectorAll('.pbf-env-x-label, .pbf-env-head-x').forEach(l => l.textContent = envXLabel(liveMode));
+            el.querySelectorAll('.pbf-env-x').forEach(i => i.placeholder = envXPlaceholder(liveMode));
             this._updateEnvPreview(el);
         }));
         const wireRowDel = () => {
@@ -779,13 +782,14 @@ const pesoBalance = {
             el.querySelector('#pbf-stations').insertAdjacentHTML('beforeend', stRow());
             wireRowDel();
         });
+        const liveMode = () => el.querySelector('input[name="pbf-mode"]:checked').value;
         el.querySelector('#pbf-add-env-normal').addEventListener('click', () => {
-            el.querySelector('#pbf-env-normal').insertAdjacentHTML('beforeend', envRow());
+            el.querySelector('#pbf-env-normal').insertAdjacentHTML('beforeend', envRow({}, liveMode()));
             wireRowDel();
             this._updateEnvPreview(el);
         });
         el.querySelector('#pbf-add-env-utility').addEventListener('click', () => {
-            el.querySelector('#pbf-env-utility').insertAdjacentHTML('beforeend', envRow());
+            el.querySelector('#pbf-env-utility').insertAdjacentHTML('beforeend', envRow({}, liveMode()));
             wireRowDel();
             this._updateEnvPreview(el);
         });
@@ -799,22 +803,23 @@ const pesoBalance = {
         this._updateEnvPreview(el);
     },
 
-    // Lee los puntos válidos (peso+delantero+trasero) de una tabla de envolvente en el form.
+    // Lee los vértices válidos (peso+posición) de una tabla de envolvente en el form,
+    // preservando el orden de las filas — es el orden en que se traza el polígono.
     _readEnvTable(el, containerSel) {
         const env = [];
         for (const row of el.querySelectorAll(`${containerSel} .pbf-env-row`)) {
             const w = parseFloat(row.querySelector('.pbf-env-w').value);
-            const f = parseFloat(row.querySelector('.pbf-env-f').value);
-            const a = parseFloat(row.querySelector('.pbf-env-a').value);
-            if (isNaN(w) || isNaN(f) || isNaN(a)) continue;
-            env.push({ weight: w, fwd_in: f, aft_in: a });
+            const x = parseFloat(row.querySelector('.pbf-env-x').value);
+            if (isNaN(w) || isNaN(x)) continue;
+            env.push({ x, y: w });
         }
-        env.sort((x, y) => x.weight - y.weight);
         return env;
     },
 
     // Dibuja en vivo ambas categorías (Normal + Utilitaria si está activada) superpuestas
-    // en el mismo gráfico, igual que la vista de resultados final (_drawChart).
+    // en el mismo gráfico, igual que la vista de resultados final (_drawChart). Se traza
+    // con lo que haya: 1 vértice = solo el punto, 2 = línea abierta, 3+ = contorno cerrado
+    // (vuelve al primer vértice) con relleno — el preview crece a medida que se agregan.
     _updateEnvPreview(el) {
         const envNormal = this._readEnvTable(el, '#pbf-env-normal');
         const envUtil = el.querySelector('#pbf-has-util').checked ? this._readEnvTable(el, '#pbf-env-utility') : [];
@@ -827,20 +832,21 @@ const pesoBalance = {
         const mode = el.querySelector('input[name="pbf-mode"]:checked').value;
         const canvas = el.querySelector('#pbf-env-canvas');
         const ctx = canvas.getContext('2d');
+        const previewData = poly => poly.length >= 3 ? [...poly, poly[0]] : poly;
 
-        if (envUtil.length >= 2) {
+        if (envUtil.length >= 1) {
             const g = ctx.createLinearGradient(0, 0, 0, 180);
             g.addColorStop(0, 'rgba(212,175,55,0.30)'); g.addColorStop(1, 'rgba(212,175,55,0.04)');
-            datasets.push({ label: 'Cat. Utilitaria', data: this._envPolygon(envUtil, mode),
-                borderColor: '#D4AF37', backgroundColor: g, borderWidth: 2, fill: true,
-                pointRadius: 3, pointBackgroundColor: '#D4AF37', tension: 0 });
+            datasets.push({ label: 'Cat. Utilitaria', data: previewData(envUtil),
+                borderColor: '#D4AF37', backgroundColor: g, borderWidth: 2, fill: envUtil.length >= 3,
+                pointRadius: 4, pointBackgroundColor: '#D4AF37', tension: 0 });
         }
-        if (envNormal.length >= 2) {
+        if (envNormal.length >= 1) {
             const g = ctx.createLinearGradient(0, 0, 0, 180);
             g.addColorStop(0, 'rgba(180,180,180,0.18)'); g.addColorStop(1, 'rgba(180,180,180,0.02)');
-            datasets.push({ label: 'Cat. Normal', data: this._envPolygon(envNormal, mode),
+            datasets.push({ label: 'Cat. Normal', data: previewData(envNormal),
                 borderColor: 'rgba(200,200,200,0.7)', backgroundColor: g, borderWidth: 1.5,
-                borderDash: [6, 3], fill: true, pointRadius: 3,
+                borderDash: [6, 3], fill: envNormal.length >= 3, pointRadius: 4,
                 pointBackgroundColor: 'rgba(200,200,200,0.9)', tension: 0 });
         }
 
@@ -941,19 +947,18 @@ const pesoBalance = {
         }
         if (!stations.length) return err('Agrega al menos una estación.');
 
-        // Envolvente — categoría Normal (obligatoria) + Utilitaria (opcional)
+        // Envolvente — categoría Normal (obligatoria) + Utilitaria (opcional). Se guarda
+        // como polígono de vértices {x,y} en el orden ingresado (orden = orden de trazado,
+        // no se reordena por peso: el contorno puede subir, cruzar y bajar libremente).
         const parseEnvTable = (containerSel, label) => {
             const rows = [];
             for (const row of el.querySelectorAll(`${containerSel} .pbf-env-row`)) {
                 const w = parseFloat(row.querySelector('.pbf-env-w').value);
-                const f = parseFloat(row.querySelector('.pbf-env-f').value);
-                const a = parseFloat(row.querySelector('.pbf-env-a').value);
-                if (isNaN(w) && isNaN(f) && isNaN(a)) continue;
-                if (isNaN(w) || isNaN(f) || isNaN(a)) throw new Error(`Cada punto de la envolvente ${label} necesita peso, límite delantero y trasero.`);
-                if (f >= a) throw new Error(`En ${label}, el punto de ${w} lbs tiene el límite delantero (${f}) mayor o igual al trasero (${a}).`);
-                rows.push({ weight: w, fwd_in: f, aft_in: a });
+                const x = parseFloat(row.querySelector('.pbf-env-x').value);
+                if (isNaN(w) && isNaN(x)) continue;
+                if (isNaN(w) || isNaN(x)) throw new Error(`Cada vértice de la envolvente ${label} necesita peso y posición.`);
+                rows.push({ x, y: w });
             }
-            rows.sort((x, y) => x.weight - y.weight);
             return rows;
         };
         const hasUtilChecked = el.querySelector('#pbf-has-util').checked;
@@ -964,11 +969,11 @@ const pesoBalance = {
         } catch (e) {
             return err(e.message);
         }
-        if (envNormal.length < 2) return err('La envolvente Normal necesita al menos 2 puntos (ej: peso mínimo y MTOW).');
-        if (hasUtilChecked && envUtil.length < 2) return err('Marcaste categoría Utilitaria pero le faltan puntos — agrega al menos 2, o desmarca la casilla.');
+        if (envNormal.length < 3) return err('La envolvente Normal necesita al menos 3 vértices para formar un polígono (ej: peso mínimo delantero, peso máximo delantero, peso máximo trasero).');
+        if (hasUtilChecked && envUtil.length < 3) return err('Marcaste categoría Utilitaria pero le faltan vértices — agrega al menos 3, o desmarca la casilla.');
 
         const limits = { maxTakeOffWeight_lbs: mtow, cgEnvelopeNormal: envNormal, defaultCategory: 'Normal' };
-        if (envUtil.length >= 2) {
+        if (envUtil.length >= 3) {
             limits.cgEnvelopeUtility = envUtil;
             const utilMaxW = num('#pbf-util-maxw');
             if (utilMaxW > 0) limits.maxUtilityWeight_lbs = utilMaxW;
@@ -1179,7 +1184,7 @@ const pesoBalance = {
             }
         }
 
-        const { msgs, category, ok } = this._checkLimits(ac, totalW, cg);
+        const { msgs, category, ok } = this._checkLimits(ac, totalW, cg, moment1000);
 
         // Max fuel
         const fuelStation = ac.stations.find(s => s.type === 'paired_fuel');
@@ -1259,7 +1264,7 @@ const pesoBalance = {
         resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
     },
 
-    _checkLimits(ac, weight, cg) {
+    _checkLimits(ac, weight, cg, moment1000) {
         const msgs = [];
         const addMsg = (text, type, bold) => {
             const style = bold ? 'font-weight:700;font-size:14px;' : '';
@@ -1274,16 +1279,22 @@ const pesoBalance = {
 
         let category = 'Fuera de Límites';
         let ok = false;
+        const mode = ac.envelopeMode === 'cg' ? 'cg' : 'moment';
+        const x0 = mode === 'cg' ? cg : moment1000;
+        const unit = mode === 'cg' ? 'in' : 'mom/1000';
+        const label0 = mode === 'cg' ? `CG (${cg.toFixed(2)} in)` : `Momento/1000 (${moment1000.toFixed(2)})`;
 
         const tryEnvelope = (env, label) => {
-            const { fwdLimit, aftLimit } = this._getCGLimits(env, weight);
-            if (fwdLimit === null) return false;
-            if (cg >= fwdLimit && cg <= aftLimit) {
-                addMsg(`CG (${cg.toFixed(2)} in) dentro de Cat. ${label} (${fwdLimit.toFixed(2)}–${aftLimit.toFixed(2)} in).`, 'ok');
+            const poly = this._polygonFor(env, mode);
+            if (!poly || poly.length < 3) return false;
+            const range = this._envelopeXRangeAtWeight(poly, weight);
+            if (!range) return false;
+            if (x0 >= range.min && x0 <= range.max) {
+                addMsg(`${label0} dentro de Cat. ${label} (${range.min.toFixed(2)}–${range.max.toFixed(2)} ${unit}).`, 'ok');
                 return true;
             } else {
-                const dir = cg < fwdLimit ? 'demasiado adelante' : 'demasiado atrás';
-                addMsg(`CG (${cg.toFixed(2)} in) fuera de Cat. ${label} — ${dir}. Límites: ${fwdLimit.toFixed(2)}–${aftLimit.toFixed(2)} in.`, 'error');
+                const dir = x0 < range.min ? 'demasiado adelante' : 'demasiado atrás';
+                addMsg(`${label0} fuera de Cat. ${label} — ${dir}. Límites: ${range.min.toFixed(2)}–${range.max.toFixed(2)} ${unit}.`, 'error');
                 return false;
             }
         };
@@ -1307,34 +1318,41 @@ const pesoBalance = {
         return { msgs, category, ok };
     },
 
-    _getCGLimits(env, weight) {
-        if (!env || !env.length) return { fwdLimit: null, aftLimit: null };
-        const sorted = [...env].sort((a, b) => a.weight - b.weight);
-        if (weight <= sorted[0].weight) return { fwdLimit: sorted[0].fwd_in, aftLimit: sorted[0].aft_in };
-        if (weight >= sorted[sorted.length-1].weight) {
-            const last = sorted[sorted.length-1];
-            return { fwdLimit: last.fwd_in, aftLimit: last.aft_in };
-        }
-        for (let i = 0; i < sorted.length-1; i++) {
-            const p1 = sorted[i], p2 = sorted[i+1];
-            if (weight >= p1.weight && weight <= p2.weight) {
-                const r = (weight - p1.weight) / (p2.weight - p1.weight);
-                return { fwdLimit: p1.fwd_in + r*(p2.fwd_in-p1.fwd_in), aftLimit: p1.aft_in + r*(p2.aft_in-p1.aft_in) };
-            }
-        }
-        return { fwdLimit: null, aftLimit: null };
-    },
-
-    // Deriva el polígono de la envolvente desde la tabla de límites de CG:
-    // sube por el límite delantero y baja por el trasero. En modo 'cg' el eje
-    // X es la posición del CG en pulgadas; en 'moment' es momento/1000.
-    _envPolygon(env, mode) {
+    // Normaliza cualquier envolvente guardada al polígono de vértices {x,y} (y=peso,
+    // x=posición en la unidad nativa del modo: in en 'cg', momento/1000 en 'moment').
+    // Formato nuevo: ya viene como lista de vértices {x,y} en el orden de trazado.
+    // Formato legado (peso/fwd_in/aft_in por fila): se deriva subiendo por el límite
+    // delantero y bajando por el trasero, como aproximación del polígono real.
+    _polygonFor(env, mode) {
+        if (!env || env.length < 2) return null;
+        if (env[0].x !== undefined && env[0].y !== undefined) return env;
         const s = [...env].sort((a, b) => a.weight - b.weight);
         const xf = p => mode === 'cg' ? p.fwd_in : p.fwd_in * p.weight / 1000;
         const xa = p => mode === 'cg' ? p.aft_in : p.aft_in * p.weight / 1000;
         const up = s.map(p => ({ x: xf(p), y: p.weight }));
         const down = [...s].reverse().map(p => ({ x: xa(p), y: p.weight }));
-        return [...up, ...down, { ...up[0] }];
+        return [...up, ...down];
+    },
+
+    // Intersecta la recta horizontal peso=y0 con el perímetro del polígono (cerrado
+    // implícitamente entre el último y el primer vértice) y devuelve el rango [min,max]
+    // de x cubierto — generaliza "límite delantero/trasero a este peso" a cualquier forma.
+    _envelopeXRangeAtWeight(poly, y0) {
+        const xs = [];
+        for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+            const yi = poly[i].y, yj = poly[j].y;
+            const xi = poly[i].x, xj = poly[j].x;
+            if (yi === yj) {
+                if (yi === y0) { xs.push(xi, xj); }
+                continue;
+            }
+            if ((yi <= y0 && yj >= y0) || (yj <= y0 && yi >= y0)) {
+                const t = (y0 - yi) / (yj - yi);
+                xs.push(xi + t * (xj - xi));
+            }
+        }
+        if (!xs.length) return null;
+        return { min: Math.min(...xs), max: Math.max(...xs) };
     },
 
     _drawChart(ac, weight, moment1000, cg) {
@@ -1352,14 +1370,14 @@ const pesoBalance = {
             if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y;
         });
 
-        // Polígonos: usa el gráfico dibujado a mano si existe (catálogo en modo
-        // momento); si no, lo deriva de la tabla de límites (aeronaves propias).
-        const utilPoly = mode === 'moment'
-            ? (ac.limits.cgEnvelopeGraphUtility || (ac.limits.cgEnvelopeUtility && this._envPolygon(ac.limits.cgEnvelopeUtility, 'moment')))
-            : (ac.limits.cgEnvelopeUtility && this._envPolygon(ac.limits.cgEnvelopeUtility, 'cg'));
-        const normPoly = mode === 'moment'
-            ? (ac.limits.cgEnvelopeGraphNormal || (ac.limits.cgEnvelopeNormal && this._envPolygon(ac.limits.cgEnvelopeNormal, 'moment')))
-            : (ac.limits.cgEnvelopeNormal && this._envPolygon(ac.limits.cgEnvelopeNormal, 'cg'));
+        // Polígonos: cgEnvelopeGraph* (legado, catálogo dibujado a mano) tiene prioridad
+        // si existe; si no, se usa el polígono de vértices — o la tabla peso/fwd/aft
+        // legada convertida — de cgEnvelope{Normal,Utility}, cerrado sobre el primer vértice.
+        const closePoly = poly => (poly && poly.length ? [...poly, poly[0]] : poly);
+        const utilPoly = ac.limits.cgEnvelopeGraphUtility
+            || (ac.limits.cgEnvelopeUtility && closePoly(this._polygonFor(ac.limits.cgEnvelopeUtility, mode)));
+        const normPoly = ac.limits.cgEnvelopeGraphNormal
+            || (ac.limits.cgEnvelopeNormal && closePoly(this._polygonFor(ac.limits.cgEnvelopeNormal, mode)));
 
         if (utilPoly) {
             track(utilPoly);
