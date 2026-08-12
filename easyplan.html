@@ -614,16 +614,17 @@ const EasyPlan = {
             this._render(route, altn, metars, tafs, gamet, true, true, metarSources, countries, brazilGamet, uruguayAge, altn2);
             this._showRouteSummary(route, altn, altn2);
 
-            // Background: chips de sugerencia para aeródromos sin METAR
+            // Background: la sugerencia de "estación cercana" recién pintada arriba solo
+            // conoce las coordenadas que ya estaban en cache (unos pocos aeródromos). Bajamos
+            // ahora las coordenadas de TODO el set con METAR y, a medida que van llegando,
+            // reconstruimos esas fichas con las estaciones realmente más cercanas.
             const noDataIcaos = allRouteIcaos.filter(icao => !metars[icao]);
             if (noDataIcaos.length) {
                 const chipCandidates = [...this._mcWithData].filter(k => !this._coordsCache[k]);
                 if (chipCandidates.length) {
                     this._fetchCoordsOurAirports(chipCandidates).then(() => {
-                        noDataIcaos.forEach(icao => this._updateChipDistances(icao));
+                        noDataIcaos.forEach(icao => this._refreshNearbyChips(icao));
                     });
-                } else {
-                    noDataIcaos.forEach(icao => this._updateChipDistances(icao));
                 }
             }
         } catch (err) {
@@ -848,32 +849,6 @@ const EasyPlan = {
             try { localStorage.setItem('_ep_coords_cache',  JSON.stringify(this._coordsCache));    } catch {}
             try { localStorage.setItem('_ep_airport_info',  JSON.stringify(this._airportInfoCache)); } catch {}
         } catch {}
-    },
-
-    // Actualiza distancias en chips ya renderizados
-    _updateChipDistances(icao) {
-        const section = document.getElementById(`ap-metar-${icao}`);
-        if (!section) return;
-        const origCoords = this._coordsCache[icao];
-        if (!origCoords) return;
-        section.querySelectorAll('.sub-chip').forEach(chip => {
-            const c = this._coordsCache[chip.dataset.sub];
-            if (!c) return;
-            const dist = Math.round(this._haversine(origCoords.lat, origCoords.lon, c.lat, c.lon));
-            const el = chip.querySelector('.sub-chip-dist');
-            if (el) el.textContent = `${dist} km`;
-        });
-        // Re-ordenar chips por distancia
-        const container = section.querySelector('.sub-chips');
-        if (!container) return;
-        const chips = [...container.querySelectorAll('.sub-chip')]
-            .map(c => {
-                const sub = this._coordsCache[c.dataset.sub];
-                const d = (origCoords && sub) ? this._haversine(origCoords.lat, origCoords.lon, sub.lat, sub.lon) : 99999;
-                return { el: c, d };
-            })
-            .sort((a, b) => a.d - b.d);
-        chips.forEach(x => container.appendChild(x.el));
     },
 
     // ── METAR parser ──
@@ -1482,9 +1457,16 @@ const EasyPlan = {
     },
 
     _renderNoMetarMsg(icao, hasAvwxKey) {
-        const nearby = this._suggestStations(icao); // [{icao, dist}]
-        const chipsHtml = nearby.length
-            ? `<div class="sub-chips-label">Usar datos de estación cercana:</div>
+        return `<div class="empty-msg">Aeródromo sin observación METAR disponible.</div>${this._nearbyChipsHtml(icao)}`;
+    },
+
+    // [{icao, dist}] → markup de las fichas de "estación cercana". Separado de
+    // _renderNoMetarMsg para poder reconstruirlas después (_refreshNearbyChips)
+    // a medida que van llegando más coordenadas, sin repintar toda la sección.
+    _nearbyChipsHtml(icao) {
+        const nearby = this._suggestStations(icao);
+        if (!nearby.length) return '';
+        return `<div class="sub-chips-label">Usar datos de estación cercana:</div>
                <div class="sub-chips">
                  ${nearby.map(s =>
                    `<button class="sub-chip" onclick="EasyPlan._applySubstitute('${icao}','${s.icao}')"
@@ -1492,9 +1474,19 @@ const EasyPlan = {
                       ${s.icao} <span class="sub-chip-dist">${s.dist != null ? s.dist + ' km' : '…'}</span>
                     </button>`
                  ).join('')}
-               </div>`
-            : '';
-        return `<div class="empty-msg">Aeródromo sin observación METAR disponible.</div>${chipsHtml}`;
+               </div>`;
+    },
+
+    // Reconstruye las fichas de "estación cercana" de un aeródromo ya pintado,
+    // una vez que se conocen coordenadas más completas (llamado desde _generate
+    // tras bajar el CSV de OurAirports para todo el set con METAR).
+    _refreshNearbyChips(icao) {
+        const section = document.getElementById(`ap-metar-${icao}`);
+        if (!section) return;
+        const emptyMsg = section.querySelector('.empty-msg');
+        if (!emptyMsg) return; // ya tiene METAR real por otra vía; nada que reemplazar
+        section.querySelectorAll('.sub-chips-label, .sub-chips').forEach(el => el.remove());
+        emptyMsg.insertAdjacentHTML('afterend', this._nearbyChipsHtml(icao));
     },
 
     _metarChips(m) {
