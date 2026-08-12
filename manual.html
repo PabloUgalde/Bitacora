@@ -1266,6 +1266,26 @@
                 <li>Para saber por dónde partir: mira el gráfico del manual y elige cualquier esquina como vértice 1 — desde ahí, carga el resto de las esquinas <strong>en el orden en que las recorrerías con el dedo</strong> siguiendo el borde de la figura, sin saltar de un lado a otro. La vista previa se va dibujando a medida que agregas vértices, así confirmas visualmente que el contorno coincide con el del manual antes de guardar.</li>
                 <li>Se necesitan al menos 3 vértices por categoría para formar un polígono.</li>
             </ul>
+            <figure style="margin:16px 0 20px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 12px;text-align:center">
+                <svg viewBox="0 0 400 300" style="width:100%;max-width:420px;height:auto" role="img" aria-label="Ejemplo de envolvente CG con vértices numerados en orden de carga">
+                    <line x1="60" y1="20" x2="60" y2="260" stroke="var(--muted)" stroke-width="1.5"></line>
+                    <line x1="60" y1="260" x2="380" y2="260" stroke="var(--muted)" stroke-width="1.5"></line>
+                    <polygon points="90,230 110,140 170,60 320,60 320,230" fill="rgba(212,175,55,0.18)" stroke="var(--primary)" stroke-width="2"></polygon>
+                    <circle cx="90" cy="230" r="13" fill="var(--primary)"></circle>
+                    <text x="90" y="234" text-anchor="middle" font-size="13" font-weight="700" fill="#121212">1</text>
+                    <circle cx="110" cy="140" r="13" fill="var(--primary)"></circle>
+                    <text x="110" y="144" text-anchor="middle" font-size="13" font-weight="700" fill="#121212">2</text>
+                    <circle cx="170" cy="60" r="13" fill="var(--primary)"></circle>
+                    <text x="170" y="64" text-anchor="middle" font-size="13" font-weight="700" fill="#121212">3</text>
+                    <circle cx="320" cy="60" r="13" fill="var(--primary)"></circle>
+                    <text x="320" y="64" text-anchor="middle" font-size="13" font-weight="700" fill="#121212">4</text>
+                    <circle cx="320" cy="230" r="13" fill="var(--primary)"></circle>
+                    <text x="320" y="234" text-anchor="middle" font-size="13" font-weight="700" fill="#121212">5</text>
+                    <text x="20" y="140" text-anchor="middle" font-size="12" fill="var(--muted)" transform="rotate(-90 20 140)">Peso (lbs)</text>
+                    <text x="220" y="285" text-anchor="middle" font-size="12" fill="var(--muted)">Posición CG (in)</text>
+                </svg>
+                <figcaption style="font-size:12px;color:var(--muted);margin-top:8px">Ejemplo: vértice 1 en cualquier esquina, y de ahí en orden siguiendo el borde (1→2→3→4→5) hasta cerrar la figura — así se cargan las filas de la tabla.</figcaption>
+            </figure>
 
             <h3 id="envuelo-cx3">🔢 Computador de vuelo CX-3 <span class="ev-pro">PRO</span></h3>
             <p>Un computador de vuelo completo tipo CX-3, pensado para planificación y para practicar de cara a exámenes DGAC: altitud de presión y densidad, TAS/Mach, corrección de viento, componentes de pista, tiempo-velocidad-distancia, combustible y autonomía, rumbo compás, planeo, ascenso/descenso, patrones de espera, atmósfera estándar, base de nubes, conversiones y cronómetro.</p>
