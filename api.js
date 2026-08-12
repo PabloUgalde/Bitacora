@@ -774,6 +774,8 @@ const api = {
                         plan:              data.plan || 'lite',
                         planExpiresAt:     data.plan_expires_at || null,
                         trial_used:        !!data.trial_used,
+                        flowSubscriptionStatus: data.flow_subscription_status || null,
+                        flowCardLast4:          data.flow_card_last4 || null,
                         personal: {
                             'profile-pais':       data.pais || local?.personal?.['profile-pais'] || 'CL',
                             'profile-nombre':     data.full_name || local?.personal?.['profile-nombre'] || '',

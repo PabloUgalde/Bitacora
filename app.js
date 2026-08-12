@@ -51,6 +51,37 @@ const app = {
                 ui.showCheckoutResult('cancelled');
                 window.history.replaceState({}, '', window.location.pathname);
             }
+            const subscription = urlParams.get('subscription');
+            if (subscription === 'success') {
+                // Primer cobro ya confirmado (síncrono en subscription/create) — Pro otorgado.
+                const updatedProfile = await api.loadProfile();
+                if (updatedProfile) userProfile = { ...userProfile, ...updatedProfile };
+                plan.apply();
+                app.loadSettings();
+                ui.showCheckoutResult('success', {
+                    planLabel: 'Pro',
+                    autopay: true,
+                    expiresAt: userProfile.planExpiresAt
+                        ? new Date(userProfile.planExpiresAt).toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric' })
+                        : null,
+                });
+                window.history.replaceState({}, '', window.location.pathname);
+            } else if (subscription === 'pending') {
+                // Tarjeta registrada; el primer cobro llega async por webhook.
+                // No se otorga Pro acá — evita mostrar éxito antes de confirmar el cobro real.
+                const updatedProfile = await api.loadProfile();
+                if (updatedProfile) userProfile = { ...userProfile, ...updatedProfile };
+                plan.apply();
+                app.loadSettings();
+                ui.showNotification('Tarjeta registrada. Confirmando tu primer cobro…', 'info');
+                window.history.replaceState({}, '', window.location.pathname);
+            } else if (subscription === 'failed') {
+                ui.showNotification('No se pudo registrar la tarjeta. Intenta nuevamente.', 'error');
+                window.history.replaceState({}, '', window.location.pathname);
+            }
+            if (urlParams.get('couponInvalid') === '1') {
+                ui.showNotification('El código de descuento no era válido — se activó sin descuento.', 'error');
+            }
             // Redirigido desde una herramienta Pro (CX-3 / EasyPlan) sin plan
             if (urlParams.get('upgrade') === 'envuelo') {
                 plan.showUpgradeScreen();
@@ -1002,13 +1033,25 @@ const app = {
                 const expires = userProfile.planExpiresAt
                     ? `Vence: ${new Date(userProfile.planExpiresAt).toLocaleDateString('es-CL')}`
                     : 'Sin vencimiento';
+
+                let autopayNote = '';
+                let cancelBtn = '';
+                if (plan.isSubscribed()) {
+                    autopayNote = `<div style="color:#4a9a4a; font-size:12px;">Cargo automático activo</div>`;
+                    cancelBtn = `<button onclick="plan.cancelSubscription()" style="margin-left:auto; background:transparent; border:1px solid #333; color:#888; border-radius:6px; padding:6px 12px; font-size:12px; cursor:pointer;">Cancelar suscripción</button>`;
+                } else if (userProfile.flowSubscriptionStatus === 'cancelled') {
+                    autopayNote = `<div style="color:#888; font-size:12px;">Cargo automático cancelado — se cancelará al vencer</div>`;
+                }
+
                 planDisplay.innerHTML = `
                     <div style="display:flex; align-items:center; gap:12px; padding:12px 16px; background:#1c1a10; border:1px solid #c9a84c; border-radius:8px;">
                         <span style="font-size:20px;">✈</span>
                         <div>
                             <div style="color:#c9a84c; font-weight:700; font-size:15px;">Plan Pro</div>
                             <div style="color:#888; font-size:12px;">${expires}</div>
+                            ${autopayNote}
                         </div>
+                        ${cancelBtn}
                     </div>`;
             } else {
                 planDisplay.innerHTML = `

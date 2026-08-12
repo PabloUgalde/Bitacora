@@ -462,18 +462,26 @@ createFlightObject: (data) => {
         document.getElementById('local-flight-count').textContent = count;
         modal.classList.add('open');
     },
-        showCheckoutResult: (type) => {
+        showCheckoutResult: (type, detail) => {
         const overlay = document.createElement('div');
         overlay.id = 'checkout-result-overlay';
 
         const isSuccess = type === 'success';
+        const detailRows = (isSuccess && detail) ? `
+                <div class="checkout-result-detail">
+                    ${detail.planLabel ? `<div><span>Plan</span><strong>${detail.planLabel}</strong></div>` : ''}
+                    ${detail.autopay ? `<div><span>Renovación</span><strong>Automática</strong></div>` : ''}
+                    ${detail.expiresAt ? `<div><span>${detail.autopay ? 'Próximo cobro' : 'Vence'}</span><strong>${detail.expiresAt}</strong></div>` : ''}
+                </div>` : '';
+
         overlay.innerHTML = `
             <div class="checkout-result-card">
                 <div class="checkout-result-icon">${isSuccess ? '✈' : '✕'}</div>
                 <h2>${isSuccess ? '¡Bienvenido a Pro!' : 'Pago cancelado'}</h2>
-                <p>${isSuccess 
-                    ? 'Tu suscripción está activa. Ahora tienes acceso completo a todas las funciones de la bitácora.' 
+                <p>${isSuccess
+                    ? 'Tu suscripción está activa. Ahora tienes acceso completo a todas las funciones de la bitácora.'
                     : 'No se realizó ningún cobro. Puedes intentarlo nuevamente cuando quieras.'}</p>
+                ${detailRows}
                 <button onclick="document.getElementById('checkout-result-overlay').remove()">
                     ${isSuccess ? 'Comenzar →' : 'Volver al dashboard'}
                 </button>
@@ -506,8 +514,18 @@ createFlightObject: (data) => {
             }
             .checkout-result-card p {
                 color: #888; font-size: 14px;
-                line-height: 1.6; margin-bottom: 24px;
+                line-height: 1.6; margin-bottom: 16px;
             }
+            .checkout-result-detail {
+                background: #111; border: 1px solid #333; border-radius: 10px;
+                padding: 12px 16px; margin-bottom: 20px; text-align: left;
+            }
+            .checkout-result-detail div {
+                display: flex; justify-content: space-between;
+                font-size: 13px; padding: 4px 0;
+            }
+            .checkout-result-detail span { color: #888; }
+            .checkout-result-detail strong { color: #c9a84c; }
             .checkout-result-card button {
                 background: ${isSuccess ? '#c9a84c' : 'transparent'};
                 color: ${isSuccess ? '#000' : '#888'};
