@@ -526,8 +526,9 @@ const pesoBalance = {
         const ac = this._formAc;
         const isEdit = !!ac;
         const mode = ac?.envelopeMode || 'moment';
-        const envKey = ac?.limits?.cgEnvelopeUtility ? 'Utilitaria' : 'Normal';
-        const env = ac?.limits?.cgEnvelopeUtility || ac?.limits?.cgEnvelopeNormal || [];
+        const envNormalData = ac?.limits?.cgEnvelopeNormal || [];
+        const envUtilData = ac?.limits?.cgEnvelopeUtility || [];
+        const hasUtil = envUtilData.length > 0;
         const emptyCg = ac ? (ac.emptyMoment_lb_in / ac.emptyWeight_lbs) : null;
         const lbPerGal = ac ? Math.round(1 / ac.fuel_gallons_per_lbs * 10) / 10 : 6;
 
@@ -536,31 +537,56 @@ const pesoBalance = {
             { name: 'Combustible Usable (Gal)', arm_in: 48.0, id: 'fuel', type: 'paired_fuel', max_gallons: 40 },
             { name: 'Equipaje', arm_in: 95.0, id: 'baggage1', type: 'paired_weight', max_lbs: 120 },
         ];
-        const envRows = env.length ? env : [
+        const envNormalRows = envNormalData.length ? envNormalData : [
+            { weight: '', fwd_in: '', aft_in: '' },
+            { weight: '', fwd_in: '', aft_in: '' },
+        ];
+        const envUtilRows = envUtilData.length ? envUtilData : [
             { weight: '', fwd_in: '', aft_in: '' },
             { weight: '', fwd_in: '', aft_in: '' },
         ];
 
         const stRow = (st = {}) => `
-            <div class="pbf-st-row" style="display:flex;gap:6px;margin-bottom:6px;align-items:center">
-                <input type="text" class="pbf-st-name" placeholder="Nombre (ej: Piloto y Pasajero)" value="${this._esc(st.name || '')}" style="flex:2;min-width:0">
-                <input type="number" class="pbf-st-arm" placeholder="Brazo in" step="0.1" value="${st.arm_in ?? ''}" style="flex:1;min-width:0">
-                <select class="pbf-st-type" style="flex:1.4;min-width:0">
-                    <option value="paired_weight" ${st.type !== 'paired_fuel' && st.type !== 'single_weight' ? 'selected' : ''}>Peso (lbs/kg)</option>
-                    <option value="paired_fuel" ${st.type === 'paired_fuel' ? 'selected' : ''}>Combustible (gal/l)</option>
-                    <option value="single_weight" ${st.type === 'single_weight' ? 'selected' : ''}>Fijo (ej: aceite)</option>
-                </select>
-                <input type="number" class="pbf-st-max" placeholder="Máx" step="0.1"
-                       value="${st.type === 'paired_fuel' ? (st.max_gallons ?? '') : st.type === 'single_weight' ? (st.default_value ?? '') : (st.max_lbs ?? '')}"
-                       title="Peso: máx lbs · Combustible: capacidad gal · Fijo: valor lbs" style="flex:0.9;min-width:0">
+            <div class="pbf-st-row" style="display:flex;gap:6px;margin-bottom:6px;align-items:flex-end;flex-wrap:wrap">
+                <div class="pbf-field pbf-field-wide" style="flex:2;min-width:150px">
+                    <label class="pbf-mini-label">Nombre</label>
+                    <input type="text" class="pbf-st-name" placeholder="Ej: Piloto y Pasajero" value="${this._esc(st.name || '')}" style="width:100%;min-width:0">
+                </div>
+                <div class="pbf-field" style="flex:1;min-width:100px">
+                    <label class="pbf-mini-label" title="Distancia en pulgadas desde el datum de referencia del avión (informe de masa y centrado / Weight &amp; Balance del POH)">Brazo (in)</label>
+                    <input type="number" class="pbf-st-arm" placeholder="Brazo in" step="0.1" value="${st.arm_in ?? ''}" style="width:100%;min-width:0">
+                </div>
+                <div class="pbf-field" style="flex:1.4;min-width:130px">
+                    <label class="pbf-mini-label">Tipo</label>
+                    <select class="pbf-st-type" style="width:100%;min-width:0">
+                        <option value="paired_weight" ${st.type !== 'paired_fuel' && st.type !== 'single_weight' ? 'selected' : ''}>Peso (lbs/kg)</option>
+                        <option value="paired_fuel" ${st.type === 'paired_fuel' ? 'selected' : ''}>Combustible (gal/l)</option>
+                        <option value="single_weight" ${st.type === 'single_weight' ? 'selected' : ''}>Fijo (ej: aceite)</option>
+                    </select>
+                </div>
+                <div class="pbf-field" style="flex:0.9;min-width:90px">
+                    <label class="pbf-mini-label" title="Peso: máx lbs · Combustible: capacidad gal · Fijo: valor lbs">Máx</label>
+                    <input type="number" class="pbf-st-max" placeholder="Máx" step="0.1"
+                           value="${st.type === 'paired_fuel' ? (st.max_gallons ?? '') : st.type === 'single_weight' ? (st.default_value ?? '') : (st.max_lbs ?? '')}"
+                           title="Peso: máx lbs · Combustible: capacidad gal · Fijo: valor lbs" style="width:100%;min-width:0">
+                </div>
                 <button type="button" class="btn-link pbf-st-del" style="color:var(--red)">✕</button>
             </div>`;
 
         const envRow = (p = {}) => `
-            <div class="pbf-env-row" style="display:flex;gap:6px;margin-bottom:6px;align-items:center">
-                <input type="number" class="pbf-env-w" placeholder="Peso lbs" step="1" value="${p.weight ?? ''}" style="flex:1;min-width:0">
-                <input type="number" class="pbf-env-f" placeholder="Lím. delantero in" step="0.01" value="${p.fwd_in ?? ''}" style="flex:1;min-width:0">
-                <input type="number" class="pbf-env-a" placeholder="Lím. trasero in" step="0.01" value="${p.aft_in ?? ''}" style="flex:1;min-width:0">
+            <div class="pbf-env-row" style="display:flex;gap:6px;margin-bottom:6px;align-items:flex-end;flex-wrap:wrap">
+                <div class="pbf-field" style="flex:1;min-width:100px">
+                    <label class="pbf-mini-label">Peso (lbs)</label>
+                    <input type="number" class="pbf-env-w" placeholder="Peso lbs" step="1" value="${p.weight ?? ''}" style="width:100%;min-width:0">
+                </div>
+                <div class="pbf-field" style="flex:1;min-width:100px">
+                    <label class="pbf-mini-label">Lím. delantero (in)</label>
+                    <input type="number" class="pbf-env-f" placeholder="Lím. delantero in" step="0.01" value="${p.fwd_in ?? ''}" style="width:100%;min-width:0">
+                </div>
+                <div class="pbf-field" style="flex:1;min-width:100px">
+                    <label class="pbf-mini-label">Lím. trasero (in)</label>
+                    <input type="number" class="pbf-env-a" placeholder="Lím. trasero in" step="0.01" value="${p.aft_in ?? ''}" style="width:100%;min-width:0">
+                </div>
                 <button type="button" class="btn-link pbf-env-del" style="color:var(--red)">✕</button>
             </div>`;
 
@@ -625,6 +651,13 @@ const pesoBalance = {
 
                 <fieldset class="pb-fieldset">
                     <legend>Estaciones de carga (brazos del POH)</legend>
+                    <div class="pbf-st-head" style="display:flex;gap:6px;margin-bottom:6px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em">
+                        <span style="flex:2">Nombre</span>
+                        <span style="flex:1" title="Distancia en pulgadas desde el datum de referencia del avión (informe de masa y centrado / Weight &amp; Balance del POH)">Brazo (in)</span>
+                        <span style="flex:1.4">Tipo</span>
+                        <span style="flex:0.9" title="Peso → tope en lbs · Combustible → capacidad en galones · Fijo → valor constante en lbs">Máx (según tipo)</span>
+                        <span style="width:22px"></span>
+                    </div>
                     <div id="pbf-stations">${stations.map(stRow).join('')}</div>
                     <button type="button" class="btn-link" id="pbf-add-st">+ Agregar estación</button>
                 </fieldset>
@@ -634,15 +667,46 @@ const pesoBalance = {
                     <p style="font-size:12px;color:var(--muted);margin-bottom:10px">
                         Copia la tabla "C.G. Limits" del manual: para cada peso, el límite
                         delantero y trasero <strong>en pulgadas</strong>. Si el manual solo trae
-                        gráfico, lee 3–4 puntos (pesos bajo, medio y máximo). El gráfico de la
-                        envolvente se dibuja automáticamente con estos puntos.</p>
-                    <div class="pb-input-group"><label>Categoría</label>
-                        <select id="pbf-cat">
-                            <option ${envKey === 'Normal' ? 'selected' : ''}>Normal</option>
-                            <option ${envKey === 'Utilitaria' ? 'selected' : ''}>Utilitaria</option>
-                        </select></div>
-                    <div id="pbf-env">${envRows.map(envRow).join('')}</div>
-                    <button type="button" class="btn-link" id="pbf-add-env">+ Agregar punto</button>
+                        gráfico, lee 3–4 puntos (pesos bajo, medio y máximo). Muchos manuales
+                        traen dos tablas — Normal y Utilitaria (esta última con límites más
+                        estrictos, ej: sin pasajeros traseros) — carga las que tenga tu avión;
+                        el gráfico las dibuja juntas para que veas en cuál queda tu carga.</p>
+
+                    <p style="font-size:12px;font-weight:600;margin-bottom:8px">Categoría Normal</p>
+                    <div class="pbf-env-head" style="display:flex;gap:6px;margin-bottom:6px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em">
+                        <span style="flex:1">Peso (lbs)</span>
+                        <span style="flex:1">Lím. delantero (in)</span>
+                        <span style="flex:1">Lím. trasero (in)</span>
+                        <span style="width:22px"></span>
+                    </div>
+                    <div id="pbf-env-normal">${envNormalRows.map(envRow).join('')}</div>
+                    <button type="button" class="btn-link" id="pbf-add-env-normal">+ Agregar punto</button>
+
+                    <div class="ll-checkbox-row" style="margin:16px 0 4px">
+                        <input type="checkbox" id="pbf-has-util" ${hasUtil ? 'checked' : ''}>
+                        <label for="pbf-has-util">Este avión también tiene categoría Utilitaria (opcional)</label>
+                    </div>
+                    <div id="pbf-env-util-block" style="${hasUtil ? '' : 'display:none'};margin-top:10px">
+                        <p style="font-size:12px;font-weight:600;margin-bottom:8px">Categoría Utilitaria</p>
+                        <div class="pb-input-group"><label>Peso máx. en Utilitaria (lbs, opcional si es igual al MTOW)</label>
+                            <input type="number" id="pbf-util-maxw" step="1" value="${ac?.limits?.maxUtilityWeight_lbs ?? ''}"></div>
+                        <div class="pbf-env-head" style="display:flex;gap:6px;margin-bottom:6px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em">
+                            <span style="flex:1">Peso (lbs)</span>
+                            <span style="flex:1">Lím. delantero (in)</span>
+                            <span style="flex:1">Lím. trasero (in)</span>
+                            <span style="width:22px"></span>
+                        </div>
+                        <div id="pbf-env-utility">${envUtilRows.map(envRow).join('')}</div>
+                        <button type="button" class="btn-link" id="pbf-add-env-utility">+ Agregar punto</button>
+                    </div>
+
+                    <div style="margin-top:14px">
+                        <p style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin-bottom:6px">Vista previa</p>
+                        <div id="pbf-env-chart-wrap" style="position:relative;height:180px;display:none">
+                            <canvas id="pbf-env-canvas"></canvas>
+                        </div>
+                        <p id="pbf-env-empty" style="font-size:12px;color:var(--muted);text-align:center">Agrega al menos 2 puntos (Normal o Utilitaria) para ver el gráfico.</p>
+                    </div>
                 </fieldset>
 
                 <button class="pb-calc-btn" id="pbf-save">${isEdit ? 'Guardar cambios' : 'Crear aeronave'}</button>
@@ -658,10 +722,11 @@ const pesoBalance = {
             const cg = el.querySelector('input[name="pbf-mode"]:checked').value === 'cg';
             el.querySelector('#pbf-moment-wrap').style.display = cg ? 'none' : '';
             el.querySelector('#pbf-cg-wrap').style.display = cg ? '' : 'none';
+            this._updateEnvPreview(el);
         }));
         const wireRowDel = () => {
             el.querySelectorAll('.pbf-st-del, .pbf-env-del').forEach(b => {
-                b.onclick = () => b.parentElement.remove();
+                b.onclick = () => { b.parentElement.remove(); this._updateEnvPreview(el); };
             });
         };
         wireRowDel();
@@ -669,11 +734,95 @@ const pesoBalance = {
             el.querySelector('#pbf-stations').insertAdjacentHTML('beforeend', stRow());
             wireRowDel();
         });
-        el.querySelector('#pbf-add-env').addEventListener('click', () => {
-            el.querySelector('#pbf-env').insertAdjacentHTML('beforeend', envRow());
+        el.querySelector('#pbf-add-env-normal').addEventListener('click', () => {
+            el.querySelector('#pbf-env-normal').insertAdjacentHTML('beforeend', envRow());
             wireRowDel();
+            this._updateEnvPreview(el);
         });
+        el.querySelector('#pbf-add-env-utility').addEventListener('click', () => {
+            el.querySelector('#pbf-env-utility').insertAdjacentHTML('beforeend', envRow());
+            wireRowDel();
+            this._updateEnvPreview(el);
+        });
+        el.querySelector('#pbf-has-util').addEventListener('change', (e) => {
+            el.querySelector('#pbf-env-util-block').style.display = e.target.checked ? '' : 'none';
+            this._updateEnvPreview(el);
+        });
+        el.querySelector('#pbf-env-normal').addEventListener('input', () => this._updateEnvPreview(el));
+        el.querySelector('#pbf-env-utility').addEventListener('input', () => this._updateEnvPreview(el));
         el.querySelector('#pbf-save').addEventListener('click', () => this._saveForm(el));
+        this._updateEnvPreview(el);
+    },
+
+    // Lee los puntos válidos (peso+delantero+trasero) de una tabla de envolvente en el form.
+    _readEnvTable(el, containerSel) {
+        const env = [];
+        for (const row of el.querySelectorAll(`${containerSel} .pbf-env-row`)) {
+            const w = parseFloat(row.querySelector('.pbf-env-w').value);
+            const f = parseFloat(row.querySelector('.pbf-env-f').value);
+            const a = parseFloat(row.querySelector('.pbf-env-a').value);
+            if (isNaN(w) || isNaN(f) || isNaN(a)) continue;
+            env.push({ weight: w, fwd_in: f, aft_in: a });
+        }
+        env.sort((x, y) => x.weight - y.weight);
+        return env;
+    },
+
+    // Dibuja en vivo ambas categorías (Normal + Utilitaria si está activada) superpuestas
+    // en el mismo gráfico, igual que la vista de resultados final (_drawChart).
+    _updateEnvPreview(el) {
+        const envNormal = this._readEnvTable(el, '#pbf-env-normal');
+        const envUtil = el.querySelector('#pbf-has-util').checked ? this._readEnvTable(el, '#pbf-env-utility') : [];
+
+        const wrap = el.querySelector('#pbf-env-chart-wrap');
+        const empty = el.querySelector('#pbf-env-empty');
+        if (this._envPreviewChart) { try { this._envPreviewChart.destroy(); } catch {} this._envPreviewChart = null; }
+
+        const datasets = [];
+        const mode = el.querySelector('input[name="pbf-mode"]:checked').value;
+        const canvas = el.querySelector('#pbf-env-canvas');
+        const ctx = canvas.getContext('2d');
+
+        if (envUtil.length >= 2) {
+            const g = ctx.createLinearGradient(0, 0, 0, 180);
+            g.addColorStop(0, 'rgba(212,175,55,0.30)'); g.addColorStop(1, 'rgba(212,175,55,0.04)');
+            datasets.push({ label: 'Cat. Utilitaria', data: this._envPolygon(envUtil, mode),
+                borderColor: '#D4AF37', backgroundColor: g, borderWidth: 2, fill: true,
+                pointRadius: 3, pointBackgroundColor: '#D4AF37', tension: 0 });
+        }
+        if (envNormal.length >= 2) {
+            const g = ctx.createLinearGradient(0, 0, 0, 180);
+            g.addColorStop(0, 'rgba(180,180,180,0.18)'); g.addColorStop(1, 'rgba(180,180,180,0.02)');
+            datasets.push({ label: 'Cat. Normal', data: this._envPolygon(envNormal, mode),
+                borderColor: 'rgba(200,200,200,0.7)', backgroundColor: g, borderWidth: 1.5,
+                borderDash: [6, 3], fill: true, pointRadius: 3,
+                pointBackgroundColor: 'rgba(200,200,200,0.9)', tension: 0 });
+        }
+
+        if (!datasets.length) {
+            wrap.style.display = 'none';
+            empty.style.display = 'block';
+            return;
+        }
+        wrap.style.display = 'block';
+        empty.style.display = 'none';
+
+        this._envPreviewChart = new Chart(ctx, {
+            type: 'line',
+            data: { datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false, animation: { duration: 200 },
+                scales: {
+                    x: { type: 'linear', position: 'bottom',
+                        title: { display: true, text: mode === 'cg' ? 'Posición CG (in)' : 'Momento / 1000 (lb·in)', color: '#888', font: { size: 11 } },
+                        ticks: { color: '#555', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.06)' } },
+                    y: { type: 'linear',
+                        title: { display: true, text: 'Peso (lbs)', color: '#888', font: { size: 11 } },
+                        ticks: { color: '#555', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.06)' } }
+                },
+                plugins: { legend: { display: datasets.length > 1, labels: { color: '#888', font: { size: 11 } } } }
+            }
+        });
     },
 
     async _saveForm(el) {
@@ -747,23 +896,38 @@ const pesoBalance = {
         }
         if (!stations.length) return err('Agrega al menos una estación.');
 
-        // Envolvente
-        const env = [];
-        for (const row of el.querySelectorAll('.pbf-env-row')) {
-            const w = parseFloat(row.querySelector('.pbf-env-w').value);
-            const f = parseFloat(row.querySelector('.pbf-env-f').value);
-            const a = parseFloat(row.querySelector('.pbf-env-a').value);
-            if (isNaN(w) && isNaN(f) && isNaN(a)) continue;
-            if (isNaN(w) || isNaN(f) || isNaN(a)) return err('Cada punto de envolvente necesita peso, límite delantero y trasero.');
-            if (f >= a) return err(`En el punto de ${w} lbs, el límite delantero (${f}) debe ser menor que el trasero (${a}).`);
-            env.push({ weight: w, fwd_in: f, aft_in: a });
+        // Envolvente — categoría Normal (obligatoria) + Utilitaria (opcional)
+        const parseEnvTable = (containerSel, label) => {
+            const rows = [];
+            for (const row of el.querySelectorAll(`${containerSel} .pbf-env-row`)) {
+                const w = parseFloat(row.querySelector('.pbf-env-w').value);
+                const f = parseFloat(row.querySelector('.pbf-env-f').value);
+                const a = parseFloat(row.querySelector('.pbf-env-a').value);
+                if (isNaN(w) && isNaN(f) && isNaN(a)) continue;
+                if (isNaN(w) || isNaN(f) || isNaN(a)) throw new Error(`Cada punto de la envolvente ${label} necesita peso, límite delantero y trasero.`);
+                if (f >= a) throw new Error(`En ${label}, el punto de ${w} lbs tiene el límite delantero (${f}) mayor o igual al trasero (${a}).`);
+                rows.push({ weight: w, fwd_in: f, aft_in: a });
+            }
+            rows.sort((x, y) => x.weight - y.weight);
+            return rows;
+        };
+        const hasUtilChecked = el.querySelector('#pbf-has-util').checked;
+        let envNormal, envUtil = [];
+        try {
+            envNormal = parseEnvTable('#pbf-env-normal', 'Normal');
+            if (hasUtilChecked) envUtil = parseEnvTable('#pbf-env-utility', 'Utilitaria');
+        } catch (e) {
+            return err(e.message);
         }
-        if (env.length < 2) return err('La envolvente necesita al menos 2 puntos (ej: peso mínimo y MTOW).');
-        env.sort((x, y) => x.weight - y.weight);
+        if (envNormal.length < 2) return err('La envolvente Normal necesita al menos 2 puntos (ej: peso mínimo y MTOW).');
+        if (hasUtilChecked && envUtil.length < 2) return err('Marcaste categoría Utilitaria pero le faltan puntos — agrega al menos 2, o desmarca la casilla.');
 
-        const cat = el.querySelector('#pbf-cat').value;
-        const limits = { maxTakeOffWeight_lbs: mtow, defaultCategory: cat };
-        limits[cat === 'Utilitaria' ? 'cgEnvelopeUtility' : 'cgEnvelopeNormal'] = env;
+        const limits = { maxTakeOffWeight_lbs: mtow, cgEnvelopeNormal: envNormal, defaultCategory: 'Normal' };
+        if (envUtil.length >= 2) {
+            limits.cgEnvelopeUtility = envUtil;
+            const utilMaxW = num('#pbf-util-maxw');
+            if (utilMaxW > 0) limits.maxUtilityWeight_lbs = utilMaxW;
+        }
 
         const ac = {
             id: this._formAc?.id || 'u_' + Date.now().toString(36),

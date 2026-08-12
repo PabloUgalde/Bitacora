@@ -6,6 +6,7 @@
 
 .desktop-only { display: block !important; }
 .mobile-only { display: none !important; }
+.pbf-mini-label { display: none; font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; margin-bottom: 2px; }
 
 #hamburger-btn {
     display: none;
@@ -97,6 +98,18 @@
 /* ====================================================================== */
 
 @media (max-width: 800px) {
+
+    /* --- PESO Y BALANCE: formulario crear/editar aeronave --- */
+    .pbf-st-head, .pbf-env-head { display: none !important; }
+    .pbf-mini-label { display: block; }
+    .pbf-st-row, .pbf-env-row {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px !important;
+        align-items: end !important;
+    }
+    .pbf-field-wide { grid-column: 1 / -1; }
+    .pbf-st-del, .pbf-env-del { justify-self: end; align-self: end; }
 
     /* --- VISIBILIDAD --- */
     .desktop-only { display: none !important; }
