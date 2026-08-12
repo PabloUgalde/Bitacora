@@ -895,6 +895,7 @@ function convUnit(){
   var nextUnit=field.units[nextIdx];
 
   // Convert stored value if present
+  var converted_ok=true;
   if(isTimeUnit(curUnit)&&isTimeUnit(nextUnit)){
     var hrs=timeToHr(fnData[field.id],curUnit);
     if(isFinite(hrs)&&!isNaN(hrs))fnData[field.id]=hrToUnit(hrs,nextUnit);
@@ -909,10 +910,13 @@ function convUnit(){
         var converted=convFn(val);
         if(Math.abs(converted)>=10) fnData[field.id]=fmt(Math.round(converted*100)/100);
         else fnData[field.id]=fmt(Math.round(converted*1000)/1000);
+      } else {
+        // No conversion path found: refuse to relabel — a mismatched unit+value is worse than an unchanged one
+        converted_ok=false;
       }
     }
   }
-  field.unit=nextUnit;
+  if(converted_ok)field.unit=nextUnit;
   runFnCalc();
   renderFn();
 }
@@ -932,6 +936,7 @@ function setUnitGlobal(){
   var nextIdx=(curIdx+1)%field.units.length;
   var nextUnit=field.units[nextIdx];
   // Convert stored value (same as convUnit)
+  var converted_ok=true;
   if(isTimeUnit(curUnit)&&isTimeUnit(nextUnit)){
     var hrs=timeToHr(fnData[field.id],curUnit);
     if(isFinite(hrs)&&!isNaN(hrs))fnData[field.id]=hrToUnit(hrs,nextUnit);
@@ -940,12 +945,15 @@ function setUnitGlobal(){
     if(ok(val)){
       var convFn=(UC[curUnit]&&UC[curUnit][nextUnit])||(field.unitConv&&field.unitConv[curUnit]&&field.unitConv[curUnit][nextUnit]);
       if(convFn){var cv=convFn(val);fnData[field.id]=fmt(Math.abs(cv)>=10?Math.round(cv*100)/100:Math.round(cv*1000)/1000);}
+      else converted_ok=false;
     }
   }
-  field.unit=nextUnit;
-  // Store global preference — keyed by sorted unit list so all fields with same options share it
-  var key=field.units.slice().sort().join('|');
-  globalUnitPref[key]=nextUnit;
+  if(converted_ok){
+    field.unit=nextUnit;
+    // Store global preference — keyed by sorted unit list so all fields with same options share it
+    var key=field.units.slice().sort().join('|');
+    globalUnitPref[key]=nextUnit;
+  }
   runFnCalc();renderFn();
 }
 
@@ -1137,7 +1145,14 @@ var FNS={
         },
         out:false},
       {id:'dur',  lbl:'Dur',  unit:'HR',   units:['HR','HMS','S','MIN'], out:false},
-      {id:'rate', lbl:'Rate', unit:'US GPH',units:['US GPH','IMP GPH','LPH','PPH'],out:false},
+      {id:'rate', lbl:'Rate', unit:'US GPH',units:['US GPH','IMP GPH','LPH','PPH'],
+        unitConv:{
+          'US GPH':{'IMP GPH':function(x){return x*0.832674;},'LPH':function(x){return x*3.78541;},'PPH':function(x){return x*6.0;}},
+          'IMP GPH':{'US GPH':function(x){return x/0.832674;},'LPH':function(x){return x*4.54609;},'PPH':function(x){return x*7.2;}},
+          'LPH':{'US GPH':function(x){return x/3.78541;},'IMP GPH':function(x){return x/4.54609;},'PPH':function(x){return x*1.5855;}},
+          'PPH':{'US GPH':function(x){return x/6.0;},'IMP GPH':function(x){return x/7.2;},'LPH':function(x){return x/1.5855;}},
+        },
+        out:false},
       {id:'wt',   lbl:'Wt',   unit:'LBS',  units:['LBS','KGS'], out:false},
       {id:'rateW',lbl:'Rate', unit:'LBS/HR',units:['LBS/HR','KGS/HR'], out:false},
       {id:'type', lbl:'Type', unit:'Av Gas',units:['Av Gas','Jet-A','Diesel'],
