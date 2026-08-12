@@ -719,6 +719,9 @@ const app = {
                 if (bitacoraDropdownMenu && bitacoraDropdownToggle && !bitacoraDropdownToggle.contains(e.target) && !bitacoraDropdownMenu.contains(e.target)) {
                     bitacoraDropdownMenu.classList.remove('active');
                 }
+                if (envueloDropdownMenu && envueloDropdownToggle && !envueloDropdownToggle.contains(e.target) && !envueloDropdownMenu.contains(e.target)) {
+                    envueloDropdownMenu.classList.remove('active');
+                }
                 if (sortDropdownMenu && sortDropdownToggle && !sortDropdownToggle.contains(e.target) && !sortDropdownMenu.contains(e.target)) {
                     sortDropdownMenu.classList.remove('active');
                 }
