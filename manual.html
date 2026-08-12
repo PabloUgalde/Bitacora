@@ -1246,7 +1246,7 @@
             <ul>
                 <li>Ingreso en <strong>lbs o kg</strong> y combustible en <strong>galones o litros</strong> — los campos se convierten solos.</li>
                 <li>Acepta sumas directas: escribe <code>80+75</code> en un campo y se calcula al salir.</li>
-                <li>Valida MTOW, límites de equipaje y envolvente CG por categoría (Normal / Utilitaria), con veredicto claro: <strong>DENTRO DE LÍMITES</strong> o <strong>NO DESPEGAR</strong>.</li>
+                <li>Valida MTOW, límites de equipaje y envolvente CG por categoría (Normal / Utilitaria / Acrobática), con veredicto claro: <strong>DENTRO DE LÍMITES</strong> o <strong>NO DESPEGAR</strong>.</li>
                 <li>Muestra el <strong>combustible máximo cargable</strong> según el peso sin combustible.</li>
                 <li>Gráfica de la envolvente CG con tu punto calculado.</li>
             </ul>
@@ -1258,6 +1258,14 @@
                 <span class="callout-icon">💡</span>
                 <span><strong>Plan Lite:</strong> una aeronave por día (puedes recalcularla las veces que quieras). <strong>Plan Pro:</strong> sin límite.</span>
             </div>
+
+            <h4>Agregar tu propia aeronave</h4>
+            <p>Si tu avión no está en el catálogo público, toca <strong>+ Crear propia</strong> y carga los datos de su manual de vuelo (POH) o informe de masa y centrado: pesos, estaciones (asientos, equipaje, combustible) y la envolvente CG de cada categoría que tenga tu avión — la mayoría trae al menos Normal, algunos suman Utilitaria y/o Acrobática.</p>
+            <ul>
+                <li>La envolvente se carga como una <strong>lista de vértices</strong> (peso + posición), uno por fila, en el mismo orden en que el gráfico de tu manual dibuja el contorno — no como una tabla de límite delantero/trasero por peso. Esto permite cargar formas con más de dos límites por peso, como suelen tener las envolventes de categoría Utilitaria o Acrobática.</li>
+                <li>Para saber por dónde partir: mira el gráfico del manual y elige cualquier esquina como vértice 1 — desde ahí, carga el resto de las esquinas <strong>en el orden en que las recorrerías con el dedo</strong> siguiendo el borde de la figura, sin saltar de un lado a otro. La vista previa se va dibujando a medida que agregas vértices, así confirmas visualmente que el contorno coincide con el del manual antes de guardar.</li>
+                <li>Se necesitan al menos 3 vértices por categoría para formar un polígono.</li>
+            </ul>
 
             <h3 id="envuelo-cx3">🔢 Computador de vuelo CX-3 <span class="ev-pro">PRO</span></h3>
             <p>Un computador de vuelo completo tipo CX-3, pensado para planificación y para practicar de cara a exámenes DGAC: altitud de presión y densidad, TAS/Mach, corrección de viento, componentes de pista, tiempo-velocidad-distancia, combustible y autonomía, rumbo compás, planeo, ascenso/descenso, patrones de espera, atmósfera estándar, base de nubes, conversiones y cronómetro.</p>
