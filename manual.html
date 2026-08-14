@@ -332,6 +332,7 @@
                 <a class="toc-link" href="#config-licencias">Licencias y habilitaciones</a>
                 <a class="toc-link" href="#config-dashboard">Personalizar dashboard</a>
                 <a class="toc-link" href="#config-horas">Formato de horas</a>
+                <a class="toc-link" href="#config-pagina">Formato de bitácora (vuelos por página)</a>
             </div>
             <div class="toc-section">
                 <div class="toc-section-title">En Vuelo</div>
@@ -1216,6 +1217,25 @@
             <div class="callout info">
                 <span class="callout-icon">💡</span>
                 <span>El formato de horas es una preferencia de visualización y no afecta los datos almacenados. Los vuelos se guardan siempre en decimal internamente.</span>
+            </div>
+        </section>
+
+        <!-- ─────────────────── FORMATO DE BITÁCORA (VUELOS POR PÁGINA) ─────────────────── -->
+        <section class="section" id="config-pagina">
+            <h2><span class="icon">📖</span> Configuración — Formato de bitácora física</h2>
+            <p>En <strong>Configuración → Formato de Bitácora</strong> defines cuántos vuelos caben por página en tu bitácora de papel. La app usa este dato para calcular sola el número de página al agregar un vuelo, guardar desde Live Log, importar un Excel o escanear con IA.</p>
+
+            <p>Las bitácoras DGAC actuales traen <strong>8 vuelos por página</strong>, y ese es el valor por defecto. Pero hay bitácoras de otros formatos o de años anteriores con más o menos filas por hoja — y algunos pilotos han usado más de una bitácora física a lo largo de su carrera, cada una con su propio formato.</p>
+
+            <ul>
+                <li>Cada fila del panel es un <strong>rango de páginas</strong>: "Desde página X" y cuántos vuelos por página tiene ese rango. El primer rango siempre empieza en la página 1.</li>
+                <li>Si tu bitácora nunca cambió de formato, basta con ajustar el número de vuelos por página del único rango.</li>
+                <li>Si en algún momento cambiaste de bitácora física, usa <strong>"+ Agregar cambio de formato"</strong> para agregar un rango nuevo, indicando desde qué número de página empezó a regir el nuevo formato.</li>
+            </ul>
+
+            <div class="callout info">
+                <span class="callout-icon">💡</span>
+                <span>Cambiar esta configuración no renumera los vuelos ya guardados — solo afecta la página que se asigna a los vuelos nuevos de ahí en adelante.</span>
             </div>
         </section>
 

@@ -495,22 +495,10 @@
 }
 
 /* ── Botones de configuración ──────────────────────────────────────── */
-.settings-save-btn {
-    width: auto !important;
-    padding: 10px 24px !important;
-    background-color: var(--primary-color) !important;
-    color: #000 !important;
-    transition: opacity 0.2s, background-color 0.2s !important;
-}
-.settings-save-btn:hover:not(:disabled) {
-    background-color: #e8c75a !important;
-}
-.settings-save-btn:disabled {
-    background-color: var(--secondary-color) !important;
-    color: var(--text-muted-color) !important;
-    cursor: not-allowed !important;
-    opacity: 0.6 !important;
-}
+/* .settings-save-btn ya no lleva estilo propio: la apariencia viene de
+   .btn-primary (sistema de botones unificado, style.css). La clase se
+   conserva solo como hook de app._setSettingsDirty() para habilitar/
+   deshabilitar el botón. */
 
 .settings-btn-primary {
     background: #c9a84c;

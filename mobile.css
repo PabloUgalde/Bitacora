@@ -25,12 +25,20 @@
 #logbook-controls .button-text { display: none; }
 
 #logbook-controls button,
-#logbook-controls .nav-dropdown > button {
+#logbook-controls .nav-dropdown > button,
+#logbook-controls > a {
     width: 44px; height: 44px; padding: 0; margin: 0; min-width: 44px;
     display: flex; align-items: center; justify-content: center;
     border-radius: var(--border-radius); border: 1px solid var(--border-color);
     background-color: var(--surface-color); transition: background-color 0.2s ease; cursor: pointer;
 }
+
+/* El "+" (agregar vuelo) es la única acción primaria del toolbar: gana a la regla gris de arriba por especificidad (#id > a.clase). */
+#logbook-controls > a.is-active {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+#logbook-controls > a.is-active:hover { background-color: var(--primary-hover-color); }
 
 #logbook-controls button::before,
 #logbook-controls .nav-dropdown > button::before {

@@ -9,7 +9,7 @@ App PWA de bitácora de vuelo para pilotos chilenos. Producción: **https://bita
 - **Email:** Resend (`noreply@bitacoradevuelo.cl`)
 - **Librería gráficos:** Chart.js (CDN)
 - **Excel/CSV:** SheetJS (CDN)
-- **PWA:** Service Worker `sw.js` (cache v2.38), `manifest.json`
+- **PWA:** Service Worker `sw.js` (cache v2.39), `manifest.json`
 
 ## Estructura de archivos clave
 
@@ -116,6 +116,7 @@ GEMINI_API_KEY   ← usado por la Edge Function gemini-ocr (nunca expuesto al cl
 - Estado global con `let` en `state.js` (no hay módulos ES ni bundler)
 - Campos y comentarios en español (domain language = DGAC)
 - Claves de Supabase son publicables (seguridad vía RLS + JWT)
+- **Sistema de botones unificado (13-ago-2026, `style.css`):** 5 clases — `.btn-primary` (dorado, una sola acción principal por pantalla/fila), `.btn-secondary` (outline neutro, default), `.btn-icon` (40×40, toolbars de tabla), `.btn-danger` (outline rojo, nunca relleno sólido) y `.btn-link` (texto dorado inline, acciones secundarias tipo "+ Agregar X"). Reemplazó a `.settings-btn-*` (custom-styles.css, dorado `#c9a84c` distinto al del resto de la app) y a estilos inline sueltos en Registro Detallado/modales de `app.js`/`data-importer.js`/`mi-cuenta.js`. No toca `.prev-btn`/`.next-btn`/`.submit-btn` (siguen usándose en el wizard de Agregar Vuelo) ni los botones propios de `en-vuelo.css` (Live Log, Peso y Balance) — esos son componentes táctiles grandes hechos a propósito para uso en vuelo, ya internos consistentes con el mismo dorado (`var(--gold)` = `var(--primary-color)`), evaluados y dejados intactos a propósito.
 
 ## Landing page (v2 HUD)
 

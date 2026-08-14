@@ -412,10 +412,10 @@ const app = {
         const paginationControls = document.getElementById('pagination-controls');
         if (paginationControls) {
             paginationControls.addEventListener('click', (e) => {
-                if (e.target.closest('.prev-btn') && !e.target.closest('.prev-btn').disabled) {
+                if (e.target.closest('[data-page-nav="prev"]') && !e.target.closest('[data-page-nav="prev"]').disabled) {
                     logbookState.currentPage--; render.detailedLog();
                 }
-                if (e.target.closest('.next-btn') && !e.target.closest('.next-btn').disabled) {
+                if (e.target.closest('[data-page-nav="next"]') && !e.target.closest('[data-page-nav="next"]').disabled) {
                     logbookState.currentPage++; render.detailedLog();
                 }
             });
@@ -557,17 +557,15 @@ const app = {
                 <p style="color:#aaa;font-size:13px;margin:0 0 0.5rem;">Para confirmar, escribe <strong style="color:#e57373;">ELIMINAR</strong>:</p>
                 <input type="text" id="del-all-input" autocomplete="off" autocapitalize="characters" style="width:100%;padding:10px 12px;background:#111;border:1px solid #333;border-radius:6px;color:#fff;font-size:14px;box-sizing:border-box;margin-bottom:1rem;">
                 <div style="display:flex;gap:12px;justify-content:flex-end;padding-top:1rem;border-top:1px solid #333;">
-                    <button id="del-all-cancel" class="prev-btn" style="padding:10px 20px;background:transparent;border:1px solid #444;">Cancelar</button>
-                    <button id="del-all-confirm" disabled style="padding:10px 24px;background:#c62828;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px;opacity:0.4;">Eliminar todo</button>
+                    <button id="del-all-cancel" class="btn-secondary">Cancelar</button>
+                    <button id="del-all-confirm" class="btn-danger" disabled>Eliminar todo</button>
                 </div>
             </div>`;
             document.body.appendChild(modal);
             const input = modal.querySelector('#del-all-input');
             const confirmBtn = modal.querySelector('#del-all-confirm');
             input.addEventListener('input', () => {
-                const ok = input.value.trim().toUpperCase() === 'ELIMINAR';
-                confirmBtn.disabled = !ok;
-                confirmBtn.style.opacity = ok ? '1' : '0.4';
+                confirmBtn.disabled = input.value.trim().toUpperCase() !== 'ELIMINAR';
             });
             modal.querySelector('#del-all-cancel').addEventListener('click', () => modal.remove());
             confirmBtn.addEventListener('click', async () => {
@@ -793,7 +791,7 @@ const app = {
             <p style="color:#888;font-size:13px;margin:0 0 1rem;">Los vuelos eliminados se conservan aquí durante <strong style="color:#aaa;">30 días</strong> antes de borrarse definitivamente.</p>
             <div id="trash-list" style="max-height:50vh;overflow:auto;">Cargando…</div>
             <div style="display:flex;justify-content:flex-end;gap:12px;padding-top:1rem;border-top:1px solid #333;margin-top:1rem;">
-                <button id="trash-empty-btn" class="settings-btn-danger" style="display:none;padding:8px 16px;">Vaciar papelera</button>
+                <button id="trash-empty-btn" class="btn-danger" style="display:none;">Vaciar papelera</button>
             </div>
         </div>`;
         document.body.appendChild(modal);
@@ -819,7 +817,7 @@ const app = {
                         ${fecha} · ${r.aeronave_marca_modelo || ''} ${r.matricula_aeronave || ''} · ${ruta} · ${r.duracion_total || 0} hrs
                         <div style="color:#666;font-size:11px;">Eliminado el ${borrado}</div>
                     </div>
-                    <button data-restore="${r.id}" class="settings-btn-secondary" style="padding:6px 12px;font-size:12px;flex-shrink:0;">Restaurar</button>
+                    <button data-restore="${r.id}" class="btn-secondary" style="padding:6px 12px;font-size:12px;flex-shrink:0;">Restaurar</button>
                 </div>`;
             }).join('');
             listEl.querySelectorAll('[data-restore]').forEach(btn => {

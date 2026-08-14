@@ -319,8 +319,8 @@ const dataImporter = {
                         <tbody>${buildSerial()}</tbody>
                     </table>
                     <div style="display:flex;gap:12px;justify-content:flex-end;padding-top:1rem;border-top:1px solid #333;">
-                        <button id="datefmt-cancel" class="prev-btn" style="padding:10px 20px;background:transparent;border:1px solid #444;">Cancelar importación</button>
-                        <button id="datefmt-confirm" class="submit-btn" style="padding:10px 24px;">Las fechas son correctas — continuar</button>
+                        <button id="datefmt-cancel" class="btn-secondary">Cancelar importación</button>
+                        <button id="datefmt-confirm" class="btn-primary">Las fechas son correctas — continuar</button>
                     </div>
                 </div>`;
 
@@ -382,8 +382,8 @@ const dataImporter = {
                         <tbody id="datefmt-rows">${buildRows(detectedFmt)}</tbody>
                     </table>
                     <div style="display:flex;gap:12px;justify-content:flex-end;padding-top:1rem;border-top:1px solid #333;">
-                        <button id="datefmt-cancel" class="prev-btn" style="padding:10px 20px;background:transparent;border:1px solid #444;">Cancelar importación</button>
-                        <button id="datefmt-confirm" class="submit-btn" style="padding:10px 24px;">Confirmar y continuar</button>
+                        <button id="datefmt-cancel" class="btn-secondary">Cancelar importación</button>
+                        <button id="datefmt-confirm" class="btn-primary">Confirmar y continuar</button>
                     </div>
                 </div>`;
 
@@ -484,8 +484,8 @@ const dataImporter = {
                     <span id="val-summary" style="font-size:13px;color:#aaa;"></span>
                 </div>
                 <div style="display:flex;gap:12px;justify-content:flex-end;padding-top:1rem;border-top:1px solid #333;">
-                    <button id="val-cancel-btn" class="prev-btn" style="padding:10px 20px; background: transparent; border: 1px solid #444;">Cancelar</button>
-                    <button id="val-confirm-btn" class="submit-btn" style="padding:10px 24px;">Confirmar importación</button>
+                    <button id="val-cancel-btn" class="btn-secondary">Cancelar</button>
+                    <button id="val-confirm-btn" class="btn-primary">Confirmar importación</button>
                 </div>
             </div>`;
 
@@ -580,8 +580,8 @@ const dataImporter = {
                     </label>` : ''}
                 </div>
                 <div style="display:flex;gap:12px;justify-content:flex-end;padding-top:1rem;border-top:1px solid #333;">
-                    <button id="page-modal-cancel" class="prev-btn" style="padding:10px 20px;background:transparent;border:1px solid #444;">Cancelar importación</button>
-                    <button id="page-modal-confirm" class="submit-btn" style="padding:10px 24px;">Continuar</button>
+                    <button id="page-modal-cancel" class="btn-secondary">Cancelar importación</button>
+                    <button id="page-modal-confirm" class="btn-primary">Continuar</button>
                 </div>
             </div>`;
 

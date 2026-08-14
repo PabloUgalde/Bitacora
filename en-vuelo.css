@@ -138,17 +138,7 @@
     letter-spacing: 0.08em;
     color: var(--muted);
 }
-.btn-link {
-    background: none;
-    border: none;
-    color: var(--gold);
-    font-family: var(--font);
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    padding: 4px 0;
-    -webkit-tap-highlight-color: transparent;
-}
+/* .btn-link vive ahora en style.css (sistema de botones unificado, global) */
 .ac-cards-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);

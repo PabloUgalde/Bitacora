@@ -289,9 +289,9 @@ const render = {
                             ${flight.Observaciones ? `<div class="detail-item" style="grid-column: 1/-1; margin-top: 1rem;"><span class="label">Observaciones</span>${flight.Observaciones}</div>` : ''}
                         </div>
                         <div class="flight-card-actions">
-                             <button class="toggle-details-btn prev-btn">Ver Detalles</button>
-                             <button class="edit-flight-btn next-btn" data-flight-id="${flight.id}">Editar</button>
-                             <button class="delete-flight-btn" data-flight-id="${flight.id}" style="flex-grow: 0; padding: 0.6rem;">🗑️</button>
+                             <button class="toggle-details-btn btn-secondary" style="flex: 1.3;">Ver Detalles</button>
+                             <button class="edit-flight-btn btn-primary" data-flight-id="${flight.id}" style="flex: 1;">Editar</button>
+                             <button class="delete-flight-btn" data-flight-id="${flight.id}" style="flex-grow: 0;">🗑️</button>
                         </div>
                     </div>`;
             });
@@ -385,7 +385,7 @@ const render = {
         const buttonsContainer = document.getElementById("pagination-buttons"); 
         const infoContainer = document.getElementById("pagination-info");
         if (!buttonsContainer || !infoContainer) return;
-        buttonsContainer.innerHTML = `<button class="prev-btn" ${logbookState.currentPage === 1 ? 'disabled' : ''}>« Anterior</button> <button class="next-btn" ${logbookState.currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}>Siguiente »</button>`;
+        buttonsContainer.innerHTML = `<button class="btn-secondary" data-page-nav="prev" ${logbookState.currentPage === 1 ? 'disabled' : ''}>« Anterior</button> <button class="btn-primary" data-page-nav="next" ${logbookState.currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}>Siguiente »</button>`;
         if (logbookState.filteredData.length > 0) {
             const startItem = (logbookState.currentPage - 1) * logbookState.itemsPerPage + 1;
             const endItem = Math.min(startItem + logbookState.itemsPerPage - 1, logbookState.filteredData.length);

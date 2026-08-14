@@ -47,8 +47,8 @@ const miCuenta = {
                 <input type="email" id="confirm-delete-email" placeholder="tu@email.com" style="width:100%; margin-bottom:1rem;">
                 <p id="delete-error-message" style="color:var(--accent-color-red); font-size:0.9rem; min-height:1.2em;"></p>
                 <div style="display:flex; justify-content:flex-end; gap:12px; padding-top:1rem; border-top:1px solid var(--border-color);">
-                    <button class="prev-btn" onclick="this.closest('.modal').remove()">Cancelar</button>
-                    <button id="confirm-delete-btn" class="settings-btn-danger" disabled style="background-color: var(--accent-color-red); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">Confirmar Eliminación</button>
+                    <button class="btn-secondary" onclick="this.closest('.modal').remove()">Cancelar</button>
+                    <button id="confirm-delete-btn" class="btn-danger" disabled>Confirmar Eliminación</button>
                 </div>
             </div>
         `;
