@@ -554,6 +554,62 @@ tbody td:nth-child(3), tbody td:nth-child(4), tbody td:nth-child(30) { text-alig
     width: 100%;
     /* Reutilizamos los estilos existentes de los selectores */
 }
+
+/* --- ESTILOS PARA CONFIGURACIÓN DE FORMATO DE BITÁCORA --- */
+.pagina-config-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.pagina-config-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 1rem;
+    background-color: var(--background-color);
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+}
+
+.pagina-config-row .pcr-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.pagina-config-row .pcr-field label {
+    font-size: 0.8rem;
+    color: var(--text-muted-color);
+    text-transform: uppercase;
+}
+
+.pagina-config-row .pcr-field input {
+    width: 110px;
+}
+
+.pagina-config-row .pcr-hasta {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    padding-bottom: 0.5rem;
+}
+
+.pagina-config-row .pcr-remove {
+    margin-left: auto;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-muted-color);
+    border-radius: var(--border-radius);
+    padding: 0.5rem 0.75rem;
+    cursor: pointer;
+}
+
+.pagina-config-row .pcr-remove:hover {
+    color: #e05555;
+    border-color: #e05555;
+}
+
 /* --- ESTILOS PARA ACORDEÓN DE CONFIGURACIÓN --- */
 
 .accordion-container {

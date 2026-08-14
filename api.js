@@ -730,6 +730,7 @@ const api = {
             dashboard_card_count:  profileData.dashboardCardCount || 8,
             user_role:             profileData.userRole || 'student',
             hours_format:          profileData.hoursFormat || 'decimal',
+            pagina_config:         profileData.paginaConfig || [],
             updated_at:            new Date().toISOString(),
         };
         const { error } = await supabaseClient
@@ -770,6 +771,7 @@ const api = {
                         hoursFormat:       data.hours_format || local?.hoursFormat || 'decimal',
                         dashboardCards:    (data.dashboard_cards?.length ? data.dashboard_cards : local?.dashboardCards) || [],
                         dashboardCardCount: data.dashboard_card_count || local?.dashboardCardCount || 8,
+                        paginaConfig:      (data.pagina_config?.length ? data.pagina_config : local?.paginaConfig) || [],
                         licenses:          (data.licencias && Object.keys(data.licencias).length ? data.licencias : local?.licenses) || {},
                         plan:              data.plan || 'lite',
                         planExpiresAt:     data.plan_expires_at || null,

@@ -515,6 +515,16 @@ const app = {
             settingsView.addEventListener('change', () => app._setSettingsDirty(true));
             settingsView.addEventListener('input',  () => app._setSettingsDirty(true));
         }
+        // --- FORMATO DE BITÁCORA (vuelos por página) ---
+        document.getElementById('pagina-config-add-btn')?.addEventListener('click', () => app.addPaginaConfigRow());
+        document.getElementById('pagina-config-rows')?.addEventListener('click', (e) => {
+            const btn = e.target.closest('.pcr-remove');
+            if (btn) app.removePaginaConfigRow(parseInt(btn.dataset.index));
+        });
+        document.getElementById('pagina-config-rows')?.addEventListener('input', (e) => {
+            if (e.target.matches('.pcr-desde')) app._updatePaginaHastaLabels();
+        });
+
         document.getElementById('download-excel-btn')?.addEventListener('click', () => api.exportToExcel());
         document.getElementById('download-csv-btn')?.addEventListener('click', () => api.exportToCSV());
         document.getElementById('clear-local-data-btn')?.addEventListener('click', () => backupManager.clearLocalCache());
@@ -610,9 +620,10 @@ const app = {
                     if (pageMode === 'auto') {
                         // result.data is reversed from Excel order; restore original row rank
                         const n = result.data.length;
+                        const assignedPages = assignPageNumbers(currentMaxPage + 1, 0, n, userProfile?.paginaConfig);
                         result.data.forEach((f, i) => {
                             const excelRank = n - 1 - i; // 0 = primera fila del Excel
-                            f['Pagina Bitacora a Replicar'] = currentMaxPage + Math.floor(excelRank / 8) + 1;
+                            f['Pagina Bitacora a Replicar'] = assignedPages[excelRank];
                         });
                     } else if (pageMode === 'insert_start') {
                         // Asignar páginas 1..N a los importados en orden cronológico
@@ -621,10 +632,11 @@ const app = {
                             const bTime = b.Fecha instanceof Date ? b.Fecha.getTime() : 0;
                             return aTime - bTime;
                         });
+                        const assignedPages = assignPageNumbers(1, 0, sorted.length, userProfile?.paginaConfig);
                         sorted.forEach((f, i) => {
-                            f['Pagina Bitacora a Replicar'] = Math.floor(i / 8) + 1;
+                            f['Pagina Bitacora a Replicar'] = assignedPages[i];
                         });
-                        const importedMaxPage = Math.floor((result.data.length - 1) / 8) + 1;
+                        const importedMaxPage = assignedPages[assignedPages.length - 1] || 1;
 
                         // Correr las páginas de los vuelos ya guardados
                         const dataStatus = document.getElementById('data-status');
@@ -896,6 +908,75 @@ const app = {
         }
     },
 
+    // --- FORMATO DE BITÁCORA (vuelos por página) ---
+    renderPaginaConfigRows: (config) => {
+        const container = document.getElementById('pagina-config-rows');
+        if (!container) return;
+        const ranges = (config?.length ? config : [{ desde: 1, vuelosPorPagina: 8 }])
+            .slice().sort((a, b) => a.desde - b.desde);
+        container.innerHTML = '';
+        ranges.forEach((range, i) => {
+            const isFirst = i === 0;
+            const isLast = i === ranges.length - 1;
+            const hastaLabel = isLast ? 'en adelante' : `hasta la ${Math.max((ranges[i + 1]?.desde || range.desde + 1) - 1, range.desde)}`;
+            const row = document.createElement('div');
+            row.className = 'pagina-config-row';
+            row.dataset.index = i;
+            row.innerHTML = `
+                <div class="pcr-field">
+                    <label>Desde página</label>
+                    <input type="number" class="pcr-desde" min="1" step="1" value="${range.desde}" ${isFirst ? 'disabled' : ''}>
+                </div>
+                <div class="pcr-hasta">${hastaLabel}</div>
+                <div class="pcr-field">
+                    <label>Vuelos por página</label>
+                    <input type="number" class="pcr-vuelos" min="1" step="1" value="${range.vuelosPorPagina || 8}">
+                </div>
+                ${ranges.length > 1 ? `<button type="button" class="pcr-remove" data-index="${i}" title="Eliminar rango">✕</button>` : ''}
+            `;
+            container.appendChild(row);
+        });
+    },
+
+    _readPaginaConfigRows: () => {
+        const rows = document.querySelectorAll('#pagina-config-rows .pagina-config-row');
+        return Array.from(rows).map(row => ({
+            desde: parseInt(row.querySelector('.pcr-desde')?.value) || 1,
+            vuelosPorPagina: parseInt(row.querySelector('.pcr-vuelos')?.value) || 8,
+        })).sort((a, b) => a.desde - b.desde);
+    },
+
+    // Actualiza solo el texto "hasta la X" de cada fila sin reconstruir los
+    // inputs (evita que el usuario pierda el foco mientras escribe "desde").
+    _updatePaginaHastaLabels: () => {
+        const rows = document.querySelectorAll('#pagina-config-rows .pagina-config-row');
+        const desdes = Array.from(rows).map(row => parseInt(row.querySelector('.pcr-desde')?.value) || 1);
+        rows.forEach((row, i) => {
+            const hastaEl = row.querySelector('.pcr-hasta');
+            if (!hastaEl) return;
+            const isLast = i === rows.length - 1;
+            hastaEl.textContent = isLast ? 'en adelante' : `hasta la ${Math.max(desdes[i + 1] - 1, desdes[i])}`;
+        });
+    },
+
+    addPaginaConfigRow: () => {
+        const ranges = app._readPaginaConfigRows();
+        const lastPage = flightData.reduce((max, f) => Math.max(max, parseInt(f['Pagina Bitacora a Replicar']) || 0), 0);
+        const last = ranges[ranges.length - 1];
+        const nextDesde = Math.max(lastPage + 1, (last?.desde || 0) + 1);
+        ranges.push({ desde: nextDesde, vuelosPorPagina: 8 });
+        app.renderPaginaConfigRows(ranges);
+        app._setSettingsDirty(true);
+    },
+
+    removePaginaConfigRow: (index) => {
+        const ranges = app._readPaginaConfigRows();
+        if (ranges.length <= 1) return;
+        ranges.splice(index, 1);
+        app.renderPaginaConfigRows(ranges);
+        app._setSettingsDirty(true);
+    },
+
     trackFlightValues: (data) => {
         const stored = JSON.parse(localStorage.getItem('flightLogFrequentValues') || '{}');
         const textFields = [['aeronave', data.aeronave], ['matricula', data.matricula], ['desde', data.desde], ['hasta', data.hasta], ['approaches-tip', data.approaches?.tipo]];
@@ -962,6 +1043,22 @@ const app = {
             const selectEl = document.getElementById(`card-slot-select-${i}`);
             if (selectEl) selectedCards.push(selectEl.value);
         }
+        const paginaConfig = app._readPaginaConfigRows();
+        if (paginaConfig[0]?.desde !== 1) {
+            ui.showNotification("El primer rango de Formato de Bitácora debe empezar en la página 1.", "error");
+            return;
+        }
+        for (let i = 1; i < paginaConfig.length; i++) {
+            if (paginaConfig[i].desde <= paginaConfig[i - 1].desde) {
+                ui.showNotification("Las páginas de inicio de Formato de Bitácora deben ser distintas y crecientes.", "error");
+                return;
+            }
+        }
+        if (paginaConfig.some(r => !(r.vuelosPorPagina >= 1))) {
+            ui.showNotification("Vuelos por página debe ser al menos 1 en Formato de Bitácora.", "error");
+            return;
+        }
+
         const profileToSave = {
             dataSource: 'supabase',
             personal: {},
@@ -971,6 +1068,7 @@ const app = {
             hiddenColumns: [...(logbookState.hiddenColumns || [])],
             backupRetentionDays: document.getElementById('backup-retention-select')?.value,
             hoursFormat: document.querySelector('input[name="hoursFormat"]:checked')?.value || 'decimal',
+            paginaConfig,
         };
         if (!profileValidator.validateProfileForm()) {
             ui.showNotification("Corrige los errores en Datos Personales.", "error");
@@ -1005,6 +1103,8 @@ const app = {
         const countSelect = document.getElementById('dashboard-card-count');
         if (countSelect) countSelect.value = userProfile.dashboardCardCount || 8;
         app.refreshDashboardSlots();
+
+        app.renderPaginaConfigRows(userProfile.paginaConfig);
 
         // Email auto-fill desde cuenta autenticada
         const emailInput = document.getElementById('profile-email');

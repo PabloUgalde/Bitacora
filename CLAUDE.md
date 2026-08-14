@@ -9,7 +9,7 @@ App PWA de bitácora de vuelo para pilotos chilenos. Producción: **https://bita
 - **Email:** Resend (`noreply@bitacoradevuelo.cl`)
 - **Librería gráficos:** Chart.js (CDN)
 - **Excel/CSV:** SheetJS (CDN)
-- **PWA:** Service Worker `sw.js` (cache v2.34), `manifest.json`
+- **PWA:** Service Worker `sw.js` (cache v2.38), `manifest.json`
 
 ## Estructura de archivos clave
 
@@ -44,7 +44,7 @@ App PWA de bitácora de vuelo para pilotos chilenos. Producción: **https://bita
 ## Base de datos (Supabase)
 
 **Tablas principales:**
-- `profiles` — metadata usuario: `full_name`, `plan`, `plan_expires_at`, `trial_used`, `licenses` (JSONB)
+- `profiles` — metadata usuario: `full_name`, `plan`, `plan_expires_at`, `trial_used`, `licenses` (JSONB), `pagina_config` (JSONB — ver "Formato de bitácora física / vuelos por página" más abajo)
 - `flights` — logbook (31 columnas): `fecha`, `aeronave_marca_modelo`, `matricula`, `duracion_total`, tipos de aeronave (LSA/Monomotor/etc.), aterrizajes (día/noche), condiciones (IFR/Diurno/Nocturno), tipos de tiempo (Solo/PIC/SIC/Instrucción), `observaciones`, `pagina_bitacora`, `es_saldo_inicial`, `deleted_at` (papelera/soft-delete — ver `supabase/soft-delete-flights.sql`)
 - `anotaciones` — notas libres por vuelo
 
@@ -167,6 +167,22 @@ Módulo para digitalizar páginas físicas de bitácora mediante visión IA.
 
 Ver `ai-map.md` para detalles de integración IA.
 
+## Formato de bitácora física / vuelos por página (13-ago-2026)
+
+Numeración automática de "Página Bitácora a Replicar" (agregar vuelo manual, Live Log, importador Excel, escáner IA) asumía siempre **8 vuelos por página**, que es el formato DGAC vigente — pero bitácoras antiguas (o de otras imprentas) traen más o menos, y un mismo piloto puede haber usado más de un formato a lo largo de su carrera (bitácora vieja con N vuelos/página hasta cierta página, luego una nueva con 8). Configurable en **Configuración → Formato de Bitácora**.
+
+**Modelo de datos:** `profiles.pagina_config` (JSONB, `supabase/add-pagina-config-column.sql`, aplicada en producción) — lista de *breakpoints* ordenados por página de inicio, no pares desde/hasta explícitos (evita bugs de huecos/solapamientos): `[{"desde":1,"vuelosPorPagina":6},{"desde":121,"vuelosPorPagina":8}]` significa páginas 1-120 con 6 vuelos/página, desde la 121 en adelante con 8. Array vacío o ausente = 8 (comportamiento histórico, sin cambios para quien no toque la configuración nueva). Como lo escribe el propio usuario desde Configuración (`api.saveProfile`), necesitó GRANT explícito de `insert`/`update` para `authenticated` — ver [[bitacora-profiles-column-grants]] en memoria: cualquier columna nueva de `profiles` que escriba el cliente sin ese GRANT falla con 42501.
+
+**Helpers globales (`state.js`):**
+- `getVuelosPorPagina(pageNumber, config?)` — busca en `userProfile.paginaConfig` (o el `config` explícito) el breakpoint vigente para esa página; default 8 si no hay config.
+- `assignPageNumbers(startPage, startCountOnStartPage, count, config?)` — asigna página a `count` vuelos nuevos en orden, empezando en `startPage` con `startCountOnStartPage` cupos ya ocupados; respeta cambios de formato a mitad de camino si el rango de la importación cruza un breakpoint.
+
+Reemplazan los `Math.floor(i / 8)` / `>= 8` hardcodeados que existían en: `ui.js` (`createFlightObject`, alta manual), `live-log.js` (guardado post-vuelo), `app.js` (importador Excel, modos `auto` e `insert_start`), `data-importer.js` (`showPageNumberModal`, cálculo de página para el texto del modal) y `logbook-scanner.js` (`_autoFillPages`, fallback cuando Gemini no detectó el número de página impreso en la foto).
+
+**UI (Configuración → Formato de Bitácora, `#panel-pagina-config`):** filas editables `{desde, vuelosPorPagina}` — la primera siempre empieza en la página 1 (campo deshabilitado); el "hasta" de cada fila se deriva del `desde` de la siguiente y se recalcula en vivo al escribir sin perder el foco del input (`app._updatePaginaHastaLabels`, actualiza solo el texto, no reconstruye los inputs). "+ Agregar cambio de formato" (`app.addPaginaConfigRow`) agrega un rango nuevo arrancando después de la última página conocida (`flightData` o el último rango). Validación al guardar (`app.saveSettings`): el primer rango debe empezar en 1, los `desde` deben ser crecientes y sin repetir, `vuelosPorPagina` ≥ 1.
+
+Los vuelos ya guardados **no se renumeran retroactivamente** al cambiar la configuración — solo gobierna la asignación de página para vuelos nuevos a partir de ese momento, igual que el resto del pipeline de paginación.
+
 ## Estado actual del proyecto
 ✅ Completamente funcional en producción  
 ✅ Auth, CRUD vuelos, offline, dashboard, logbook, resúmenes, licencias, pagos, PWA, importador Excel/CSV, impresión  
@@ -175,6 +191,7 @@ Ver `ai-map.md` para detalles de integración IA.
 ✅ Auditoría de integridad de datos aplicada (jul 2026): cola offline por usuario, sync con upsert idempotente, SW app shell completo (v2.28), renovación Pro extiende vencimiento, guard de trial  
 ✅ Protecciones anti-pérdida (jul 2026): papelera soft-delete 30 días, auto-backup CSV pre-borrado, confirmación escrita en borrado masivo, guard de discrepancia nube/caché, saldo inicial upsert-primero  
 ✅ Módulo "En Vuelo" integrado (14-jul-2026) — ver sección propia más abajo  
+✅ Formato de bitácora configurable (13-ago-2026): vuelos por página ya no está hardcodeado en 8, configurable por rango de páginas en Configuración — ver sección propia  
 ⚠️ Cargo automático (Flow Subscriptions) implementado en código (04-ago-2026), pendiente de deploy y de crear los planes en Flow — ver sección propia y punto 14 de "Pendientes"  
 ⚠️ Área de desarrollo activa: `logbook-scanner.js`, `data-importer.js`, módulo En Vuelo, cargo automático  
 ❌ Sin linter ni TypeScript. Tests funcionales Playwright en `herramientas-vuelo/tests/` (t5 cubre la integración En Vuelo)

@@ -89,6 +89,40 @@ const aircraftIcaoDesignator = (fullName) => {
     return normalizeAircraftModel(model);
 };
 
+// Cuántos vuelos caben por página en la bitácora física, dado un número de
+// página. userProfile.paginaConfig guarda el historial de formatos que ha
+// usado el piloto como breakpoints ordenados por página de inicio, ej.
+// [{desde:1,vuelosPorPagina:6},{desde:121,vuelosPorPagina:8}] = páginas
+// 1-120 con 6 vuelos/página, desde la 121 en adelante con 8. Sin config
+// (o array vacío) se asume 8, que es el formato DGAC vigente.
+const getVuelosPorPagina = (pageNumber, config) => {
+    const cfg = config || userProfile?.paginaConfig;
+    if (!Array.isArray(cfg) || cfg.length === 0) return 8;
+    let result = 8;
+    for (const range of cfg) {
+        if (pageNumber >= range.desde) result = parseInt(range.vuelosPorPagina) || 8;
+        else break;
+    }
+    return result;
+};
+
+// Asigna números de página a `count` vuelos nuevos en orden, empezando en
+// `startPage` con `startCountOnStartPage` vuelos ya ocupados en esa página
+// (0 si arranca página nueva). Respeta cambios de formato a mitad de camino
+// si el rango de páginas de la importación cruza un breakpoint de paginaConfig.
+const assignPageNumbers = (startPage, startCountOnStartPage, count, config) => {
+    const pages = [];
+    let page = startPage;
+    let countOnPage = startCountOnStartPage;
+    for (let i = 0; i < count; i++) {
+        const capacity = getVuelosPorPagina(page, config);
+        if (countOnPage >= capacity) { page++; countOnPage = 0; }
+        pages.push(page);
+        countOnPage++;
+    }
+    return pages;
+};
+
 // --- CONFIGURACIÓN DEL DASHBOARD ---
 const DASHBOARD_CARDS = [
     { id: 'totalHours',      label: 'Horas Totales',        dataKey: 'Duracion Total de Vuelo',                      isFixed: true,  formatFn: val => formatHours(val), customClass: 'primary-card' },

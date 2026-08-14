@@ -302,7 +302,7 @@ createFlightObject: (data) => {
         // evitando el bug de usar flightData[0] que depende del orden por fecha.
         const lastPageNumber = ui.getLastPageNumber();
         const flightsOnLastPage = flightData.filter(f => parseInt(f["Pagina Bitacora a Replicar"]) === lastPageNumber).length;
-        pageNumber = flightsOnLastPage >= 8 ? lastPageNumber + 1 : lastPageNumber;
+        pageNumber = flightsOnLastPage >= getVuelosPorPagina(lastPageNumber) ? lastPageNumber + 1 : lastPageNumber;
     }
     // --- FIN DE LA LÓGICA DE PAGINACIÓN CORREGIDA ---
 

@@ -468,6 +468,9 @@
                         <button class="settings-nav-item" data-panel="panel-dashboard">
                             <span class="settings-nav-icon">◈</span> Dashboard
                         </button>
+                        <button class="settings-nav-item" data-panel="panel-pagina-config">
+                            <span class="settings-nav-icon">📖</span> Formato de Bitácora
+                        </button>
                     </div>
                     <div class="settings-sidebar-section">
                         <div class="settings-sidebar-label">Cuenta</div>
@@ -485,6 +488,7 @@
                     <button class="settings-tab-item active" data-panel="panel-personal">Piloto</button>
                     <button class="settings-tab-item" data-panel="panel-licencias">Licencias</button>
                     <button class="settings-tab-item" data-panel="panel-dashboard">Dashboard</button>
+                    <button class="settings-tab-item" data-panel="panel-pagina-config">Bitácora</button>
                     <button class="settings-tab-item" data-panel="panel-cuenta">Cuenta</button>
                     <button class="settings-tab-item" data-panel="panel-datos">Datos</button>
                 </div>
@@ -566,6 +570,19 @@
                             </select>
                         </div>
                         <div id="dashboard-cards-config-container" class="card-config-container"></div>
+                        <div class="settings-panel-footer">
+                            <button type="button" class="submit-btn settings-save-btn" onclick="document.getElementById('save-settings-btn').click()">Guardar Configuración</button>
+                        </div>
+                    </div>
+
+                    <!-- PANEL: FORMATO DE BITÁCORA -->
+                    <div class="settings-panel" id="panel-pagina-config">
+                        <div class="settings-panel-header">
+                            <h3>Formato de Bitácora Física</h3>
+                            <p>Cuántos vuelos caben por página en tu bitácora de papel — se usa para numerar automáticamente la página al agregar vuelos, importar Excel o escanear. Las bitácoras DGAC actuales traen 8 vuelos por página; si la tuya es distinta, o si en algún momento cambiaste de bitácora y el formato cambió, agrega un rango nuevo indicando desde qué página empezó a regir.</p>
+                        </div>
+                        <div id="pagina-config-rows" class="pagina-config-rows"></div>
+                        <button type="button" id="pagina-config-add-btn" class="prev-btn" style="margin-top:0.75rem;">+ Agregar cambio de formato</button>
                         <div class="settings-panel-footer">
                             <button type="button" class="submit-btn settings-save-btn" onclick="document.getElementById('save-settings-btn').click()">Guardar Configuración</button>
                         </div>

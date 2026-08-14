@@ -543,7 +543,8 @@ const dataImporter = {
         return new Promise((resolve) => {
             const hasExcelPages = flights.some(f => parseInt(f['Pagina Bitacora a Replicar']) > 0);
             const nextPage = (currentMaxPage || 0) + 1;
-            const importedMaxPage = Math.floor((flights.length - 1) / 8) + 1;
+            const insertStartPages = assignPageNumbers(1, 0, flights.length, userProfile?.paginaConfig);
+            const importedMaxPage = insertStartPages[insertStartPages.length - 1] || 1;
 
             const modal = document.createElement('div');
             modal.className = 'modal open';

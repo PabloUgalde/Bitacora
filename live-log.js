@@ -725,10 +725,10 @@ const liveLog = {
                 }
             }
 
-            // Página: misma regla que createFlightObject (8 vuelos por página)
+            // Página: misma regla que createFlightObject, según Formato de Bitácora configurado
             const lastPage = ui.getLastPageNumber();
             const flightsOnLastPage = flightData.filter(f => parseInt(f["Pagina Bitacora a Replicar"]) === lastPage).length;
-            const pageNumber = flightsOnLastPage >= 8 ? lastPage + 1 : lastPage;
+            const pageNumber = flightsOnLastPage >= getVuelosPorPagina(lastPage) ? lastPage + 1 : lastPage;
 
             const flight = {
                 ...row,

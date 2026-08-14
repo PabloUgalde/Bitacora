@@ -258,8 +258,10 @@ const logbookScanner = {
         if (hasDetected) return;
         const currentMax = (typeof flightData !== 'undefined' ? flightData : [])
             .reduce((max, f) => Math.max(max, parseInt(f['Pagina Bitacora a Replicar']) || 0), 0);
+        const startPage = currentMax + pageIdx + 1;
+        const assigned = assignPageNumbers(startPage, 0, page.flights.length, userProfile?.paginaConfig);
         page.flights.forEach((f, i) => {
-            f['Pagina Bitacora a Replicar'] = currentMax + pageIdx + Math.floor(i / 8) + 1;
+            f['Pagina Bitacora a Replicar'] = assigned[i];
         });
     },
 
