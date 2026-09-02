@@ -61,7 +61,7 @@ const reportGenerator = {
                 #print-report-body .page { background: white !important; margin: 0; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
             }
 
-            #print-report-body { color: #000 !important; font-family: system-ui, sans-serif; font-size: 10pt; }
+            #print-report-body { color: #000 !important; font-family: Arial, Helvetica, sans-serif; font-size: 10pt; }
             #print-report-body .page { width: 29.7cm; height: 20.9cm; padding: 1cm; box-sizing: border-box; page-break-after: always; display: flex; flex-direction: column; overflow: hidden; position: relative; }
             #print-report-body .page:last-child { page-break-after: auto; }
 
