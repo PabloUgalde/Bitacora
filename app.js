@@ -1209,6 +1209,57 @@ const app = {
     },
 };
 
+// --- Instalación PWA (Add to Home Screen sin pasar por tiendas) ---
+const pwaInstall = {
+    _deferredPrompt: null,
+    _DISMISS_KEY: 'pwaInstallDismissedAt',
+    _DISMISS_DAYS: 14,
+
+    init: () => {
+        if (pwaInstall._isStandalone()) return;
+
+        // Se registra ya (no dentro de app.initialize) porque el navegador puede
+        // disparar el evento apenas carga la página, antes de que termine el auth.
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            pwaInstall._deferredPrompt = e;
+            if (pwaInstall._shouldShow()) pwaInstall._showBanner();
+        });
+
+        window.addEventListener('appinstalled', () => {
+            pwaInstall._deferredPrompt = null;
+            pwaInstall._hideBanner();
+            localStorage.removeItem(pwaInstall._DISMISS_KEY);
+        });
+
+        document.getElementById('pwa-install-btn')?.addEventListener('click', async () => {
+            if (!pwaInstall._deferredPrompt) return;
+            pwaInstall._deferredPrompt.prompt();
+            await pwaInstall._deferredPrompt.userChoice;
+            pwaInstall._deferredPrompt = null;
+            pwaInstall._hideBanner();
+        });
+
+        document.getElementById('pwa-install-dismiss')?.addEventListener('click', () => {
+            localStorage.setItem(pwaInstall._DISMISS_KEY, Date.now().toString());
+            pwaInstall._hideBanner();
+        });
+    },
+
+    _isStandalone: () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true,
+
+    _shouldShow: () => {
+        const dismissedAt = parseInt(localStorage.getItem(pwaInstall._DISMISS_KEY) || '0', 10);
+        if (!dismissedAt) return true;
+        const daysSince = (Date.now() - dismissedAt) / (1000 * 60 * 60 * 24);
+        return daysSince >= pwaInstall._DISMISS_DAYS;
+    },
+
+    _showBanner: () => document.getElementById('pwa-install-banner')?.classList.remove('hidden'),
+    _hideBanner: () => document.getElementById('pwa-install-banner')?.classList.add('hidden'),
+};
+pwaInstall.init();
+
 window.addEventListener('load', async () => {
     const ok = await auth.init();
     if (ok) await app.initialize();

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'flight-log-cache-v2.39';
+const CACHE_NAME = 'flight-log-cache-v2.40';
 
 const APP_SHELL_FILES = [
     './',
