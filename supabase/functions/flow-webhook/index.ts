@@ -195,14 +195,9 @@ serve(async (req) => {
     if (email) {
       const planLabel = plan === 'annual' ? 'Plan Pro Anual' : 'Plan Pro Mensual'
 
-      // Promo -15% en el plan anual: se apaga sola por fecha, mismo corte
-      // que ANNUAL_PROMO_ENDS en create-checkout/index.ts.
-      const ANNUAL_PROMO_ENDS = new Date('2026-09-01T06:00:00Z')
-      const isAnnualPromo = plan === 'annual' && new Date() < ANNUAL_PROMO_ENDS
-
-      const amount         = plan === 'annual' ? (isAnnualPromo ? '$51.000 CLP' : '$60.000 CLP') : '$6.000 CLP'
-      const originalAmount = isAnnualPromo ? '$60.000 CLP' : undefined
-      const discountLabel  = isAnnualPromo ? '-15% promo · válido hasta el 31-ago-2026' : undefined
+      const amount         = plan === 'annual' ? '$60.000 CLP' : '$6.000 CLP'
+      const originalAmount = undefined
+      const discountLabel  = undefined
 
       await fetch('https://api.resend.com/emails', {
         method: 'POST',
